@@ -204,7 +204,7 @@ def optimize(req: OptimizeRequest):
     solver.parameters.log_search_progress = True
 
     # Force the solver to stop after 30 seconds to prevent hanging on overly complex edge cases
-    solver.parameters.max_time_in_seconds = 30
+    solver.parameters.max_time_in_seconds = 300
     solver.Solve(model)
 
     # -------------------------------------------------------------------------
