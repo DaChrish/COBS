@@ -133,6 +133,7 @@ export async function runSimulation(
   const cubes: CubeInput[] = Array.from({ length: config.cubeCount }, (_, i) => ({
     id: `cube_${i}`,
     name: `Cube ${i + 1}`,
+    maxPlayers: rng() < 0.1 ? 8 : undefined,
   }));
 
   const cubeIds = cubes.map((c) => c.id);

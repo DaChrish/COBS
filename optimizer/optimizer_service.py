@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Optional
 from ortools.sat.python import cp_model
 import logging
 
@@ -27,6 +27,7 @@ class Player(BaseModel):
 class Cube(BaseModel):
     """Represents a game set (cube) that can be played."""
     id: str
+    maxPlayers: Optional[int] = None
 
 
 class OptimizeRequest(BaseModel):
@@ -131,6 +132,17 @@ def optimize(req: OptimizeRequest):
     for c in range(C):
         model.Add(sum(y[k, c] for k in range(K)) <= 1)
 
+    # Constraint 5: Enforce Cube maxPlayers capacity.
+    # If a cube has a maxPlayers limit (e.g. 8), it can NEVER be assigned to a pod
+    # with size > maxPlayers.
+    for c in range(C):
+        cube = req.cubes[c]
+        if cube.maxPlayers is not None:
+            for k in range(K):
+                if req.podSizes[k] > cube.maxPlayers:
+                    # Forbid this pod from playing this cube
+                    model.Add(y[k, c] == 0)
+
     # -------------------------------------------------------------------------
     # OBJECTIVE FUNCTION
     # -------------------------------------------------------------------------
@@ -171,22 +183,33 @@ def optimize(req: OptimizeRequest):
                     # z[p,k,c] is 1 if player p plays cube c. We multiply it by their configured score.
                     objective_terms.append(score * z[p, k, c])
 
-    # 2. Early Round Unpopular Bonus
+    # 2. Early Round Unpopular Bonus & Limited Cube Bonus
     # To prevent highly AVOIDed cubes from piling up in the final rounds, we apply a bonus 
-    # to using them in Round 1.
-    if req.roundNumber == 1 and req.earlyRoundBonus > 0:
+    # to using them in Round 1. We also add a small bonus for maxPlayers-limited cubes
+    # in Round 1, to encourage using them before pods get fragmented.
+    if req.roundNumber == 1:
         for c in range(C):
-            cube_id = req.cubes[c].id
-            # Count the total number of players globally who avoid this cube
-            avoid_count = sum(
-                1
-                for p in active_players
-                if p.votes.get(cube_id, "NEUTRAL") == "AVOID"
-            )
-            bonus = avoid_count * req.earlyRoundBonus
-            if bonus != 0:
+            cube = req.cubes[c]
+            cube_id = cube.id
+            bonus = 0
+            
+            # --- Unpopular bonus ---
+            if req.earlyRoundBonus > 0:
+                # Count the total number of players globally who avoid this cube
+                avoid_count = sum(1 for p in active_players if p.votes.get(cube_id) == "AVOID")
+                
+                # Apply the bonus linearly: (players_avoiding * earlyRoundBonus)
+                # Note: 'y[k,c]' is 1 if Pod 'k' plays Cube 'c'. 
+                # We simply add this bonus for whichever pod ends up playing 'c'.
+                bonus += avoid_count * req.earlyRoundBonus
+            
+            # --- Limited cube bonus ---
+            if cube.maxPlayers is not None:
+                # Give a small constant bonus
+                bonus += req.earlyRoundBonus * 10
+
+            if bonus > 0:
                 for k in range(K):
-                    # If this pod (k) takes this cube (c), add the bonus to the objective
                     objective_terms.append(bonus * y[k, c])
 
     # 3. Match Point Spread Penalty (Skill-based grouping)

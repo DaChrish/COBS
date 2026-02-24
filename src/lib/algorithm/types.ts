@@ -16,6 +16,8 @@ export interface PlayerInput {
 export interface CubeInput {
   id: string;
   name: string;
+  /** Maximum number of players this cube supports (null/undefined = no limit). */
+  maxPlayers?: number;
 }
 
 export interface PodAssignment {

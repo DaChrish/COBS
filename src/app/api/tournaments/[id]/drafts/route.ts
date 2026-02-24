@@ -181,9 +181,10 @@ export async function POST(
         };
       });
 
-    const cubeInputs: CubeInput[] = (tournament.cubes as Array<{ id: string; name: string }>).map((c) => ({
+    const cubeInputs: CubeInput[] = (tournament.cubes as Array<{ id: string; name: string; maxPlayers: number | null }>).map((c) => ({
       id: c.id,
       name: c.name,
+      ...(c.maxPlayers != null ? { maxPlayers: c.maxPlayers } : {}),
     }));
 
     // Tournament Optimizer ausführen

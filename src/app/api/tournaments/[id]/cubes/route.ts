@@ -37,7 +37,7 @@ export async function POST(
   try {
     const { id } = await context.params;
     const body = await request.json();
-    const { name, description, imageUrl } = body;
+    const { name, description, imageUrl, maxPlayers } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -61,6 +61,7 @@ export async function POST(
         name,
         description: description ?? "",
         imageUrl: imageUrl ?? null,
+        maxPlayers: maxPlayers != null ? Number(maxPlayers) : null,
       },
     });
 

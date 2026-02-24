@@ -31,6 +31,7 @@ interface Cube {
   name: string;
   description: string;
   imageUrl: string | null;
+  maxPlayers?: number;
   createdAt: string;
 }
 
@@ -57,7 +58,7 @@ interface Pod {
   id: string;
   podNumber: number;
   podSize: number;
-  cube: { id: string; name: string };
+  cube: { id: string; name: string; maxPlayers?: number };
   players: PodPlayer[];
   matches: Match[];
 }
@@ -210,6 +211,7 @@ export default function TournamentPage() {
   const [cubeName, setCubeName] = useState("");
   const [cubeDesc, setCubeDesc] = useState("");
   const [cubeCreating, setCubeCreating] = useState(false);
+  const [cubeMaxPlayers, setCubeMaxPlayers] = useState("");
   const [cubeError, setCubeError] = useState("");
 
   // Match-Ergebnis-Eingabe: matchId → { p1, p2 }
@@ -368,12 +370,17 @@ export default function TournamentPage() {
       const res = await fetch(`/api/tournaments/${id}/cubes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: cubeName.trim(), description: cubeDesc.trim() }),
+        body: JSON.stringify({
+          name: cubeName.trim(),
+          description: cubeDesc.trim(),
+          maxPlayers: cubeMaxPlayers ? parseInt(cubeMaxPlayers, 10) : null
+        }),
       });
       if (res.ok) {
         setShowCubeModal(false);
         setCubeName("");
         setCubeDesc("");
+        setCubeMaxPlayers("");
         await fetchTournament();
       } else {
         const data = await res.json();
@@ -653,7 +660,15 @@ export default function TournamentPage() {
                 {tournament.cubes.map((cube) => (
                   <Card key={cube.id} className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-medium truncate">{cube.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{cube.name}</p>
+                        {cube.maxPlayers && (
+                          <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted/20 text-muted-foreground whitespace-nowrap" title={`Maximal ${cube.maxPlayers} Spieler`}>
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                            {cube.maxPlayers}
+                          </span>
+                        )}
+                      </div>
                       {cube.description && (
                         <p className="text-sm text-muted mt-1 line-clamp-2">{cube.description}</p>
                       )}
@@ -954,7 +969,15 @@ export default function TournamentPage() {
                               <div key={pod.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
                                 <div className="flex items-center gap-2">
                                   <Badge variant="accent">Pod {pod.podNumber}</Badge>
-                                  <span className="text-sm text-muted">{pod.cube.name}</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-sm text-muted">{pod.cube.name}</span>
+                                    {pod.cube.maxPlayers && (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] px-1 rounded bg-muted/20 text-muted-foreground" title={`Max. ${pod.cube.maxPlayers} Spieler`}>
+                                        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                        {pod.cube.maxPlayers}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   {pod.players.map((pp) => {
@@ -1209,6 +1232,15 @@ export default function TournamentPage() {
             placeholder="Kurze Beschreibung des Cubes"
             value={cubeDesc}
             onChange={(e) => setCubeDesc(e.target.value)}
+          />
+          <Input
+            id="cube-max-players"
+            label="Max. Spieler (optional)"
+            placeholder="z.B. 8 (leer = unbegrenzt)"
+            type="number"
+            min="2"
+            value={cubeMaxPlayers}
+            onChange={(e) => setCubeMaxPlayers(e.target.value)}
           />
           <div className="flex justify-end gap-3">
             <Button variant="ghost" type="button" onClick={() => setShowCubeModal(false)}>

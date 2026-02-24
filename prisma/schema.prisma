@@ -61,6 +61,7 @@ model TournamentCube {
   name         String
   description  String     @default("")
   imageUrl     String?
+  maxPlayers   Int?
   createdAt    DateTime   @default(now())
   votes        CubeVote[]
   pods         Pod[]

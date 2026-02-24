@@ -25,7 +25,7 @@ type OptimizerServiceRequest = {
     dropped?: boolean;
     priorAvoidCount?: number;
   }>;
-  cubes: Array<{ id: string }>;
+  cubes: Array<{ id: string; maxPlayers?: number }>;
   podSizes: number[];
   roundNumber: number;
   earlyRoundBonus: number;

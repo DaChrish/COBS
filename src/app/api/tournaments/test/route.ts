@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
             tournamentId: tournament.id,
             name: cubeName(i),
             description: "",
+            maxPlayers: rng() < 0.1 ? 8 : null,
           },
         })
       )
