@@ -628,124 +628,136 @@ export default function TournamentPage() {
         </div>
 
         {/* ===== CUBES ===== */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Cubes</h2>
+        <details className="group">
+          <summary className="flex items-center justify-between cursor-pointer list-none py-2 select-none [&::-webkit-details-marker]:hidden">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-muted transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <h2 className="text-lg font-semibold">Cubes</h2>
+              <span className="text-sm text-muted">({tournament.cubes.length})</span>
+            </div>
             {isSetup && (
-              <Button variant="secondary" size="sm" onClick={() => setShowCubeModal(true)}>
+              <Button variant="secondary" size="sm" onClick={(e) => { e.preventDefault(); setShowCubeModal(true); }}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Cube hinzufügen
               </Button>
             )}
-          </div>
+          </summary>
+          <div className="space-y-4 mt-4">
 
-          {tournament.cubes.length === 0 ? (
-            <Card className="text-center py-8 text-muted">Noch keine Cubes vorhanden.</Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {tournament.cubes.map((cube) => (
-                <Card key={cube.id} className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{cube.name}</p>
-                    {cube.description && (
-                      <p className="text-sm text-muted mt-1 line-clamp-2">{cube.description}</p>
+            {tournament.cubes.length === 0 ? (
+              <Card className="text-center py-8 text-muted">Noch keine Cubes vorhanden.</Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {tournament.cubes.map((cube) => (
+                  <Card key={cube.id} className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{cube.name}</p>
+                      {cube.description && (
+                        <p className="text-sm text-muted mt-1 line-clamp-2">{cube.description}</p>
+                      )}
+                    </div>
+                    {isSetup && (
+                      <button
+                        onClick={() => handleDeleteCube(cube.id)}
+                        className="text-muted hover:text-danger transition-colors shrink-0 cursor-pointer"
+                        title="Cube entfernen"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     )}
-                  </div>
-                  {isSetup && (
-                    <button
-                      onClick={() => handleDeleteCube(cube.id)}
-                      className="text-muted hover:text-danger transition-colors shrink-0 cursor-pointer"
-                      title="Cube entfernen"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  )}
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
 
         {/* ===== SPIELER ===== */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Spieler</h2>
+        <details className="group">
+          <summary className="flex items-center gap-2 cursor-pointer list-none py-2 select-none [&::-webkit-details-marker]:hidden">
+            <svg className="w-4 h-4 text-muted transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            <h2 className="text-lg font-semibold">Spieler</h2>
+            <span className="text-sm text-muted">({tournament.players.length})</span>
+          </summary>
+          <div className="space-y-4 mt-4">
 
-          {/* Beitritts-Code */}
-          <Card className="flex flex-col sm:flex-row sm:items-center gap-3 bg-accent/5 border-accent/20">
-            <div className="flex-1">
-              <p className="text-sm text-muted mb-1">Beitritts-Code</p>
-              <p className="text-2xl font-mono font-bold tracking-widest text-accent">{tournament.joinCode}</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigator.clipboard.writeText(tournament.joinCode)}
-            >
-              Kopieren
-            </Button>
-          </Card>
+            {/* Beitritts-Code */}
+            <Card className="flex flex-col sm:flex-row sm:items-center gap-3 bg-accent/5 border-accent/20">
+              <div className="flex-1">
+                <p className="text-sm text-muted mb-1">Beitritts-Code</p>
+                <p className="text-2xl font-mono font-bold tracking-widest text-accent">{tournament.joinCode}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigator.clipboard.writeText(tournament.joinCode)}
+              >
+                Kopieren
+              </Button>
+            </Card>
 
-          {tournament.players.length === 0 ? (
-            <Card className="text-center py-8 text-muted">Noch keine Spieler angemeldet.</Card>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-card">
-                    <th className="text-left px-4 py-3 font-medium text-muted">Spieler</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted">Gewünscht</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted">Neutral</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted">Vermeiden</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted">Punkte</th>
-                    <th className="text-right px-4 py-3 font-medium text-muted"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tournament.players.map((tp) => {
-                    const vs = voteSummary[tp.id];
-                    return (
-                      <tr key={tp.id} className="border-b border-border last:border-0 hover:bg-card-hover transition-colors">
-                        <td className="px-4 py-3 font-medium">{tp.player.name}</td>
-                        <td className="px-4 py-3 text-center">
-                          {vs ? <span className="text-success">{vs.desired}</span> : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {vs ? <span className="text-muted">{vs.neutral}</span> : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {vs ? <span className="text-danger">{vs.avoid}</span> : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-center">{tp.matchPoints}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => {
-                              localStorage.setItem(`tp_${id}`, tp.id);
-                              localStorage.setItem(`player_${id}`, tp.player.id);
-                              localStorage.setItem(`impersonating_${id}`, tp.player.name);
-                              window.open(`/tournament/${id}`, "_blank");
-                            }}
-                            className="text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
-                            title={`Als ${tp.player.name} anzeigen`}
-                          >
-                            <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            Ansicht
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+            {tournament.players.length === 0 ? (
+              <Card className="text-center py-8 text-muted">Noch keine Spieler angemeldet.</Card>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-card">
+                      <th className="text-left px-4 py-3 font-medium text-muted">Spieler</th>
+                      <th className="text-center px-4 py-3 font-medium text-muted">Gewünscht</th>
+                      <th className="text-center px-4 py-3 font-medium text-muted">Neutral</th>
+                      <th className="text-center px-4 py-3 font-medium text-muted">Vermeiden</th>
+                      <th className="text-center px-4 py-3 font-medium text-muted">Punkte</th>
+                      <th className="text-right px-4 py-3 font-medium text-muted"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tournament.players.map((tp) => {
+                      const vs = voteSummary[tp.id];
+                      return (
+                        <tr key={tp.id} className="border-b border-border last:border-0 hover:bg-card-hover transition-colors">
+                          <td className="px-4 py-3 font-medium">{tp.player.name}</td>
+                          <td className="px-4 py-3 text-center">
+                            {vs ? <span className="text-success">{vs.desired}</span> : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {vs ? <span className="text-muted">{vs.neutral}</span> : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {vs ? <span className="text-danger">{vs.avoid}</span> : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-center">{tp.matchPoints}</td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => {
+                                localStorage.setItem(`tp_${id}`, tp.id);
+                                localStorage.setItem(`player_${id}`, tp.player.id);
+                                localStorage.setItem(`impersonating_${id}`, tp.player.name);
+                                window.open(`/tournament/${id}`, "_blank");
+                              }}
+                              className="text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
+                              title={`Als ${tp.player.name} anzeigen`}
+                            >
+                              <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              Ansicht
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </details>
 
         {/* ===== STIMMEN PRO CUBE ===== */}
         {tournament.cubes.length > 0 && (() => {
@@ -789,355 +801,394 @@ export default function TournamentPage() {
             );
           };
           return (
-            <section key="stimmen-pro-cube" className="space-y-4">
-              <h2 className="text-lg font-semibold">Stimmen pro Cube</h2>
-              <Card className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-card">
-                      <th className="text-left px-4 py-3 font-medium text-muted">Cube</th>
-                      <th className="text-left px-4 py-3 font-medium text-success">👍 Gewünscht</th>
-                      <th className="text-left px-4 py-3 font-medium text-muted">➖ Neutral</th>
-                      <th className="text-left px-4 py-3 font-medium text-danger">👎 Vermeiden</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tournament.cubes.map((cube) => {
-                      const vb = votesByCube[cube.id] ?? { desired: [], neutral: [], avoid: [] };
-                      return (
-                        <tr key={cube.id} className="border-b border-border last:border-0 hover:bg-card-hover transition-colors">
-                          <td className="px-4 py-3 font-medium align-top">{cube.name}</td>
-                          {renderVoteCell(cube.id, vb.desired, "desired")}
-                          {renderVoteCell(cube.id, vb.neutral, "neutral")}
-                          {renderVoteCell(cube.id, vb.avoid, "avoid")}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </Card>
-            </section>
+            <details key="stimmen-pro-cube" className="group">
+              <summary className="flex items-center gap-2 cursor-pointer list-none py-2 select-none [&::-webkit-details-marker]:hidden">
+                <svg className="w-4 h-4 text-muted transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                <h2 className="text-lg font-semibold">Stimmen pro Cube</h2>
+              </summary>
+              <div className="space-y-4 mt-4">
+                <Card className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-card">
+                        <th className="text-left px-4 py-3 font-medium text-muted">Cube</th>
+                        <th className="text-left px-4 py-3 font-medium text-success">👍 Gewünscht</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted">➖ Neutral</th>
+                        <th className="text-left px-4 py-3 font-medium text-danger">👎 Vermeiden</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tournament.cubes.map((cube) => {
+                        const vb = votesByCube[cube.id] ?? { desired: [], neutral: [], avoid: [] };
+                        return (
+                          <tr key={cube.id} className="border-b border-border last:border-0 hover:bg-card-hover transition-colors">
+                            <td className="px-4 py-3 font-medium align-top">{cube.name}</td>
+                            {renderVoteCell(cube.id, vb.desired, "desired")}
+                            {renderVoteCell(cube.id, vb.neutral, "neutral")}
+                            {renderVoteCell(cube.id, vb.avoid, "avoid")}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </Card>
+              </div>
+            </details>
           );
         })()}
 
         {/* ===== DRAFTS (nur im Drafting-/Finished-Status sichtbar) ===== */}
         {(isDrafting || isFinished) && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Drafts</h2>
+          <details className="group" open>
+            <summary className="flex items-center justify-between cursor-pointer list-none py-2 select-none [&::-webkit-details-marker]:hidden">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-muted transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                <h2 className="text-lg font-semibold">Drafts</h2>
+                <span className="text-sm text-muted">({drafts.length})</span>
+              </div>
               {isDrafting && (
-                <Button onClick={handleGenerateDraft} loading={generatingDraft}>
+                <Button onClick={(e) => { e.preventDefault(); handleGenerateDraft(); }} loading={generatingDraft}>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Nächsten Draft generieren
                 </Button>
               )}
-            </div>
+            </summary>
+            <div className="space-y-4 mt-4">
 
-            {drafts.length === 0 ? (
-              <Card className="text-center py-8 text-muted">Noch keine Drafts generiert.</Card>
-            ) : (
-              <div className="space-y-6">
-                {drafts.map((draft) => {
-                  const draftPlayerIds = new Set(draft.pods.flatMap((p) => p.players.map((pp) => pp.tournamentPlayer.id)));
-                  const expectedPhotos = draftPlayerIds.size * 3;
-                  const actualPhotos = draft.photos?.length ?? 0;
-                  const photosComplete = expectedPhotos > 0 && actualPhotos >= expectedPhotos;
+              {drafts.length === 0 ? (
+                <Card className="text-center py-8 text-muted">Noch keine Drafts generiert.</Card>
+              ) : (
+                <div className="space-y-6">
+                  {drafts.map((draft) => {
+                    const draftPlayerIds = new Set(draft.pods.flatMap((p) => p.players.map((pp) => pp.tournamentPlayer.id)));
+                    const expectedPhotos = draftPlayerIds.size * 3;
+                    const actualPhotos = draft.photos?.length ?? 0;
+                    const photosComplete = expectedPhotos > 0 && actualPhotos >= expectedPhotos;
 
-                  return (
-                  <Card key={draft.id} className="space-y-4">
-                    {/* Draft-Kopfzeile inkl. Foto-Indikator */}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-semibold">Draft #{draft.roundNumber}</h3>
-                        <span
-                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                            photosComplete
-                              ? "bg-success/20 text-success"
-                              : expectedPhotos === 0
-                                ? "bg-muted/40 text-muted"
-                                : "bg-warning/20 text-warning"
-                          }`}
-                          title={expectedPhotos === 0 ? "Keine Spieler im Draft" : photosComplete ? "Alle Fotos hochgeladen" : `Fotos: ${actualPhotos}/${expectedPhotos}`}
-                        >
-                          {expectedPhotos === 0 ? (
-                            "—"
-                          ) : photosComplete ? (
-                            <>
-                              <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                              Alle Fotos
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm3 2h6v4H7V5zm8 4v2h1v-2h-1zm-2-2v2h1V7h-1zm2 8v-2h-1v2h1zm-1-2v-2h-1v2h1zm-6 2v-2H7v2h1zm-2-2v-2H5v2h1z" clipRule="evenodd" />
-                              </svg>
-                              Fotos {actualPhotos}/{expectedPhotos}
-                            </>
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isDrafting && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleGeneratePairings(draft.id)}
-                            loading={generatingPairings === draft.id}
-                          >
-                            Paarungen generieren
-                          </Button>
-                        )}
-                        {draft.pods.some((p) => p.matches.some((m) => !m.reported)) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleFillRoundRandomly(draft.id)}
-                            loading={fillingRandomDraftId === draft.id}
-                            title="Nur die nächste Runde mit ungemeldeten Matches zufällig füllen"
-                          >
-                            Ergebnisse zufällig (diese Runde)
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveDraft(draft.id, draft.roundNumber)}
-                          loading={deletingDraftId === draft.id}
-                          className="text-muted hover:text-danger"
-                          title="Draft entfernen und Runde neu ausführen können"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Draft entfernen
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Pods */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {draft.pods.map((pod) => {
-                        const podPlayerIds = new Set(pod.players.map((pp) => pp.tournamentPlayer.id));
-                        const podPhotos = (draft.photos ?? []).filter((ph) => podPlayerIds.has(ph.tournamentPlayer.id));
-
-                        return (
-                        <div key={pod.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="accent">Pod {pod.podNumber}</Badge>
-                            <span className="text-sm text-muted">{pod.cube.name}</span>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            {pod.players.map((pp) => {
-                              const tpId = pp.tournamentPlayer.id;
-                              const hasPool = podPhotos.some((ph) => ph.tournamentPlayer.id === tpId && ph.type === "POOL");
-                              const hasDeck = podPhotos.some((ph) => ph.tournamentPlayer.id === tpId && ph.type === "DECK");
-                              const hasReturn = podPhotos.some((ph) => ph.tournamentPlayer.id === tpId && ph.type === "RETURNED");
-                              const voteForCube = tournament?.players?.find((p) => p.id === tpId)?.votes?.find((v) => v.cubeId === pod.cube.id)?.vote ?? "NEUTRAL";
-                              const voteEmoji = voteForCube === "DESIRED" ? "👍" : voteForCube === "AVOID" ? "👎" : "➖";
-                              return (
-                                <button
-                                  key={tpId}
-                                  type="button"
-                                  onClick={() => setPhotoModal({ draftId: draft.id, tournamentPlayerId: tpId, playerName: pp.tournamentPlayer.player.name })}
-                                  className="flex items-center justify-between gap-2 text-left text-xs px-2 py-1.5 rounded bg-card border border-border hover:border-accent/50 hover:ring-1 hover:ring-accent/30 focus:outline-none focus:ring-2 focus:ring-accent"
+                    return (
+                      <details key={draft.id} className="group/draft" open>
+                        <summary className="list-none cursor-pointer select-none [&::-webkit-details-marker]:hidden">
+                          <Card className="space-y-0">
+                            {/* Draft-Kopfzeile inkl. Foto-Indikator */}
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                <svg className="w-4 h-4 text-muted transition-transform group-open/draft:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                <h3 className="font-semibold">Draft #{draft.roundNumber}</h3>
+                                <span
+                                  className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${photosComplete
+                                    ? "bg-success/20 text-success"
+                                    : expectedPhotos === 0
+                                      ? "bg-muted/40 text-muted"
+                                      : "bg-warning/20 text-warning"
+                                    }`}
+                                  title={expectedPhotos === 0 ? "Keine Spieler im Draft" : photosComplete ? "Alle Fotos hochgeladen" : `Fotos: ${actualPhotos}/${expectedPhotos}`}
                                 >
-                                  <span className="font-medium truncate flex items-center gap-1">
-                                    {pp.tournamentPlayer.player.name}
-                                    <span className="text-muted font-normal">({playerStandingsMap[tpId]?.matchPoints ?? 0} Pkt)</span>
-                                    <span title={voteForCube === "DESIRED" ? "Gewünscht" : voteForCube === "AVOID" ? "Vermeiden" : "Neutral"}>{voteEmoji}</span>
-                                  </span>
-                                  <span className="flex items-center gap-1 shrink-0 text-muted" title="Pool · Deck · Rückgabe">
-                                    <span className={hasPool ? "text-success" : "text-muted/60"} title="Pool">{hasPool ? "✓" : "—"}</span>
-                                    <span className={hasDeck ? "text-success" : "text-muted/60"} title="Deck">{hasDeck ? "✓" : "—"}</span>
-                                    <span className={hasReturn ? "text-success" : "text-muted/60"} title="Rückgabe">{hasReturn ? "✓" : "—"}</span>
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Matches in diesem Pod */}
-                          {pod.matches.length > 0 && (
-                            <div className="mt-3 space-y-2 border-t border-border pt-3">
-                              <p className="text-xs font-medium text-muted uppercase tracking-wide">Matches</p>
-                              {pod.matches.map((match) => {
-                                const p1Name = playerNameMap[match.player1Id] ?? "?";
-                                const p2Name = match.player2Id ? (playerNameMap[match.player2Id] ?? "?") : null;
-                                const input = matchInputs[match.id] ?? { p1: match.player1Wins, p2: match.player2Wins };
-
-                                const p1Pts = playerStandingsMap[match.player1Id]?.matchPoints;
-                                const p2Pts = match.player2Id ? playerStandingsMap[match.player2Id]?.matchPoints : undefined;
-                                if (match.isBye) {
-                                  return (
-                                    <div key={match.id} className="flex items-center gap-2 text-sm text-muted">
-                                      <span>{p1Name}{p1Pts != null ? ` (${p1Pts} Pkt)` : ""}</span>
-                                      <Badge variant="default">Bye</Badge>
-                                    </div>
-                                  );
-                                }
-
-                                return (
-                                  <div key={match.id} className="flex flex-wrap items-center gap-2 text-sm">
-                                    {/* Runden-Nummer */}
-                                    <span className="text-xs text-muted w-8 shrink-0">R{match.swissRound}</span>
-
-                                    {/* Spieler 1 */}
-                                    <span className="font-medium min-w-[80px]">{p1Name}{p1Pts != null ? ` (${p1Pts})` : ""}</span>
-
-                                    {/* Eingabe Spieler 1 Siege */}
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      max={2}
-                                      className="w-12 rounded border border-border bg-card px-2 py-1 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-                                      value={input.p1 ?? match.player1Wins}
-                                      onChange={(e) => updateMatchInput(match.id, "p1", parseInt(e.target.value, 10) || 0)}
-                                    />
-                                    <span className="text-muted">:</span>
-                                    {/* Eingabe Spieler 2 Siege */}
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      max={2}
-                                      className="w-12 rounded border border-border bg-card px-2 py-1 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-                                      value={input.p2 ?? match.player2Wins}
-                                      onChange={(e) => updateMatchInput(match.id, "p2", parseInt(e.target.value, 10) || 0)}
-                                    />
-
-                                    {/* Spieler 2 */}
-                                    <span className="font-medium min-w-[80px]">{p2Name}{p2Pts != null ? ` (${p2Pts})` : ""}</span>
-
-                                    {/* Status / Aktion */}
-                                    {match.reported ? (
-                                      <Badge variant="success">Gemeldet</Badge>
-                                    ) : null}
-                                    <Button
-                                      variant={match.reported ? "ghost" : "primary"}
-                                      size="sm"
-                                      onClick={() => handleReportResult(draft.id, match.id, match)}
-                                      loading={reportingMatch === match.id}
-                                    >
-                                      {match.reported ? "Aktualisieren" : "Melden"}
-                                    </Button>
-                                  </div>
-                                );
-                              })}
+                                  {expectedPhotos === 0 ? (
+                                    "—"
+                                  ) : photosComplete ? (
+                                    <>
+                                      <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                      </svg>
+                                      Alle Fotos
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm3 2h6v4H7V5zm8 4v2h1v-2h-1zm-2-2v2h1V7h-1zm2 8v-2h-1v2h1zm-1-2v-2h-1v2h1zm-6 2v-2H7v2h1zm-2-2v-2H5v2h1z" clipRule="evenodd" />
+                                      </svg>
+                                      Fotos {actualPhotos}/{expectedPhotos}
+                                    </>
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                {isDrafting && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleGeneratePairings(draft.id)}
+                                    loading={generatingPairings === draft.id}
+                                  >
+                                    Paarungen generieren
+                                  </Button>
+                                )}
+                                {draft.pods.some((p) => p.matches.some((m) => !m.reported)) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleFillRoundRandomly(draft.id)}
+                                    loading={fillingRandomDraftId === draft.id}
+                                    title="Nur die nächste Runde mit ungemeldeten Matches zufällig füllen"
+                                  >
+                                    Ergebnisse zufällig (diese Runde)
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveDraft(draft.id, draft.roundNumber)}
+                                  loading={deletingDraftId === draft.id}
+                                  className="text-muted hover:text-danger"
+                                  title="Draft entfernen und Runde neu ausführen können"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                  Draft entfernen
+                                </Button>
+                              </div>
                             </div>
-                          )}
+                          </Card>
+                        </summary>
+
+                        {/* Pods */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                          {draft.pods.map((pod) => {
+                            const podPlayerIds = new Set(pod.players.map((pp) => pp.tournamentPlayer.id));
+                            const podPhotos = (draft.photos ?? []).filter((ph) => podPlayerIds.has(ph.tournamentPlayer.id));
+
+                            return (
+                              <div key={pod.id} className="rounded-lg border border-border bg-background p-3 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="accent">Pod {pod.podNumber}</Badge>
+                                  <span className="text-sm text-muted">{pod.cube.name}</span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  {pod.players.map((pp) => {
+                                    const tpId = pp.tournamentPlayer.id;
+                                    const hasPool = podPhotos.some((ph) => ph.tournamentPlayer.id === tpId && ph.type === "POOL");
+                                    const hasDeck = podPhotos.some((ph) => ph.tournamentPlayer.id === tpId && ph.type === "DECK");
+                                    const hasReturn = podPhotos.some((ph) => ph.tournamentPlayer.id === tpId && ph.type === "RETURNED");
+                                    const voteForCube = tournament?.players?.find((p) => p.id === tpId)?.votes?.find((v) => v.cubeId === pod.cube.id)?.vote ?? "NEUTRAL";
+                                    const voteEmoji = voteForCube === "DESIRED" ? "👍" : voteForCube === "AVOID" ? "👎" : "➖";
+                                    return (
+                                      <button
+                                        key={tpId}
+                                        type="button"
+                                        onClick={() => setPhotoModal({ draftId: draft.id, tournamentPlayerId: tpId, playerName: pp.tournamentPlayer.player.name })}
+                                        className="flex items-center justify-between gap-2 text-left text-xs px-2 py-1.5 rounded bg-card border border-border hover:border-accent/50 hover:ring-1 hover:ring-accent/30 focus:outline-none focus:ring-2 focus:ring-accent"
+                                      >
+                                        <span className="font-medium truncate flex items-center gap-1">
+                                          {pp.tournamentPlayer.player.name}
+                                          <span className="text-muted font-normal">({playerStandingsMap[tpId]?.matchPoints ?? 0} Pkt)</span>
+                                          <span title={voteForCube === "DESIRED" ? "Gewünscht" : voteForCube === "AVOID" ? "Vermeiden" : "Neutral"}>{voteEmoji}</span>
+                                        </span>
+                                        <span className="flex items-center gap-1 shrink-0 text-muted" title="Pool · Deck · Rückgabe">
+                                          <span className={hasPool ? "text-success" : "text-muted/60"} title="Pool">{hasPool ? "✓" : "—"}</span>
+                                          <span className={hasDeck ? "text-success" : "text-muted/60"} title="Deck">{hasDeck ? "✓" : "—"}</span>
+                                          <span className={hasReturn ? "text-success" : "text-muted/60"} title="Rückgabe">{hasReturn ? "✓" : "—"}</span>
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Matches in diesem Pod — grouped by Swiss round */}
+                                {pod.matches.length > 0 && (() => {
+                                  const roundNumbers = [...new Set(pod.matches.map((m) => m.swissRound))].sort((a, b) => a - b);
+                                  return roundNumbers.map((roundNum) => {
+                                    const roundMatches = pod.matches.filter((m) => m.swissRound === roundNum);
+                                    const allReported = roundMatches.every((m) => m.reported);
+                                    return (
+                                      <details key={roundNum} className="group/round mt-3 border-t border-border pt-3">
+                                        <summary className="flex items-center gap-2 cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden text-xs">
+                                          <svg className="w-3 h-3 text-muted transition-transform group-open/round:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                          <span className="font-medium text-muted uppercase tracking-wide">Runde {roundNum}</span>
+                                          {allReported && <Badge variant="success">✓</Badge>}
+                                        </summary>
+                                        <div className="space-y-2 mt-2">
+                                          {roundMatches.map((match) => {
+                                            const p1Name = playerNameMap[match.player1Id] ?? "?";
+                                            const p2Name = match.player2Id ? (playerNameMap[match.player2Id] ?? "?") : null;
+                                            const input = matchInputs[match.id] ?? { p1: match.player1Wins, p2: match.player2Wins };
+
+                                            const p1Pts = playerStandingsMap[match.player1Id]?.matchPoints;
+                                            const p2Pts = match.player2Id ? playerStandingsMap[match.player2Id]?.matchPoints : undefined;
+                                            if (match.isBye) {
+                                              return (
+                                                <div key={match.id} className="flex items-center gap-2 text-sm text-muted">
+                                                  <span>{p1Name}{p1Pts != null ? ` (${p1Pts} Pkt)` : ""}</span>
+                                                  <Badge variant="default">Bye</Badge>
+                                                </div>
+                                              );
+                                            }
+
+                                            return (
+                                              <div key={match.id} className="flex flex-wrap items-center gap-2 text-sm">
+                                                {/* Runden-Nummer */}
+                                                <span className="text-xs text-muted w-8 shrink-0">R{match.swissRound}</span>
+
+                                                {/* Spieler 1 */}
+                                                <span className="font-medium min-w-[80px]">{p1Name}{p1Pts != null ? ` (${p1Pts})` : ""}</span>
+
+                                                {/* Eingabe Spieler 1 Siege */}
+                                                <input
+                                                  type="number"
+                                                  min={0}
+                                                  max={2}
+                                                  className="w-12 rounded border border-border bg-card px-2 py-1 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                                                  value={input.p1 ?? match.player1Wins}
+                                                  onChange={(e) => updateMatchInput(match.id, "p1", parseInt(e.target.value, 10) || 0)}
+                                                />
+                                                <span className="text-muted">:</span>
+                                                {/* Eingabe Spieler 2 Siege */}
+                                                <input
+                                                  type="number"
+                                                  min={0}
+                                                  max={2}
+                                                  className="w-12 rounded border border-border bg-card px-2 py-1 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                                                  value={input.p2 ?? match.player2Wins}
+                                                  onChange={(e) => updateMatchInput(match.id, "p2", parseInt(e.target.value, 10) || 0)}
+                                                />
+
+                                                {/* Spieler 2 */}
+                                                <span className="font-medium min-w-[80px]">{p2Name}{p2Pts != null ? ` (${p2Pts})` : ""}</span>
+
+                                                {/* Status / Aktion */}
+                                                {match.reported ? (
+                                                  <Badge variant="success">Gemeldet</Badge>
+                                                ) : null}
+                                                <Button
+                                                  variant={match.reported ? "ghost" : "primary"}
+                                                  size="sm"
+                                                  onClick={() => handleReportResult(draft.id, match.id, match)}
+                                                  loading={reportingMatch === match.id}
+                                                >
+                                                  {match.reported ? "Aktualisieren" : "Melden"}
+                                                </Button>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </details>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                            );
+                          })}
                         </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+                      </details>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </details>
         )}
 
         {/* ===== STANDINGS ===== */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Standings</h2>
-            <Button variant="ghost" size="sm" onClick={fetchStandings}>
+        <details className="group">
+          <summary className="flex items-center justify-between cursor-pointer list-none py-2 select-none [&::-webkit-details-marker]:hidden">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-muted transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <h2 className="text-lg font-semibold">Standings</h2>
+              {standings.length > 0 && <span className="text-sm text-muted">({standings.length})</span>}
+            </div>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); fetchStandings(); }}>
               Aktualisieren
             </Button>
-          </div>
+          </summary>
+          <div className="space-y-4 mt-4">
 
-          {standings.length === 0 ? (
-            <Card className="text-center py-8 text-muted">Noch keine Ergebnisse vorhanden.</Card>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-card">
-                    <th className="text-center px-3 py-3 font-medium text-muted">#</th>
-                    <th className="text-left px-3 py-3 font-medium text-muted">Spieler</th>
-                    <th className="text-center px-3 py-3 font-medium text-muted">Punkte</th>
-                    <th className="text-center px-3 py-3 font-medium text-muted">Bilanz</th>
-                    <th className="text-center px-3 py-3 font-medium text-muted">OMW%</th>
-                    <th className="text-center px-3 py-3 font-medium text-muted">GW%</th>
-                    <th className="text-center px-3 py-3 font-medium text-muted">OGW%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {standings.map((s) => (
-                    <tr key={s.tournamentPlayerId} className="border-b border-border last:border-0 hover:bg-card-hover transition-colors">
-                      <td className="px-3 py-3 text-center font-mono text-muted">{s.rank}</td>
-                      <td className="px-3 py-3 font-medium">
-                        {s.playerName}
-                        {s.dropped && <span className="text-danger text-xs ml-2">(dropped)</span>}
-                      </td>
-                      <td className="px-3 py-3 text-center font-mono font-semibold">{s.matchPoints}</td>
-                      <td className="px-3 py-3 text-center text-muted">
-                        {s.matchWins}-{s.matchLosses}-{s.matchDraws}
-                      </td>
-                      <td className="px-3 py-3 text-center font-mono">{s.omwPercent.toFixed(2)}%</td>
-                      <td className="px-3 py-3 text-center font-mono">{s.gwPercent.toFixed(2)}%</td>
-                      <td className="px-3 py-3 text-center font-mono">{s.ogwPercent.toFixed(2)}%</td>
+            {standings.length === 0 ? (
+              <Card className="text-center py-8 text-muted">Noch keine Ergebnisse vorhanden.</Card>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-card">
+                      <th className="text-center px-3 py-3 font-medium text-muted">#</th>
+                      <th className="text-left px-3 py-3 font-medium text-muted">Spieler</th>
+                      <th className="text-center px-3 py-3 font-medium text-muted">Punkte</th>
+                      <th className="text-center px-3 py-3 font-medium text-muted">Bilanz</th>
+                      <th className="text-center px-3 py-3 font-medium text-muted">OMW%</th>
+                      <th className="text-center px-3 py-3 font-medium text-muted">GW%</th>
+                      <th className="text-center px-3 py-3 font-medium text-muted">OGW%</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+                  </thead>
+                  <tbody>
+                    {standings.map((s) => (
+                      <tr key={s.tournamentPlayerId} className="border-b border-border last:border-0 hover:bg-card-hover transition-colors">
+                        <td className="px-3 py-3 text-center font-mono text-muted">{s.rank}</td>
+                        <td className="px-3 py-3 font-medium">
+                          {s.playerName}
+                          {s.dropped && <span className="text-danger text-xs ml-2">(dropped)</span>}
+                        </td>
+                        <td className="px-3 py-3 text-center font-mono font-semibold">{s.matchPoints}</td>
+                        <td className="px-3 py-3 text-center text-muted">
+                          {s.matchWins}-{s.matchLosses}-{s.matchDraws}
+                        </td>
+                        <td className="px-3 py-3 text-center font-mono">{s.omwPercent.toFixed(2)}%</td>
+                        <td className="px-3 py-3 text-center font-mono">{s.gwPercent.toFixed(2)}%</td>
+                        <td className="px-3 py-3 text-center font-mono">{s.ogwPercent.toFixed(2)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </details>
 
         {/* ===== SIMULATION ===== */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Simulation</h2>
-          <Card>
-            <form onSubmit={handleRunSimulation} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Input
-                  id="sim-players"
-                  label="Spieleranzahl"
-                  type="number"
-                  min={2}
-                  max={1000}
-                  value={simPlayerCount}
-                  onChange={(e) => setSimPlayerCount(e.target.value)}
-                />
-                <Input
-                  id="sim-cubes"
-                  label="Cube-Anzahl"
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={simCubeCount}
-                  onChange={(e) => setSimCubeCount(e.target.value)}
-                />
-                <Input
-                  id="sim-seed"
-                  label="Seed (optional)"
-                  type="number"
-                  placeholder="Zufällig"
-                  value={simSeed}
-                  onChange={(e) => setSimSeed(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center gap-4">
-                <Button type="submit" loading={simRunning}>
-                  Simulation starten
-                </Button>
-                {simError && <p className="text-sm text-danger">{simError}</p>}
-              </div>
-            </form>
-          </Card>
+        <details className="group">
+          <summary className="flex items-center gap-2 cursor-pointer list-none py-2 select-none [&::-webkit-details-marker]:hidden">
+            <svg className="w-4 h-4 text-muted transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            <h2 className="text-lg font-semibold">Simulation</h2>
+          </summary>
+          <div className="space-y-4 mt-4">
+            <Card>
+              <form onSubmit={handleRunSimulation} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Input
+                    id="sim-players"
+                    label="Spieleranzahl"
+                    type="number"
+                    min={2}
+                    max={1000}
+                    value={simPlayerCount}
+                    onChange={(e) => setSimPlayerCount(e.target.value)}
+                  />
+                  <Input
+                    id="sim-cubes"
+                    label="Cube-Anzahl"
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={simCubeCount}
+                    onChange={(e) => setSimCubeCount(e.target.value)}
+                  />
+                  <Input
+                    id="sim-seed"
+                    label="Seed (optional)"
+                    type="number"
+                    placeholder="Zufällig"
+                    value={simSeed}
+                    onChange={(e) => setSimSeed(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <Button type="submit" loading={simRunning}>
+                    Simulation starten
+                  </Button>
+                  {simError && <p className="text-sm text-danger">{simError}</p>}
+                </div>
+              </form>
+            </Card>
 
-          {simResults && (
-            <SimulationResults
-              stats={simResults}
-              activeTab={simTab}
-              onTabChange={setSimTab}
-            />
-          )}
-        </section>
+            {simResults && (
+              <SimulationResults
+                stats={simResults}
+                activeTab={simTab}
+                onTabChange={setSimTab}
+              />
+            )}
+          </div>
+        </details>
       </div>
 
       {/* ===== MODAL: Cube hinzufügen ===== */}

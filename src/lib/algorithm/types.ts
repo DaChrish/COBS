@@ -9,6 +9,8 @@ export interface PlayerInput {
   votes: Record<string, Vote>; // cubeId -> vote
   /** Optional: used by BandB for snake draft and variance; falls back to matchPoints if absent. */
   skill?: number;
+  /** How many times this player was assigned an AVOID cube in previous rounds. */
+  priorAvoidCount?: number;
 }
 
 export interface CubeInput {

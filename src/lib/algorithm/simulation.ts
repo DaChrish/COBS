@@ -188,6 +188,12 @@ export async function runSimulation(
   const usedCubeIds: string[] = [];
 
   for (let draft = 0; draft < config.draftRounds; draft++) {
+    // Track how many prior AVOID cube assignments each player had
+    for (const p of players) {
+      p.priorAvoidCount = (playerAssignments[p.id] ?? [])
+        .filter((a) => a.originalVote === "AVOID").length;
+    }
+
     let result: { pods: { podNumber: number; podSize: number; cubeId: string; playerIds: string[] }[]; warnings: string[] };
     const roundResult = await runOptimizedRound(players, cubes, {
       roundNumber: draft + 1,

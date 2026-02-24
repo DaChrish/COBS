@@ -21,6 +21,7 @@ class Player(BaseModel):
     matchPoints: int            # Current standing points. Players with similar points should be grouped together.
     votes: Dict[str, str]       # Map of cubeId -> vote ("DESIRED", "NEUTRAL", "AVOID")
     dropped: bool = False       # If True, the player is not participating in this round
+    priorAvoidCount: int = 0    # How many times this player was assigned an AVOID cube in previous rounds
 
 
 class Cube(BaseModel):
@@ -41,6 +42,8 @@ class OptimizeRequest(BaseModel):
     scoreAvoid: int = -190
     scoreNeutral: int = 0
     matchPointPenaltyWeight: int = 10000
+    lowerStandingBonus: float = 0.3  # Multiplier bonus for lower-standing players' DESIRED votes (0 = disabled)
+    repeatAvoidMultiplier: float = 4.0  # AVOID penalty multiplier per prior AVOID assignment (e.g. 4 = 4x after 1st, 16x after 2nd)
 
 
 # -----------------------------------------------------------------------------
@@ -135,8 +138,20 @@ def optimize(req: OptimizeRequest):
 
     # 1. Player Preferences (WANT/AVOID/NEUTRAL)
     # We add or subtract points based on how a player voted for the cube their pod is playing.
+    #
+    # Lower-standing preference bonus: Players with fewer match points get a small
+    # multiplier (up to 1.3x) on their DESIRED score. This subtly favors fulfilling
+    # cube wishes for weaker players when the solver has multiple equally good options.
+    # Only applied to DESIRED — AVOID penalties stay equal for all players.
+    sorted_mps = sorted(set(p.matchPoints for p in active_players))
+    mp_to_rank = {mp: i for i, mp in enumerate(sorted_mps)}
+    max_rank = max(len(sorted_mps) - 1, 1)
+
     for p in range(P):
         player = active_players[p]
+        rank = mp_to_rank[player.matchPoints]  # 0 = weakest, max_rank = strongest
+        preference_multiplier = 1.0 + req.lowerStandingBonus * (1.0 - rank / max_rank)
+
         for k in range(K):
             for c in range(C):
                 cube_id = req.cubes[c].id
@@ -144,9 +159,13 @@ def optimize(req: OptimizeRequest):
 
                 score = req.scoreNeutral
                 if vote == "DESIRED":
-                    score = req.scoreWant
+                    # Apply the lower-standing bonus only to DESIRED votes
+                    score = int(req.scoreWant * preference_multiplier)
                 elif vote == "AVOID":
-                    score = req.scoreAvoid
+                    # Escalate AVOID penalty for players who already played AVOID cubes
+                    # in previous rounds: score = scoreAvoid * multiplier^priorAvoidCount
+                    avoid_multiplier = req.repeatAvoidMultiplier ** player.priorAvoidCount
+                    score = int(req.scoreAvoid * avoid_multiplier)
 
                 if score != 0:
                     # z[p,k,c] is 1 if player p plays cube c. We multiply it by their configured score.
@@ -192,6 +211,31 @@ def optimize(req: OptimizeRequest):
         # Penalize the spread (max_mp - min_mp) heavily.
         # Since we are Maximizing the objective, we add a negative penalty: weight * (min - max).
         objective_terms.append(req.matchPointPenaltyWeight * (min_mp[k] - max_mp[k]))
+
+    # 4. Non-Standard Pod Constraint (Low-Standing Players in Non-8 Pods)
+    # The ideal pod size is 8 players. Players with higher standings (more match points)
+    # deserve the best experience, which is a pod of exactly 8.
+    # Players with the lowest standings should be placed in pods that differ from 8.
+    # 
+    # Implementation: For every player A assigned to a non-8 pod and every player B
+    # assigned to a pod of 8, enforce that matchPoints(A) <= matchPoints(B).
+    # When MPs are tied, the solver is free to use cube preferences as the tiebreaker.
+    standard_pods = [k for k in range(K) if req.podSizes[k] == 8]
+    nonstandard_pods = [k for k in range(K) if req.podSizes[k] != 8]
+
+    if standard_pods and nonstandard_pods:
+        for p_a in range(P):
+            for p_b in range(P):
+                if active_players[p_a].matchPoints > active_players[p_b].matchPoints:
+                    # Player A has MORE match points than player B.
+                    # A must NOT be in a non-standard pod while B is in a standard pod.
+                    for k_ns in nonstandard_pods:
+                        for k_s in standard_pods:
+                            # Forbid: x[p_a, k_ns] == 1 AND x[p_b, k_s] == 1
+                            model.AddBoolOr([
+                                x[p_a, k_ns].Not(),
+                                x[p_b, k_s].Not()
+                            ])
 
     # Set the solver to maximize the sum of all accumulated objective terms
     model.Maximize(sum(objective_terms))

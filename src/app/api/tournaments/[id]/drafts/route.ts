@@ -6,7 +6,9 @@ import {
   setScoreAvoid,
   setScoreNeutral,
   setMatchPointPenaltyWeight,
-  setEarlyRoundUnpopularBonus
+  setEarlyRoundUnpopularBonus,
+  setLowerStandingBonus,
+  setRepeatAvoidMultiplier,
 } from "@/lib/algorithm/tournamentOptimizer";
 import { calculatePointsFromResults } from "@/lib/algorithm/swiss";
 import type { PlayerInput, CubeInput } from "@/lib/algorithm/types";
@@ -81,6 +83,8 @@ export async function POST(
     if (typeof body.scoreNeutral === "number") setScoreNeutral(body.scoreNeutral);
     if (typeof body.matchPointPenaltyWeight === "number") setMatchPointPenaltyWeight(body.matchPointPenaltyWeight);
     if (typeof body.earlyRoundBonus === "number") setEarlyRoundUnpopularBonus(body.earlyRoundBonus);
+    if (typeof body.lowerStandingBonus === "number") setLowerStandingBonus(body.lowerStandingBonus);
+    if (typeof body.repeatAvoidMultiplier === "number") setRepeatAvoidMultiplier(body.repeatAvoidMultiplier);
 
     const tournament = await prisma.tournament.findUnique({
       where: { id },
@@ -94,7 +98,12 @@ export async function POST(
         cubes: true,
         drafts: {
           include: {
-            pods: { include: { matches: true } },
+            pods: {
+              include: {
+                matches: true,
+                players: { select: { tournamentPlayerId: true } },
+              },
+            },
           },
           orderBy: { roundNumber: "asc" },
         },
@@ -139,6 +148,22 @@ export async function POST(
     };
 
     // Spieler-Eingabe: matchPoints/gameWins/gameLosses aus Match-Ergebnissen (Single Source of Truth)
+    // Compute priorAvoidCount: how many times each player was assigned an AVOID cube in previous drafts
+    type DraftPodWithPlayers = { cubeId: string; players: Array<{ tournamentPlayerId: string }> };
+    const priorAvoidCounts = new Map<string, number>();
+    for (const draft of tournament.drafts as Array<{ pods: DraftPodWithPlayers[] }>) {
+      for (const pod of draft.pods) {
+        for (const pp of pod.players) {
+          const tp = (tournament.players as TournamentPlayerWithVotes[]).find((p) => p.id === pp.tournamentPlayerId);
+          if (!tp) continue;
+          const vote = tp.votes.find((v) => v.cubeId === pod.cubeId)?.vote;
+          if (vote === "AVOID") {
+            priorAvoidCounts.set(tp.id, (priorAvoidCounts.get(tp.id) ?? 0) + 1);
+          }
+        }
+      }
+    }
+
     const playerInputs: PlayerInput[] = (tournament.players as TournamentPlayerWithVotes[])
       .filter((tp) => !tp.dropped)
       .map((tp) => {
@@ -152,6 +177,7 @@ export async function POST(
           votes: Object.fromEntries(
             tp.votes.map((v) => [v.cubeId, v.vote])
           ) as Record<string, "DESIRED" | "NEUTRAL" | "AVOID">,
+          priorAvoidCount: priorAvoidCounts.get(tp.id) ?? 0,
         };
       });
 

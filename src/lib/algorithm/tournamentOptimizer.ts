@@ -13,6 +13,8 @@ let SCORE_WANT = 5.0;
 let SCORE_NEUTRAL = 0.0;
 let SCORE_AVOID = -200.0;
 let MATCH_POINT_PENALTY_WEIGHT = 10000;
+let LOWER_STANDING_BONUS = 0.3;
+let REPEAT_AVOID_MULTIPLIER = 4.0;
 
 /** Request body für den Python-Optimizer-Service (FastAPI). */
 type OptimizerServiceRequest = {
@@ -21,6 +23,7 @@ type OptimizerServiceRequest = {
     matchPoints: number;
     votes: Record<string, string>;
     dropped?: boolean;
+    priorAvoidCount?: number;
   }>;
   cubes: Array<{ id: string }>;
   podSizes: number[];
@@ -30,6 +33,8 @@ type OptimizerServiceRequest = {
   scoreAvoid: number;
   scoreNeutral: number;
   matchPointPenaltyWeight: number;
+  lowerStandingBonus: number;
+  repeatAvoidMultiplier: number;
 };
 
 /** Response des Python-Optimizer-Services. */
@@ -74,6 +79,7 @@ export async function runOptimizedRound(
       matchPoints: p.matchPoints,
       votes: p.votes as Record<string, string>,
       dropped: p.dropped,
+      priorAvoidCount: p.priorAvoidCount ?? 0,
     })),
     cubes: available.map((c) => ({ id: c.id })),
     podSizes: sizesToSend,
@@ -83,6 +89,8 @@ export async function runOptimizedRound(
     scoreAvoid: SCORE_AVOID,
     scoreNeutral: SCORE_NEUTRAL,
     matchPointPenaltyWeight: MATCH_POINT_PENALTY_WEIGHT,
+    lowerStandingBonus: LOWER_STANDING_BONUS,
+    repeatAvoidMultiplier: REPEAT_AVOID_MULTIPLIER,
   };
 
   const pingRes = await fetch(`${OPTIMIZER_URL}/health`, {
@@ -170,4 +178,12 @@ export function setScoreNeutral(value: number): void {
 
 export function setMatchPointPenaltyWeight(value: number): void {
   MATCH_POINT_PENALTY_WEIGHT = value;
+}
+
+export function setLowerStandingBonus(value: number): void {
+  LOWER_STANDING_BONUS = value;
+}
+
+export function setRepeatAvoidMultiplier(value: number): void {
+  REPEAT_AVOID_MULTIPLIER = value;
 }
