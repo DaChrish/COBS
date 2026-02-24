@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      DATABASE_URL: "postgresql://drafttool:drafttool@db:5432/drafttool?schema=public"
+      ADMIN_PASSWORD: "admin123"

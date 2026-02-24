@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cobs-db
+    environment:
+      POSTGRES_USER: drafttool
+      POSTGRES_PASSWORD: drafttool
+      POSTGRES_DB: drafttool
+    volumes:
+      - cobs-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drafttool -d drafttool"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  optimizer:
+    build:
+      context: optimizer
+      dockerfile: Dockerfile
+    image: cobs-optimizer
+    container_name: cobs-optimizer
+    ports:
+      - "8000:8001"
+    networks:
+      - cobs-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cobs-app
+    environment:
+      DATABASE_URL: "postgresql://drafttool:drafttool@db:5432/drafttool?schema=public"
+      OPTIMIZER_URL: "http://optimizer:8001"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      optimizer:
+        condition: service_started
+    networks:
+      - cobs-network
+
+networks:
+  cobs-network:
+    driver: bridge
+
+volumes:
+  cobs-db-data:

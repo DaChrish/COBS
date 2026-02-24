@@ -1,0 +1,97 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/Users/christoph/git/darft-tool[39m
+
+ [2m[90m↓[39m[22m src/lib/algorithm/__tests__/optimizedAssignmentBandB.test.ts [2m([22m[2m6 tests[22m[2m | [22m[33m6 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m src/lib/algorithm/__tests__/swiss.test.ts [2m([22m[2m9 tests[22m[2m | [22m[33m9 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m src/lib/algorithm/__tests__/brunswikian.test.ts [2m([22m[2m17 tests[22m[2m | [22m[33m17 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m src/lib/algorithm/__tests__/optimizedAssignment.test.ts [2m([22m[2m7 tests[22m[2m | [22m[33m7 skipped[39m[2m)[22m
+[90mstdout[2m | src/lib/algorithm/__tests__/tournamentOptimizer.test.ts
+[22m[39mTEST: B0 avoid count: [33m1[39m
+
+ [2m[90m↓[39m[22m src/lib/algorithm/__tests__/simulation.test.ts [2m([22m[2m5 tests[22m[2m | [22m[33m5 skipped[39m[2m)[22m
+[90mstdout[2m | src/lib/algorithm/__tests__/tournamentOptimizer.test.ts[2m > [22m[2m24 players / 10 cubes — Simple 3-round tournament with varied voting behavior[2m > [22m[2mround 1: uses EARLY_ROUND_UNPOPULAR_BONUS to forcibly assign the 'Unpop1' cube to tolerant Group A
+[22m[39mB&B EVAL: Cubes [ [32m'Pop1'[39m, [32m'Pop2'[39m, [32m'Pop3'[39m ] Score: [33m120[39m
+B&B EVAL: Cubes [ [32m'Pop1'[39m, [32m'Pop2'[39m, [32m'Unpop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop1'[39m, [32m'Pop3'[39m, [32m'Pop2'[39m ] Score: [33m120[39m
+B&B EVAL: Cubes [ [32m'Pop1'[39m, [32m'Pop3'[39m, [32m'Unpop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop1'[39m, [32m'Unpop1'[39m, [32m'Pop2'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop1'[39m, [32m'Unpop1'[39m, [32m'Pop3'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop2'[39m, [32m'Pop1'[39m, [32m'Pop3'[39m ] Score: [33m120[39m
+B&B EVAL: Cubes [ [32m'Pop2'[39m, [32m'Pop1'[39m, [32m'Unpop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop2'[39m, [32m'Pop3'[39m, [32m'Pop1'[39m ] Score: [33m120[39m
+B&B EVAL: Cubes [ [32m'Pop2'[39m, [32m'Pop3'[39m, [32m'Unpop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop2'[39m, [32m'Unpop1'[39m, [32m'Pop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop2'[39m, [32m'Unpop1'[39m, [32m'Pop3'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop3'[39m, [32m'Pop1'[39m, [32m'Pop2'[39m ] Score: [33m120[39m
+B&B EVAL: Cubes [ [32m'Pop3'[39m, [32m'Pop1'[39m, [32m'Unpop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop3'[39m, [32m'Pop2'[39m, [32m'Pop1'[39m ] Score: [33m120[39m
+B&B EVAL: Cubes [ [32m'Pop3'[39m, [32m'Pop2'[39m, [32m'Unpop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop3'[39m, [32m'Unpop1'[39m, [32m'Pop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Pop3'[39m, [32m'Unpop1'[39m, [32m'Pop2'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Unpop1'[39m, [32m'Pop1'[39m, [32m'Pop2'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Unpop1'[39m, [32m'Pop1'[39m, [32m'Pop3'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Unpop1'[39m, [32m'Pop2'[39m, [32m'Pop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Unpop1'[39m, [32m'Pop2'[39m, [32m'Pop3'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Unpop1'[39m, [32m'Pop3'[39m, [32m'Pop1'[39m ] Score: [33m128[39m
+B&B EVAL: Cubes [ [32m'Unpop1'[39m, [32m'Pop3'[39m, [32m'Pop2'[39m ] Score: [33m128[39m
+ACTUAL TOTAL SCORE IS: [33m80[39m
+[
+  {
+    cube: [32m'Pop1'[39m,
+    score: [
+      [32m'DESIRED'[39m, [32m'DESIRED'[39m,
+      [32m'DESIRED'[39m, [32m'DESIRED'[39m,
+      [32m'DESIRED'[39m, [32m'DESIRED'[39m,
+      [32m'DESIRED'[39m, [32m'DESIRED'[39m
+    ]
+  },
+  {
+    cube: [32m'Pop2'[39m,
+    score: [
+      [32m'DESIRED'[39m, [32m'DESIRED'[39m,
+      [32m'DESIRED'[39m, [32m'DESIRED'[39m,
+      [32m'DESIRED'[39m, [32m'DESIRED'[39m,
+      [32m'DESIRED'[39m, [32m'DESIRED'[39m
+    ]
+  },
+  {
+    cube: [32m'Unpop1'[39m,
+    score: [
+      [32m'NEUTRAL'[39m, [32m'NEUTRAL'[39m,
+      [32m'NEUTRAL'[39m, [32m'NEUTRAL'[39m,
+      [32m'NEUTRAL'[39m, [32m'NEUTRAL'[39m,
+      [32m'NEUTRAL'[39m, [32m'NEUTRAL'[39m
+    ]
+  }
+]
+
+ [31m❯[39m src/lib/algorithm/__tests__/tournamentOptimizer.test.ts [2m([22m[2m8 tests[22m[2m | [22m[31m1 failed[39m[2m | [22m[33m7 skipped[39m[2m)[22m[32m 10[2mms[22m[39m
+     [2m[90m↓[39m[22m assigns every active player to exactly one pod
+     [2m[90m↓[39m[22m returns RoundResult with roundNumber, totalScore, avoidCount, wantCount
+     [2m[90m↓[39m[22m includes playerMatchPoints on each pod assignment
+     [2m[90m↓[39m[22m respects usedCubeIds
+     [2m[90m↓[39m[22m ignores dropped players
+[31m     [31m×[31m round 1: uses EARLY_ROUND_UNPOPULAR_BONUS to forcibly assign the 'Unpop1' cube to tolerant Group A[39m[32m 9[2mms[22m[39m
+     [2m[90m↓[39m[22m round 2: bonus drops to 0, completely ignores unpopular cubes if popular ones are available
+     [2m[90m↓[39m[22m handles 3 full rounds properly without avoids and maintains correct groups
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/lib/algorithm/__tests__/tournamentOptimizer.test.ts[2m > [22m24 players / 10 cubes — Simple 3-round tournament with varied voting behavior[2m > [22mround 1: uses EARLY_ROUND_UNPOPULAR_BONUS to forcibly assign the 'Unpop1' cube to tolerant Group A
+[31m[1mAssertionError[22m: expected 80 to be close to 40, received difference is 40, but expected 0.000049999999999999996[39m
+[36m [2m❯[22m src/lib/algorithm/__tests__/tournamentOptimizer.test.ts:[2m200:31[22m[39m
+    [90m198| [39m    // totalScore returns only the preference. The bonus guides the *c…
+    [90m199| [39m    // Group A gets Unpop1 (Neutral=0) + B gets Pop1 (20) + C gets Pop…
+    [90m200| [39m    [34mexpect[39m(result[33m.[39mtotalScore)[33m.[39m[34mtoBeCloseTo[39m([34m40.0[39m[33m,[39m [34m4[39m)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m201| [39m    expect(result.avoidCount).toBe(0); // Everyone placed in non-avoid…
+    [90m202| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[33m5 skipped[39m[90m (6)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[33m51 skipped[39m[90m (52)[39m
+[2m   Start at [22m 20:32:03
+[2m   Duration [22m 252ms[2m (transform 538ms, setup 0ms, import 699ms, tests 10ms, environment 1ms)[22m
+

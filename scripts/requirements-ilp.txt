@@ -1,0 +1,2 @@
+# Optional: für ILP-Pod-Zuweisung (Python-Solver). Install: pip install -r scripts/requirements-ilp.txt
+highspy>=1.7.0

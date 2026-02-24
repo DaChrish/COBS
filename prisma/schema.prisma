@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TournamentStatus {
+  SETUP
+  VOTING
+  DRAFTING
+  FINISHED
+}
+
+enum VoteType {
+  DESIRED
+  NEUTRAL
+  AVOID
+}
+
+enum DraftStatus {
+  PENDING
+  ACTIVE
+  FINISHED
+}
+
+enum PhotoType {
+  POOL
+  DECK
+  RETURNED
+}
+
+model Player {
+  id           String              @id @default(uuid())
+  name         String              @unique
+  passwordHash String
+  createdAt    DateTime            @default(now())
+  tournaments  TournamentPlayer[]
+}
+
+model Tournament {
+  id        String           @id @default(uuid())
+  name      String
+  date      DateTime         @default(now())
+  status    TournamentStatus @default(SETUP)
+  adminCode String
+  joinCode  String           @unique
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  players   TournamentPlayer[]
+  cubes     TournamentCube[]
+  drafts    Draft[]
+}
+
+model TournamentCube {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String
+  description  String     @default("")
+  imageUrl     String?
+  createdAt    DateTime   @default(now())
+  votes        CubeVote[]
+  pods         Pod[]
+
+  @@unique([tournamentId, name])
+}
+
+model TournamentPlayer {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  playerId     String
+  player       Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  matchPoints  Int        @default(0)
+  gameWins     Int        @default(0)
+  gameLosses   Int        @default(0)
+  dropped      Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  votes        CubeVote[]
+  podPlayers   PodPlayer[]
+  matchesAsP1  Match[]    @relation("Player1")
+  matchesAsP2  Match[]    @relation("Player2")
+  photos       DraftPhoto[]
+
+  @@unique([tournamentId, playerId])
+}
+
+model CubeVote {
+  id                 String           @id @default(uuid())
+  tournamentPlayerId String
+  tournamentPlayer   TournamentPlayer @relation(fields: [tournamentPlayerId], references: [id], onDelete: Cascade)
+  cubeId             String
+  cube               TournamentCube   @relation(fields: [cubeId], references: [id], onDelete: Cascade)
+  vote               VoteType         @default(NEUTRAL)
+
+  @@unique([tournamentPlayerId, cubeId])
+}
+
+model Draft {
+  id           String      @id @default(uuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  roundNumber  Int
+  status       DraftStatus @default(PENDING)
+  createdAt    DateTime    @default(now())
+  pods         Pod[]
+  photos       DraftPhoto[]
+
+  @@unique([tournamentId, roundNumber])
+}
+
+model Pod {
+  id         String         @id @default(uuid())
+  draftId    String
+  draft      Draft          @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  cubeId     String
+  cube       TournamentCube @relation(fields: [cubeId], references: [id], onDelete: Cascade)
+  podNumber  Int
+  podSize    Int
+  players    PodPlayer[]
+  matches    Match[]
+}
+
+model PodPlayer {
+  id                 String           @id @default(uuid())
+  podId              String
+  pod                Pod              @relation(fields: [podId], references: [id], onDelete: Cascade)
+  tournamentPlayerId String
+  tournamentPlayer   TournamentPlayer @relation(fields: [tournamentPlayerId], references: [id], onDelete: Cascade)
+
+  @@unique([podId, tournamentPlayerId])
+}
+
+model Match {
+  id          String           @id @default(uuid())
+  podId       String
+  pod         Pod              @relation(fields: [podId], references: [id], onDelete: Cascade)
+  swissRound  Int
+  player1Id   String
+  player1     TournamentPlayer @relation("Player1", fields: [player1Id], references: [id], onDelete: Cascade)
+  player2Id   String?
+  player2     TournamentPlayer? @relation("Player2", fields: [player2Id], references: [id], onDelete: Cascade)
+  player1Wins Int              @default(0)
+  player2Wins Int              @default(0)
+  isBye       Boolean          @default(false)
+  reported    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+}
+
+model DraftPhoto {
+  id                 String           @id @default(uuid())
+  draftId            String
+  draft              Draft            @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  tournamentPlayerId String
+  tournamentPlayer   TournamentPlayer @relation(fields: [tournamentPlayerId], references: [id], onDelete: Cascade)
+  type               PhotoType
+  imageUrl           String
+  createdAt          DateTime         @default(now())
+
+  @@unique([draftId, tournamentPlayerId, type])
+}
