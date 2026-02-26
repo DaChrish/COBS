@@ -235,29 +235,40 @@ def optimize(req: OptimizeRequest):
         # Since we are Maximizing the objective, we add a negative penalty: weight * (min - max).
         objective_terms.append(req.matchPointPenaltyWeight * (min_mp[k] - max_mp[k]))
 
-    # 4. Non-Standard Pod Constraint (Low-Standing Players in Non-8 Pods)
-    # The ideal pod size is 8 players. Players with higher standings (more match points)
-    # deserve the best experience, which is a pod of exactly 8.
-    # Players with the lowest standings should be placed in pods that differ from 8.
-    # 
-    # Implementation: For every player A assigned to a non-8 pod and every player B
-    # assigned to a pod of 8, enforce that matchPoints(A) <= matchPoints(B).
+    # 4. Three-Tier Pod Constraint (Skill-based pod tier assignment)
+    # Pod tiers from worst to best experience:
+    #   Tier 1 (lowest): Odd-sized non-standard pods (someone must get a bye)
+    #   Tier 2 (middle): Even-sized non-standard pods (no bye, but not ideal 8)
+    #   Tier 3 (highest): Standard 8-player pods (ideal experience)
+    #
+    # Constraints ensure: MP(odd non-std player) <= MP(even non-std player) <= MP(std player)
     # When MPs are tied, the solver is free to use cube preferences as the tiebreaker.
     standard_pods = [k for k in range(K) if req.podSizes[k] == 8]
-    nonstandard_pods = [k for k in range(K) if req.podSizes[k] != 8]
+    even_nonstandard_pods = [k for k in range(K) if req.podSizes[k] != 8 and req.podSizes[k] % 2 == 0]
+    odd_nonstandard_pods = [k for k in range(K) if req.podSizes[k] != 8 and req.podSizes[k] % 2 == 1]
 
-    if standard_pods and nonstandard_pods:
+    # Build tier pairs: (lower_tier_pods, higher_tier_pods)
+    # A player with more MP must not be in a lower tier while a player with fewer MP is in a higher tier.
+    tier_pairs = []
+    if odd_nonstandard_pods and even_nonstandard_pods:
+        tier_pairs.append((odd_nonstandard_pods, even_nonstandard_pods))
+    if odd_nonstandard_pods and standard_pods:
+        tier_pairs.append((odd_nonstandard_pods, standard_pods))
+    if even_nonstandard_pods and standard_pods:
+        tier_pairs.append((even_nonstandard_pods, standard_pods))
+
+    for lower_tier, higher_tier in tier_pairs:
         for p_a in range(P):
             for p_b in range(P):
                 if active_players[p_a].matchPoints > active_players[p_b].matchPoints:
                     # Player A has MORE match points than player B.
-                    # A must NOT be in a non-standard pod while B is in a standard pod.
-                    for k_ns in nonstandard_pods:
-                        for k_s in standard_pods:
-                            # Forbid: x[p_a, k_ns] == 1 AND x[p_b, k_s] == 1
+                    # A must NOT be in a lower-tier pod while B is in a higher-tier pod.
+                    for k_low in lower_tier:
+                        for k_high in higher_tier:
+                            # Forbid: x[p_a, k_low] == 1 AND x[p_b, k_high] == 1
                             model.AddBoolOr([
-                                x[p_a, k_ns].Not(),
-                                x[p_b, k_s].Not()
+                                x[p_a, k_low].Not(),
+                                x[p_b, k_high].Not()
                             ])
 
     # Set the solver to maximize the sum of all accumulated objective terms
