@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from cobs.routes import auth, cubes, health
+from cobs.routes import auth, cubes, health, tournaments
 
 
 def create_app() -> FastAPI:
@@ -7,6 +7,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, tags=["health"])
     app.include_router(auth.router)
     app.include_router(cubes.router)
+    app.include_router(tournaments.router)
     return app
 
 
