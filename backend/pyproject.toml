@@ -13,6 +13,7 @@ dependencies = [
     "passlib[bcrypt]>=1.7",
     "python-multipart>=0.0.18",
     "bcrypt<5.0.0",
+    "ortools>=9.15.6755",
 ]
 
 [project.optional-dependencies]
