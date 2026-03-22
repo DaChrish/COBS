@@ -3,6 +3,7 @@ import { Container, Title, Text, Button, Card, Group, Badge, Stack, Center, Load
 import { IconHandFinger, IconCards, IconTrophy } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
+import { useWebSocket } from "../../hooks/useWebSocket";
 import type { TournamentDetail, Draft } from "../../api/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -14,7 +15,13 @@ export function HubPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: tournament, loading } = useApi<TournamentDetail>(`/tournaments/${id}`);
-  const { data: drafts } = useApi<Draft[]>(`/tournaments/${id}/drafts`);
+  const { data: drafts, refetch: refetchDrafts } = useApi<Draft[]>(`/tournaments/${id}/drafts`);
+
+  useWebSocket(id, (event) => {
+    if (["pairings_ready", "match_reported", "timer_update"].includes(event.event)) {
+      refetchDrafts();
+    }
+  });
 
   if (loading || !tournament) return <Center h="50vh"><Loader /></Center>;
 

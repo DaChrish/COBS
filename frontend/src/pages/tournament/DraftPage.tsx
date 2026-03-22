@@ -4,6 +4,7 @@ import { Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput }
 import { IconUpload } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
+import { useWebSocket } from "../../hooks/useWebSocket";
 import { apiFetch } from "../../api/client";
 import { Timer } from "../../components/Timer";
 import { MatchCard } from "../../components/MatchCard";
@@ -14,11 +15,18 @@ export function DraftPage() {
   const { id, round } = useParams<{ id: string; round: string }>();
   const { user } = useAuth();
   const { data: tournament } = useApi<TournamentDetail>(`/tournaments/${id}`);
-  const { data: drafts } = useApi<Draft[]>(`/tournaments/${id}/drafts`);
+  const { data: drafts, refetch: refetchDrafts } = useApi<Draft[]>(`/tournaments/${id}/drafts`);
   const draft = drafts?.find((d) => d.round_number === Number(round));
   const { data: matches, refetch: refetchMatches } = useApi<Match[]>(
     draft ? `/tournaments/${id}/drafts/${draft.id}/matches` : null
   );
+
+  useWebSocket(id, (event) => {
+    if (["pairings_ready", "match_reported", "timer_update"].includes(event.event)) {
+      refetchMatches();
+      refetchDrafts();
+    }
+  });
 
   const [reportMatch, setReportMatch] = useState<Match | null>(null);
   const [uploading, setUploading] = useState(false);
