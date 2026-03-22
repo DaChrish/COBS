@@ -98,6 +98,36 @@ async def create_tournament(
     )
 
 
+@router.get("/mine", response_model=list[TournamentResponse])
+async def my_tournaments(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List tournaments for the current player."""
+    result = await db.execute(
+        select(TournamentPlayer)
+        .where(TournamentPlayer.user_id == user.id)
+        .options(selectinload(TournamentPlayer.tournament))
+    )
+    tps = result.scalars().all()
+
+    responses = []
+    for tp in tps:
+        t = tp.tournament
+        player_count = await db.scalar(
+            select(func.count()).where(TournamentPlayer.tournament_id == t.id)
+        )
+        cube_count = await db.scalar(
+            select(func.count()).where(TournamentCube.tournament_id == t.id)
+        )
+        responses.append(TournamentResponse(
+            id=t.id, name=t.name, status=t.status, join_code=t.join_code,
+            max_rounds=t.max_rounds, player_count=player_count or 0,
+            cube_count=cube_count or 0,
+        ))
+    return responses
+
+
 @router.get("/{tournament_id}", response_model=TournamentDetailResponse)
 async def get_tournament(
     tournament_id: uuid.UUID,
