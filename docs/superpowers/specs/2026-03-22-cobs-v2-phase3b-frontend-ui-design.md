@@ -10,6 +10,10 @@ Mobile-first player UI with a separate desktop-optimized admin area. Built with 
 
 No persistent bottom tabs. Navigation via back-links and the hub.
 
+**Header:** Every page has a minimal header with: COBS logo (placeholder cube), color scheme toggle (dark/light), and user menu (username dropdown with Account, Logout). Logout clears the JWT from localStorage and redirects to `/login`.
+
+**Impersonation Banner:** When an admin is impersonating a player, a colored banner appears at the top of every page showing "Impersonating [username] — End" with a link to end impersonation (clears the impersonation token, returns admin token).
+
 ## Pages
 
 ### Player Pages (mobile-first)
@@ -42,7 +46,7 @@ The hub adapts based on tournament status:
 
 **VOTING:** Prominent "Jetzt abstimmen" button at top. Shows vote progress (X of Y cubes rated). Info cards below (player count, cubes, rounds).
 
-**DRAFTING:** Shows timer countdown prominently if active. Current pod + cube assignment. Match list with status (reported/pending/conflict). "Ergebnis melden" button for pending matches. Link to standings + photo upload.
+**DRAFTING:** Shows timer countdown prominently if active. Current pod + cube assignment. Match list with status (reported/pending/conflict). "Ergebnis melden" button for pending matches. Link to standings + photo upload. "Turnier verlassen" option (drop self) in a collapsible/danger section at the bottom.
 
 **FINISHED:** Final standings summary (top 3), link to full standings. Past draft overview.
 
@@ -62,6 +66,13 @@ Default to card view if no votes exist yet, list view if all cubes already voted
 
 **Dual-report flow:** Both players report independently. If results agree, match auto-finalizes. If conflict, both players see a "Conflict — waiting for admin" status. Admin resolves in admin UI.
 
+**Match states (player view):**
+- **Pending:** "Ergebnis melden" button shown
+- **I reported, waiting for opponent:** Shows my reported result grayed out + "Warte auf Gegner..." indicator
+- **Conflict:** Red badge "Konflikt — Admin wird benachrichtigt"
+- **Finalized:** Green checkmark with result (e.g. "2-1 ✓")
+- **Bye:** Auto-shown as "Bye — 3 Punkte" with no action needed
+
 ### Draft Detail Page (`/tournament/:id/draft/:round`)
 
 - Timer countdown at top (color changes: normal → orange at 5min → red when expired)
@@ -75,7 +86,7 @@ Full table: Rank, Player, Points, W-L-D, OMW%, GW%, OGW%. Current player's row h
 
 ### Admin Tournament Overview (`/admin`)
 
-Desktop table with columns: Name, Status (badge), Players, Cubes, Drafts, Join Code, Created. Sortable. "Create Tournament" button. "Create Test Tournament" button.
+Desktop table with columns: Name, Status (badge), Players, Cubes, Drafts, Join Code, Created. Sortable. "Create Tournament" button. "Create Test Tournament" button (modal with: name, num_players, num_cubes, seed fields — creates tournament in VOTING status and navigates to it).
 
 ### Admin Tournament Detail (`/admin/tournament/:id`)
 
