@@ -23,7 +23,7 @@ export function JoinPage() {
         method: "POST",
         body: JSON.stringify({ join_code: joinCode, username, password }),
       });
-      setToken(res.access_token);
+      await setToken(res.access_token);
       navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Join failed");

@@ -19,7 +19,7 @@ interface AuthContextType {
   token: string | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
-  setToken: (token: string) => void;
+  setToken: (token: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -32,9 +32,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [loading, setLoading] = useState(true);
 
-  const setToken = useCallback((t: string) => {
+  const setToken = useCallback(async (t: string) => {
     localStorage.setItem("token", t);
     setTokenState(t);
+    // Fetch user immediately so AuthGuard works on redirect
+    try {
+      const me = await apiFetch<AuthUser>("/auth/me");
+      setUser(me);
+    } catch { /* will be retried by fetchMe effect */ }
+    setLoading(false);
   }, []);
 
   const fetchMe = useCallback(async () => {
@@ -62,8 +68,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
-    setToken(res.access_token);
-  }, [setToken]);
+    localStorage.setItem("token", res.access_token);
+    setTokenState(res.access_token);
+    // Fetch user immediately so AuthGuard sees user on redirect
+    const me = await apiFetch<AuthUser>("/auth/me");
+    setUser(me);
+    setLoading(false);
+  }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem("token");

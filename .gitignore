@@ -47,3 +47,8 @@ next-env.d.ts
 .gemini/
 /skills/
 skills-lock.json
+
+__pycache__/
+*.pyc
+.superpowers/
+.cursor/
