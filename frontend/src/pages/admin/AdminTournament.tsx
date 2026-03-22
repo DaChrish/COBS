@@ -190,7 +190,7 @@ function PlayersTab({
     setError(null);
     try {
       await apiFetch(`/tournaments/${tournament.id}/players/${playerId}/drop`, {
-        method: "POST",
+        method: "PATCH",
       });
       onRefetch();
     } catch (e) {
@@ -662,7 +662,7 @@ function TimerTab({ tournamentId }: { tournamentId: string }) {
     try {
       await apiFetch(`/tournaments/${tournamentId}/pods/${pod.id}/timer`, {
         method: "POST",
-        body: JSON.stringify({ duration_seconds: minutes * 60 }),
+        body: JSON.stringify({ minutes }),
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
