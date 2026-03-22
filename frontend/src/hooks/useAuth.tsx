@@ -19,6 +19,7 @@ interface AuthContextType {
   token: string | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  setToken: (token: string) => void;
   loading: boolean;
 }
 
@@ -26,10 +27,15 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(
+  const [token, setTokenState] = useState<string | null>(
     () => localStorage.getItem("token")
   );
   const [loading, setLoading] = useState(true);
+
+  const setToken = useCallback((t: string) => {
+    localStorage.setItem("token", t);
+    setTokenState(t);
+  }, []);
 
   const fetchMe = useCallback(async () => {
     if (!token) {
@@ -41,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(me);
     } catch {
       localStorage.removeItem("token");
-      setToken(null);
+      setTokenState(null);
     } finally {
       setLoading(false);
     }
@@ -52,25 +58,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchMe]);
 
   const login = useCallback(async (username: string, password: string) => {
-    const res = await apiFetch<{ access_token: string; is_admin: boolean }>(
-      "/auth/login",
-      {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
-      }
-    );
-    localStorage.setItem("token", res.access_token);
+    const res = await apiFetch<{ access_token: string }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
     setToken(res.access_token);
-  }, []);
+  }, [setToken]);
 
   const logout = useCallback(() => {
     localStorage.removeItem("token");
-    setToken(null);
+    setTokenState(null);
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, setToken, loading }}>
       {children}
     </AuthContext.Provider>
   );
