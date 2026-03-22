@@ -54,7 +54,7 @@ export function AdminOverview() {
   const createTestTournament = async () => {
     setLoading(true);
     try {
-      const t = await apiFetch<{ tournament_id: string }>("/tournaments/test", {
+      const t = await apiFetch<{ tournament_id: string }>("/test/tournament", {
         method: "POST",
         body: JSON.stringify({
           name: name || "Test Tournament",
