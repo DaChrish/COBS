@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cobs.auth.dependencies import require_admin
 from cobs.database import get_db
-from cobs.models.draft import Pod
+from cobs.logic.ws_manager import manager
+from cobs.models.draft import Draft, Pod
 from cobs.models.user import User
 from cobs.schemas.timer import TimerSetRequest
 
@@ -32,8 +33,25 @@ async def set_timer(
     else:
         pod.timer_ends_at = None
 
+    # Read draft_id before commit (SQLAlchemy expires attributes after commit)
+    draft_id = pod.draft_id
+    pod_id_str = str(pod.id)
+    timer_ends_at = pod.timer_ends_at
+
     await db.commit()
     await db.refresh(pod)
+
+    # Look up tournament_id from pod -> draft for broadcast
+    draft_result = await db.execute(select(Draft).where(Draft.id == draft_id))
+    draft = draft_result.scalar_one()
+    await manager.broadcast(
+        str(draft.tournament_id),
+        "timer_update",
+        {
+            "pod_id": pod_id_str,
+            "timer_ends_at": timer_ends_at.isoformat() if timer_ends_at else None,
+        },
+    )
 
     return {
         "pod_id": str(pod.id),

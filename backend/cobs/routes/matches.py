@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from cobs.auth.dependencies import get_current_user, require_admin
 from cobs.database import get_db
 from cobs.logic.swiss import generate_swiss_pairings
+from cobs.logic.ws_manager import manager
 from cobs.models.draft import Draft, Pod, PodPlayer
 from cobs.models.match import Match
 from cobs.models.tournament import TournamentPlayer
@@ -127,6 +128,7 @@ async def generate_pairings(
             new_matches.append(match)
 
     await db.commit()
+    await manager.broadcast(str(tournament_id), "pairings_ready", {"draft_id": str(draft_id)})
 
     # Return all matches for this draft
     return await _get_draft_matches(draft_id, db)
@@ -202,6 +204,7 @@ async def report_match(
             match.has_conflict = True
 
     await db.commit()
+    await manager.broadcast(str(tournament_id), "match_reported", {"match_id": str(match_id)})
     await db.refresh(match)
     return await _match_to_response(match, db)
 
