@@ -56,6 +56,8 @@ async def list_tournaments(
                 status=t.status,
                 join_code=t.join_code,
                 max_rounds=t.max_rounds,
+                is_test=t.is_test,
+                seed=t.seed,
                 player_count=player_count or 0,
                 cube_count=cube_count or 0,
             )
@@ -93,6 +95,8 @@ async def create_tournament(
         status=tournament.status,
         join_code=tournament.join_code,
         max_rounds=tournament.max_rounds,
+        is_test=tournament.is_test,
+        seed=tournament.seed,
         player_count=0,
         cube_count=len(body.cube_ids),
     )
@@ -122,8 +126,8 @@ async def my_tournaments(
         )
         responses.append(TournamentResponse(
             id=t.id, name=t.name, status=t.status, join_code=t.join_code,
-            max_rounds=t.max_rounds, player_count=player_count or 0,
-            cube_count=cube_count or 0,
+            max_rounds=t.max_rounds, is_test=t.is_test, seed=t.seed,
+            player_count=player_count or 0, cube_count=cube_count or 0,
         ))
     return responses
 
@@ -176,6 +180,8 @@ async def get_tournament(
         status=tournament.status,
         join_code=tournament.join_code,
         max_rounds=tournament.max_rounds,
+        is_test=tournament.is_test,
+        seed=tournament.seed,
         player_count=len(players),
         cube_count=len(cubes),
         players=players,
@@ -216,6 +222,8 @@ async def update_tournament(
         status=tournament.status,
         join_code=tournament.join_code,
         max_rounds=tournament.max_rounds,
+        is_test=tournament.is_test,
+        seed=tournament.seed,
         player_count=player_count or 0,
         cube_count=cube_count or 0,
     )

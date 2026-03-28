@@ -37,6 +37,8 @@ def upgrade() -> None:
     sa.Column('status', sa.Enum('SETUP', 'VOTING', 'DRAFTING', 'FINISHED', name='tournamentstatus'), nullable=False),
     sa.Column('join_code', sa.String(length=8), nullable=False),
     sa.Column('max_rounds', sa.Integer(), nullable=False),
+    sa.Column('is_test', sa.Boolean(), nullable=False, server_default='false'),
+    sa.Column('seed', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')

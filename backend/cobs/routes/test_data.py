@@ -58,6 +58,8 @@ async def create_test_tournament(
         name=body.name,
         join_code=_generate_join_code(),
         status=TournamentStatus.VOTING,
+        is_test=True,
+        seed=body.seed,
     )
     db.add(tournament)
     await db.flush()

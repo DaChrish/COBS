@@ -23,6 +23,8 @@ class TournamentResponse(BaseModel):
     status: TournamentStatus
     join_code: str
     max_rounds: int
+    is_test: bool = False
+    seed: int | None = None
     player_count: int = 0
     cube_count: int = 0
 

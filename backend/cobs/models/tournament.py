@@ -24,6 +24,8 @@ class Tournament(TimestampMixin, Base):
     )
     join_code: Mapped[str] = mapped_column(String(8), unique=True, index=True)
     max_rounds: Mapped[int] = mapped_column(Integer, default=3)
+    is_test: Mapped[bool] = mapped_column(Boolean, default=False)
+    seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     tournament_cubes: Mapped[list["TournamentCube"]] = relationship(
         back_populates="tournament", cascade="all, delete-orphan"

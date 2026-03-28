@@ -4,6 +4,8 @@ export interface Tournament {
   status: "SETUP" | "VOTING" | "DRAFTING" | "FINISHED";
   join_code: string;
   max_rounds: number;
+  is_test: boolean;
+  seed: number | null;
   player_count: number;
   cube_count: number;
 }
@@ -66,6 +68,7 @@ export interface PodPlayer {
   tournament_player_id: string;
   username: string;
   seat_number: number;
+  vote: "DESIRED" | "NEUTRAL" | "AVOID" | null;
 }
 
 export interface Match {
