@@ -1,15 +1,20 @@
+import os
+import random
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from cobs.auth.dependencies import require_admin
+from cobs.config import settings
 from cobs.database import get_db
-from cobs.logic.simulate import generate_match_results
-from cobs.models.draft import Draft, Pod
+from cobs.logic.simulate import generate_match_results, generate_photo_image
+from cobs.models.draft import Draft, Pod, PodPlayer
 from cobs.models.match import Match
+from cobs.models.photo import DraftPhoto, PhotoType
 from cobs.models.tournament import Tournament, TournamentPlayer
 from cobs.models.user import User
 
@@ -148,3 +153,111 @@ async def simulate_results(
     return SimulateResultsResponse(
         reported=reported_count, conflicts=conflict_count
     )
+
+
+class SimulatePhotosRequest(BaseModel):
+    incomplete: bool = False
+
+
+class SimulatePhotosResponse(BaseModel):
+    photos_created: int
+    photos_skipped: int
+
+
+@router.post("/simulate-photos", response_model=SimulatePhotosResponse)
+async def simulate_photos(
+    tournament_id: uuid.UUID,
+    body: SimulatePhotosRequest = SimulatePhotosRequest(),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Simulate draft photos for the latest draft of a test tournament."""
+    tournament = await _get_test_tournament(tournament_id, db)
+
+    # Find latest draft by round_number desc
+    draft_result = await db.execute(
+        select(Draft)
+        .where(Draft.tournament_id == tournament_id)
+        .order_by(Draft.round_number.desc())
+    )
+    draft = draft_result.scalars().first()
+    if not draft:
+        raise HTTPException(status_code=400, detail="No drafts found")
+
+    # Load all PodPlayers for that draft, eager load tournament_player.user
+    pp_result = await db.execute(
+        select(PodPlayer)
+        .join(Pod, PodPlayer.pod_id == Pod.id)
+        .where(Pod.draft_id == draft.id)
+        .options(
+            selectinload(PodPlayer.tournament_player).selectinload(
+                TournamentPlayer.user
+            )
+        )
+    )
+    pod_players = pp_result.scalars().all()
+
+    rng = random.Random((tournament.seed or 0) + 1000)
+
+    os.makedirs(settings.upload_dir, exist_ok=True)
+
+    created = 0
+    skipped = 0
+
+    for pp in pod_players:
+        username = pp.tournament_player.user.username
+
+        if body.incomplete:
+            roll = rng.random()
+            if roll < 0.1:
+                # Skip all 3 photos
+                photo_types: list[PhotoType] = []
+                skipped += 3
+            elif roll < 0.3:
+                # Only POOL + DECK
+                photo_types = [PhotoType.POOL, PhotoType.DECK]
+                skipped += 1
+            else:
+                photo_types = list(PhotoType)
+        else:
+            photo_types = list(PhotoType)
+
+        for pt in photo_types:
+            image_bytes = generate_photo_image(
+                username, pt.value, draft.round_number
+            )
+            filename = f"{uuid.uuid4()}.jpg"
+            filepath = os.path.join(settings.upload_dir, filename)
+            with open(filepath, "wb") as f:
+                f.write(image_bytes)
+
+            # Upsert: check for existing photo
+            existing_result = await db.execute(
+                select(DraftPhoto).where(
+                    DraftPhoto.draft_id == draft.id,
+                    DraftPhoto.tournament_player_id == pp.tournament_player_id,
+                    DraftPhoto.photo_type == pt,
+                )
+            )
+            existing = existing_result.scalar_one_or_none()
+
+            if existing:
+                # Delete old file
+                old_path = os.path.join(settings.upload_dir, existing.filename)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+                existing.filename = filename
+            else:
+                photo = DraftPhoto(
+                    draft_id=draft.id,
+                    tournament_player_id=pp.tournament_player_id,
+                    photo_type=pt,
+                    filename=filename,
+                )
+                db.add(photo)
+
+            created += 1
+
+    await db.commit()
+
+    return SimulatePhotosResponse(photos_created=created, photos_skipped=skipped)

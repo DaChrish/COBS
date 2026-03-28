@@ -94,6 +94,89 @@ async def test_simulate_results_rejects_non_test_tournament(client: AsyncClient)
     assert "test tournament" in resp.json()["detail"].lower()
 
 
+class TestSimulatePhotos:
+    async def test_simulate_photos_all(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_tournament_with_matches(client)
+
+        resp = await client.post(
+            f"/test/tournaments/{tid}/simulate-photos",
+            json={"incomplete": False},
+            headers=ah,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["photos_created"] == 24  # 8 players * 3 types
+        assert data["photos_skipped"] == 0
+
+    async def test_simulate_photos_incomplete(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_tournament_with_matches(client)
+
+        resp = await client.post(
+            f"/test/tournaments/{tid}/simulate-photos",
+            json={"incomplete": True},
+            headers=ah,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["photos_created"] + data["photos_skipped"] == 24
+        assert data["photos_skipped"] > 0
+
+    async def test_simulate_photos_rejects_non_test(self, client: AsyncClient):
+        # Create admin
+        admin = await client.post(
+            "/auth/admin/setup", json={"username": "admin", "password": "pw"}
+        )
+        ah = {"Authorization": f"Bearer {admin.json()['access_token']}"}
+
+        # Create a cube first
+        cube_resp = await client.post(
+            "/cubes",
+            json={"name": "Real Cube", "description": "A real cube"},
+            headers=ah,
+        )
+        assert cube_resp.status_code == 201
+        cube_id = cube_resp.json()["id"]
+
+        # Create a real (non-test) tournament
+        t_resp = await client.post(
+            "/tournaments",
+            json={"name": "Real Tournament", "cube_ids": [cube_id]},
+            headers=ah,
+        )
+        assert t_resp.status_code == 201
+        tid = t_resp.json()["id"]
+
+        resp = await client.post(
+            f"/test/tournaments/{tid}/simulate-photos",
+            json={},
+            headers=ah,
+        )
+        assert resp.status_code == 400
+        assert "test tournament" in resp.json()["detail"].lower()
+
+    async def test_simulate_photos_idempotent(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_tournament_with_matches(client)
+
+        # First run
+        resp1 = await client.post(
+            f"/test/tournaments/{tid}/simulate-photos",
+            json={"incomplete": False},
+            headers=ah,
+        )
+        assert resp1.status_code == 200
+        assert resp1.json()["photos_created"] == 24
+
+        # Second run — should replace, still 24 created
+        resp2 = await client.post(
+            f"/test/tournaments/{tid}/simulate-photos",
+            json={"incomplete": False},
+            headers=ah,
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["photos_created"] == 24
+        assert resp2.json()["photos_skipped"] == 0
+
+
 async def test_simulate_skips_byes_and_already_reported(client: AsyncClient):
     ah, tid, draft_id = await _setup_tournament_with_matches(client)
 
