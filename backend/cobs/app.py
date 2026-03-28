@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from cobs.routes import auth, cubes, drafts, health, matches, photos, standings, test_data, timer, tournaments, votes, websocket
+from cobs.routes import auth, cubes, drafts, health, matches, photos, simulate, standings, test_data, timer, tournaments, votes, websocket
 
 
 def create_app() -> FastAPI:
@@ -16,6 +16,7 @@ def create_app() -> FastAPI:
     app.include_router(timer.router)
     app.include_router(websocket.router)
     app.include_router(test_data.router)
+    app.include_router(simulate.router)
     return app
 
 
