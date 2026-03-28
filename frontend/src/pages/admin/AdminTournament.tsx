@@ -19,6 +19,8 @@ import {
   Code,
   ScrollArea,
   Divider,
+  SimpleGrid,
+  Paper,
 } from "@mantine/core";
 import {
   IconInfoCircle,
@@ -288,13 +290,57 @@ function PlayersTab({
 
 // ─── Drafts Tab ───────────────────────────────────────────────────────────────
 
-function DraftsTab({ tournamentId }: { tournamentId: string }) {
+const POD_ACCENT_COLORS = [
+  "blue",
+  "teal",
+  "violet",
+  "orange",
+  "pink",
+  "cyan",
+  "grape",
+  "lime",
+] as const;
+
+function DraftsTab({ tournamentId, isTest }: { tournamentId: string; isTest: boolean }) {
   const { data: drafts, loading, refetch } = useApi<Draft[]>(
     `/tournaments/${tournamentId}/drafts`
   );
   const [generating, setGenerating] = useState(false);
   const [pairingFor, setPairingFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [simulating, setSimulating] = useState<string | null>(null);
+
+  const simulateResults = async (withConflicts: boolean) => {
+    setSimulating(withConflicts ? "conflicts" : "results");
+    setError(null);
+    try {
+      await apiFetch(`/test/tournaments/${tournamentId}/simulate-results`, {
+        method: "POST",
+        body: JSON.stringify({ with_conflicts: withConflicts }),
+      });
+      refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setSimulating(null);
+    }
+  };
+
+  const simulatePhotos = async (incomplete: boolean) => {
+    setSimulating(incomplete ? "photos-incomplete" : "photos");
+    setError(null);
+    try {
+      await apiFetch(`/test/tournaments/${tournamentId}/simulate-photos`, {
+        method: "POST",
+        body: JSON.stringify({ incomplete }),
+      });
+      refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setSimulating(null);
+    }
+  };
 
   const generateDraft = async () => {
     setGenerating(true);
@@ -334,7 +380,7 @@ function DraftsTab({ tournamentId }: { tournamentId: string }) {
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="lg">
       {error && (
         <Alert color="red" icon={<IconAlertTriangle size={16} />}>
           {error}
@@ -352,11 +398,15 @@ function DraftsTab({ tournamentId }: { tournamentId: string }) {
       )}
 
       {drafts?.map((draft) => (
-        <Stack key={draft.id} gap="xs">
-          <Group justify="space-between">
-            <Group gap="sm">
-              <Text fw={600}>Runde {draft.round_number}</Text>
-              <Badge color={DRAFT_STATUS_COLORS[draft.status]}>
+        <Stack key={draft.id} gap="md">
+          <Group justify="space-between" align="center">
+            <Group gap="sm" align="center">
+              <Text fw={700} size="lg">Runde {draft.round_number}</Text>
+              <Badge
+                size="lg"
+                variant="dot"
+                color={DRAFT_STATUS_COLORS[draft.status]}
+              >
                 {draft.status}
               </Badge>
             </Group>
@@ -373,33 +423,110 @@ function DraftsTab({ tournamentId }: { tournamentId: string }) {
           </Group>
 
           {draft.pods.length > 0 && (
-            <ScrollArea>
-              <Table striped withTableBorder>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Pod</Table.Th>
-                    <Table.Th>Cube</Table.Th>
-                    <Table.Th ta="right">Größe</Table.Th>
-                    <Table.Th>Spieler</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {draft.pods.map((pod) => (
-                    <Table.Tr key={pod.id}>
-                      <Table.Td>{pod.pod_number}</Table.Td>
-                      <Table.Td>{pod.cube_name}</Table.Td>
-                      <Table.Td ta="right">{pod.pod_size}</Table.Td>
-                      <Table.Td>
-                        {pod.players
-                          .sort((a, b) => a.seat_number - b.seat_number)
-                          .map((p) => p.username)
-                          .join(", ")}
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </ScrollArea>
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+              {draft.pods.map((pod, idx) => {
+                const accent = POD_ACCENT_COLORS[idx % POD_ACCENT_COLORS.length];
+                return (
+                  <Paper
+                    key={pod.id}
+                    radius="md"
+                    p="md"
+                    withBorder
+                    style={{
+                      borderLeftWidth: 3,
+                      borderLeftColor: `var(--mantine-color-${accent}-6)`,
+                    }}
+                  >
+                    <Group justify="space-between" mb="xs">
+                      <Group gap="xs" align="center">
+                        <Text fw={700} size="sm" c={accent}>
+                          Pod {pod.pod_number}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          ·
+                        </Text>
+                        <Group gap={4} align="center">
+                          <IconCube size={14} style={{ opacity: 0.6 }} />
+                          <Text size="sm" fw={500}>
+                            {pod.cube_name}
+                          </Text>
+                        </Group>
+                      </Group>
+                      <Badge size="sm" variant="light" color={accent}>
+                        {pod.pod_size} Spieler
+                      </Badge>
+                    </Group>
+                    <Group gap={6} wrap="wrap">
+                      {pod.players
+                        .sort((a, b) => a.seat_number - b.seat_number)
+                        .map((p) => {
+                          const voteColor =
+                            p.vote === "DESIRED"
+                              ? "green"
+                              : p.vote === "AVOID"
+                                ? "red"
+                                : "gray";
+                          return (
+                            <Badge
+                              key={p.tournament_player_id}
+                              size="sm"
+                              variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
+                              color={voteColor}
+                              leftSection={
+                                <Text span size="xs" c="dimmed" fw={600}>
+                                  {p.seat_number}
+                                </Text>
+                              }
+                            >
+                              {p.username}
+                            </Badge>
+                          );
+                        })}
+                    </Group>
+                  </Paper>
+                );
+              })}
+            </SimpleGrid>
+          )}
+          {isTest && draft.status !== "FINISHED" && (
+            <Group gap="xs">
+              <Button
+                size="xs"
+                variant="light"
+                color="green"
+                loading={simulating === "results"}
+                onClick={() => simulateResults(false)}
+              >
+                Ergebnisse simulieren
+              </Button>
+              <Button
+                size="xs"
+                variant="light"
+                color="red"
+                loading={simulating === "conflicts"}
+                onClick={() => simulateResults(true)}
+              >
+                Ergebnisse + Konflikte
+              </Button>
+              <Button
+                size="xs"
+                variant="light"
+                color="blue"
+                loading={simulating === "photos"}
+                onClick={() => simulatePhotos(false)}
+              >
+                Fotos simulieren
+              </Button>
+              <Button
+                size="xs"
+                variant="light"
+                color="orange"
+                loading={simulating === "photos-incomplete"}
+                onClick={() => simulatePhotos(true)}
+              >
+                Fotos (lückenhaft)
+              </Button>
+            </Group>
           )}
           <Divider />
         </Stack>
@@ -836,7 +963,7 @@ export function AdminTournament() {
         </Tabs.Panel>
 
         <Tabs.Panel value="drafts">
-          <DraftsTab tournamentId={id} />
+          <DraftsTab tournamentId={id} isTest={tournament.is_test} />
         </Tabs.Panel>
 
         <Tabs.Panel value="matches">
