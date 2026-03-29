@@ -23,6 +23,8 @@ services:
     environment:
       COBS_DATABASE_URL: "postgresql+asyncpg://drafttool:drafttool@db:5432/drafttool"
       COBS_JWT_SECRET: "change-me-in-production"
+    volumes:
+      - cobs-v2-uploads:/app/uploads
     ports:
       - "8000:8000"
     depends_on:
@@ -42,3 +44,4 @@ services:
 
 volumes:
   cobs-v2-db-data:
+  cobs-v2-uploads:
