@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput } from "@mantine/core";
+import { Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput, Badge, Image } from "@mantine/core";
 import { IconUpload } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
@@ -30,6 +30,15 @@ export function DraftPage() {
 
   const [reportMatch, setReportMatch] = useState<Match | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [myPhotos, setMyPhotos] = useState<Record<string, string | null>>({ POOL: null, DECK: null, RETURNED: null });
+
+  // Load existing photos
+  useEffect(() => {
+    if (!draft) return;
+    apiFetch<Record<string, string | null>>(`/tournaments/${id}/drafts/${draft.id}/photos/mine`)
+      .then(setMyPhotos)
+      .catch(() => {});
+  }, [id, draft]);
 
   if (!tournament || !draft) return <Center h="50vh"><Loader /></Center>;
 
@@ -61,18 +70,21 @@ export function DraftPage() {
     formData.append("file", file);
     try {
       const token = localStorage.getItem("token");
-      await fetch(`/api/tournaments/${id}/drafts/${draft.id}/photos/${type}`, {
+      const res = await fetch(`/api/tournaments/${id}/drafts/${draft.id}/photos/${type}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+      if (!res.ok) throw new Error("Upload fehlgeschlagen");
+      // Refresh photos
+      const photos = await apiFetch<Record<string, string | null>>(`/tournaments/${id}/drafts/${draft.id}/photos/mine`);
+      setMyPhotos(photos);
+    } catch {
+      // silently fail for now
     } finally {
       setUploading(false);
     }
   };
-
-  // suppress unused warning — uploading state is used to disable inputs in future
-  void uploading;
 
   return (
     <Container size="sm">
@@ -108,29 +120,40 @@ export function DraftPage() {
         </>
       )}
 
-      <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Photos</Text>
+      <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Fotos</Text>
       <Stack gap="xs">
-        <FileInput
-          label="Pool Photo"
-          placeholder="Foto hochladen"
-          accept="image/*"
-          leftSection={<IconUpload size={14} />}
-          onChange={(f) => handlePhotoUpload(f, "POOL")}
-        />
-        <FileInput
-          label="Deck Photo"
-          placeholder="Foto hochladen"
-          accept="image/*"
-          leftSection={<IconUpload size={14} />}
-          onChange={(f) => handlePhotoUpload(f, "DECK")}
-        />
-        <FileInput
-          label="Returned Photo"
-          placeholder="Foto hochladen"
-          accept="image/*"
-          leftSection={<IconUpload size={14} />}
-          onChange={(f) => handlePhotoUpload(f, "RETURNED")}
-        />
+        {(["POOL", "DECK", "RETURNED"] as const).map((type) => (
+          <Card key={type} withBorder padding="xs" radius="md">
+            <Group justify="space-between" align="center">
+              <Group gap="xs" align="center">
+                <Text size="sm" fw={500} w={80}>{type}</Text>
+                {myPhotos[type] ? (
+                  <Badge color="green" size="xs" variant="light">Hochgeladen</Badge>
+                ) : (
+                  <Badge color="gray" size="xs" variant="light">Fehlt</Badge>
+                )}
+              </Group>
+              <FileInput
+                size="xs"
+                w={200}
+                placeholder={myPhotos[type] ? "Ersetzen..." : "Hochladen..."}
+                accept="image/*"
+                leftSection={<IconUpload size={14} />}
+                onChange={(f) => handlePhotoUpload(f, type)}
+                disabled={uploading}
+              />
+            </Group>
+            {myPhotos[type] && (
+              <Image
+                src={`/api${myPhotos[type]}`}
+                radius="md"
+                fit="contain"
+                h={150}
+                mt="xs"
+              />
+            )}
+          </Card>
+        ))}
       </Stack>
 
       <MatchReportModal

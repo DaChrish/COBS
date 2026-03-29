@@ -121,6 +121,41 @@ async def upload_photo(
 
 
 @router.get(
+    "/tournaments/{tournament_id}/drafts/{draft_id}/photos/mine",
+    response_model=dict[str, str | None],
+)
+async def get_my_photos(
+    tournament_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get current player's photos for a draft."""
+    tp_result = await db.execute(
+        select(TournamentPlayer).where(
+            TournamentPlayer.tournament_id == tournament_id,
+            TournamentPlayer.user_id == user.id,
+        )
+    )
+    tp = tp_result.scalar_one_or_none()
+    if not tp:
+        raise HTTPException(status_code=403, detail="Not a participant")
+
+    photo_result = await db.execute(
+        select(DraftPhoto).where(
+            DraftPhoto.draft_id == draft_id,
+            DraftPhoto.tournament_player_id == tp.id,
+        )
+    )
+    photos = photo_result.scalars().all()
+
+    result: dict[str, str | None] = {"POOL": None, "DECK": None, "RETURNED": None}
+    for p in photos:
+        result[p.photo_type.value] = f"/uploads/{p.filename}"
+    return result
+
+
+@router.get(
     "/tournaments/{tournament_id}/drafts/{draft_id}/photos/status",
     response_model=DraftPhotoStatusResponse,
 )
