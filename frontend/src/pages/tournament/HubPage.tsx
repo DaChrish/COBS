@@ -4,6 +4,7 @@ import { IconHandFinger, IconCards, IconTrophy } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { Timer } from "../../components/Timer";
 import type { TournamentDetail, Draft } from "../../api/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -70,10 +71,16 @@ export function HubPage() {
               </Text>
             </Card>
           )}
-          <Button size="lg" fullWidth leftSection={<IconCards size={20} />}
-            onClick={() => navigate(`/tournament/${id}/draft/${latestDraft.round_number}`)}>
-            Draft ansehen
-          </Button>
+          {myPod?.timer_ends_at && <Timer endsAt={myPod.timer_ends_at} />}
+          <Stack gap="xs">
+            {drafts?.map((d) => (
+              <Button key={d.id} fullWidth variant={d.id === latestDraft?.id ? "filled" : "light"}
+                leftSection={<IconCards size={16} />}
+                onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
+                Runde {d.round_number} {d.status === "ACTIVE" ? "" : `(${d.status})`}
+              </Button>
+            ))}
+          </Stack>
           <Group grow>
             <Button variant="light" leftSection={<IconTrophy size={16} />}
               onClick={() => navigate(`/tournament/${id}/standings`)}>
@@ -92,6 +99,17 @@ export function HubPage() {
             onClick={() => navigate(`/tournament/${id}/standings`)}>
             Endergebnis ansehen
           </Button>
+          {drafts && drafts.length > 0 && (
+            <Stack gap="xs">
+              <Text size="sm" c="dimmed" tt="uppercase" fw={500}>Runden</Text>
+              {drafts.map((d) => (
+                <Button key={d.id} fullWidth variant="light" leftSection={<IconCards size={16} />}
+                  onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
+                  Runde {d.round_number}
+                </Button>
+              ))}
+            </Stack>
+          )}
         </Stack>
       )}
     </Container>

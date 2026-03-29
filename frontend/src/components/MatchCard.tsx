@@ -42,7 +42,10 @@ export function MatchCard({ match, myPlayerId, onReport }: Props) {
           <Badge color="green">{match.player1_wins}-{match.player2_wins} ✓</Badge>
         )}
         {match.has_conflict && (
-          <Badge color="red">Konflikt</Badge>
+          <>
+            <Badge color="red">Konflikt</Badge>
+            <Text size="xs" c="dimmed">Ergebnisse stimmen nicht überein — Admin wird es klären</Text>
+          </>
         )}
         {!match.reported && !match.has_conflict && isMyMatch && !iReported && (
           <Button size="compact-xs" onClick={() => onReport(match)}>Melden</Button>
