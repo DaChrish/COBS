@@ -55,3 +55,7 @@ __pycache__/
 
 # uploaded photos
 backend/uploads/
+
+# python cache
+__pycache__/
+*.pyc
