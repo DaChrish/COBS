@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Container,
@@ -21,6 +21,7 @@ import {
   Divider,
   SimpleGrid,
   Paper,
+  Image as MantineImage,
 } from "@mantine/core";
 import {
   IconInfoCircle,
@@ -30,11 +31,13 @@ import {
   IconSwords,
   IconClock,
   IconAlertTriangle,
+  IconCamera,
+  IconCameraOff,
 } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
-import type { TournamentDetail, Draft, Match, Pod } from "../../api/types";
+import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus } from "../../api/types";
 
 const STATUS_COLORS: Record<string, string> = {
   SETUP: "gray",
@@ -301,7 +304,7 @@ const POD_ACCENT_COLORS = [
   "lime",
 ] as const;
 
-function DraftsTab({ tournamentId, isTest }: { tournamentId: string; isTest: boolean }) {
+function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string; isTest: boolean; tournament: TournamentDetail }) {
   const { data: drafts, loading, refetch } = useApi<Draft[]>(
     `/tournaments/${tournamentId}/drafts`
   );
@@ -309,6 +312,23 @@ function DraftsTab({ tournamentId, isTest }: { tournamentId: string; isTest: boo
   const [pairingFor, setPairingFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [simulating, setSimulating] = useState<string | null>(null);
+  const [photoStatus, setPhotoStatus] = useState<Record<string, DraftPhotoStatus>>({});
+  const [selectedPlayer, setSelectedPlayer] = useState<{ player: PlayerPhotoStatus; draftId: string } | null>(null);
+  const [forceOverride, setForceOverride] = useState<{ type: string; draftId: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!drafts) return;
+    drafts.forEach(async (draft) => {
+      try {
+        const status = await apiFetch<DraftPhotoStatus>(
+          `/tournaments/${tournamentId}/drafts/${draft.id}/photos/status`
+        );
+        setPhotoStatus((prev) => ({ ...prev, [draft.id]: status }));
+      } catch {
+        // ignore
+      }
+    });
+  }, [drafts, tournamentId]);
 
   const simulateResults = async (withConflicts: boolean) => {
     setSimulating(withConflicts ? "conflicts" : "results");
@@ -342,30 +362,48 @@ function DraftsTab({ tournamentId, isTest }: { tournamentId: string; isTest: boo
     }
   };
 
-  const generateDraft = async () => {
+  const generateDraft = async (skipPhotoCheck = false) => {
     setGenerating(true);
     setError(null);
     try {
-      await apiFetch(`/tournaments/${tournamentId}/drafts`, { method: "POST" });
+      await apiFetch(`/tournaments/${tournamentId}/drafts`, {
+        method: "POST",
+        body: JSON.stringify({ skip_photo_check: skipPhotoCheck }),
+      });
       refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      const msg = e instanceof Error ? e.message : "Error";
+      if (msg.toLowerCase().includes("photo") && !skipPhotoCheck) {
+        setError(msg);
+        setForceOverride({ type: "draft", draftId: null });
+      } else {
+        setError(msg);
+      }
     } finally {
       setGenerating(false);
     }
   };
 
-  const generatePairings = async (draftId: string) => {
+  const generatePairings = async (draftId: string, skipPhotoCheck = false) => {
     setPairingFor(draftId);
     setError(null);
     try {
       await apiFetch(
         `/tournaments/${tournamentId}/drafts/${draftId}/pairings`,
-        { method: "POST" }
+        {
+          method: "POST",
+          body: JSON.stringify({ skip_photo_check: skipPhotoCheck }),
+        }
       );
       refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      const msg = e instanceof Error ? e.message : "Error";
+      if (msg.toLowerCase().includes("photo") && !skipPhotoCheck) {
+        setError(msg);
+        setForceOverride({ type: "pairings", draftId });
+      } else {
+        setError(msg);
+      }
     } finally {
       setPairingFor(null);
     }
@@ -384,11 +422,31 @@ function DraftsTab({ tournamentId, isTest }: { tournamentId: string; isTest: boo
       {error && (
         <Alert color="red" icon={<IconAlertTriangle size={16} />}>
           {error}
+          {forceOverride && (
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              mt="xs"
+              onClick={() => {
+                const { type, draftId } = forceOverride;
+                setForceOverride(null);
+                setError(null);
+                if (type === "pairings" && draftId) {
+                  generatePairings(draftId, true);
+                } else if (type === "draft") {
+                  generateDraft(true);
+                }
+              }}
+            >
+              Trotzdem fortfahren
+            </Button>
+          )}
         </Alert>
       )}
 
       <Group>
-        <Button onClick={generateDraft} loading={generating}>
+        <Button onClick={() => generateDraft()} loading={generating}>
           Draft generieren
         </Button>
       </Group>
@@ -409,6 +467,16 @@ function DraftsTab({ tournamentId, isTest }: { tournamentId: string; isTest: boo
               >
                 {draft.status}
               </Badge>
+              {photoStatus[draft.id] && (
+                <Badge
+                  size="sm"
+                  variant="light"
+                  color={photoStatus[draft.id].pool_deck_ready === photoStatus[draft.id].total_players ? "green" : "yellow"}
+                  leftSection={<IconCamera size={12} />}
+                >
+                  {photoStatus[draft.id].pool_deck_ready}/{photoStatus[draft.id].total_players} bereit
+                </Badge>
+              )}
             </Group>
             {draft.status !== "FINISHED" && (
               <Button
@@ -466,16 +534,29 @@ function DraftsTab({ tournamentId, isTest }: { tournamentId: string; isTest: boo
                               : p.vote === "AVOID"
                                 ? "red"
                                 : "gray";
+                          const ps = photoStatus[draft.id]?.players.find(
+                            (s) => s.tournament_player_id === p.tournament_player_id
+                          );
+                          const hasPoolDeck = ps?.pool && ps?.deck;
                           return (
                             <Badge
                               key={p.tournament_player_id}
                               size="sm"
                               variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
                               color={voteColor}
+                              style={{ cursor: ps ? "pointer" : undefined }}
+                              onClick={() => ps && setSelectedPlayer({ player: ps, draftId: draft.id })}
                               leftSection={
-                                <Text span size="xs" c="dimmed" fw={600}>
-                                  {p.seat_number}
-                                </Text>
+                                <Group gap={2} wrap="nowrap">
+                                  <Text span size="xs" c="dimmed" fw={600}>
+                                    {p.seat_number}
+                                  </Text>
+                                  {ps && (
+                                    hasPoolDeck
+                                      ? <IconCamera size={10} color="var(--mantine-color-green-6)" />
+                                      : <IconCameraOff size={10} color="var(--mantine-color-red-6)" />
+                                  )}
+                                </Group>
                               }
                             >
                               {p.username}
@@ -531,6 +612,60 @@ function DraftsTab({ tournamentId, isTest }: { tournamentId: string; isTest: boo
           <Divider />
         </Stack>
       ))}
+
+      <Modal
+        opened={selectedPlayer !== null}
+        onClose={() => setSelectedPlayer(null)}
+        title={selectedPlayer?.player.username ?? ""}
+        size="lg"
+      >
+        {selectedPlayer && (
+          <Stack gap="md">
+            <SimpleGrid cols={3} spacing="md">
+              {(["pool", "deck", "returned"] as const).map((type) => (
+                <Stack key={type} gap={4} align="center">
+                  <Text size="xs" fw={600} c="dimmed">{type.toUpperCase()}</Text>
+                  {selectedPlayer.player[type] ? (
+                    <MantineImage
+                      src={`/api${selectedPlayer.player[type]}`}
+                      radius="md"
+                      fit="contain"
+                      h={200}
+                    />
+                  ) : (
+                    <Paper withBorder p="xl" radius="md" style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
+                      <Text c="red" size="sm">Fehlt</Text>
+                    </Paper>
+                  )}
+                </Stack>
+              ))}
+            </SimpleGrid>
+            {(!selectedPlayer.player.pool || !selectedPlayer.player.deck || !selectedPlayer.player.returned) && (
+              <Button
+                size="xs"
+                variant="light"
+                color="blue"
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem("token");
+                    const res = await apiFetch<{ access_token: string }>("/auth/impersonate", {
+                      method: "POST",
+                      body: JSON.stringify({ user_id: selectedPlayer.player.user_id }),
+                    });
+                    if (token) localStorage.setItem("admin_token", token);
+                    localStorage.setItem("token", res.access_token);
+                    window.location.reload();
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Error");
+                  }
+                }}
+              >
+                Als {selectedPlayer.player.username} anmelden
+              </Button>
+            )}
+          </Stack>
+        )}
+      </Modal>
     </Stack>
   );
 }
@@ -963,7 +1098,7 @@ export function AdminTournament() {
         </Tabs.Panel>
 
         <Tabs.Panel value="drafts">
-          <DraftsTab tournamentId={id} isTest={tournament.is_test} />
+          <DraftsTab tournamentId={id} isTest={tournament.is_test} tournament={tournament} />
         </Tabs.Panel>
 
         <Tabs.Panel value="matches">
