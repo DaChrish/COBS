@@ -1,11 +1,13 @@
-import { useParams } from "react-router-dom";
-import { Container, Title, Table, Badge, Text, Center, Loader, ScrollArea } from "@mantine/core";
+import { useParams, useNavigate } from "react-router-dom";
+import { Button, Container, Group, Title, Table, Badge, Text, Center, Loader, ScrollArea, Tooltip } from "@mantine/core";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
 import type { StandingsEntry, TournamentDetail } from "../../api/types";
 
 export function StandingsPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: standings, loading } = useApi<StandingsEntry[]>(`/tournaments/${id}/standings`);
   const { data: tournament } = useApi<TournamentDetail>(`/tournaments/${id}`);
@@ -16,7 +18,13 @@ export function StandingsPage() {
 
   return (
     <Container size="md">
-      <Title order={3} mb="md">Standings</Title>
+      <Group justify="space-between" mb="md" align="center">
+        <Title order={3}>Standings</Title>
+        <Button variant="light" size="xs" leftSection={<IconArrowLeft size={14} />}
+          onClick={() => navigate(`/tournament/${id}`)}>
+          Zurück
+        </Button>
+      </Group>
       <ScrollArea>
         <Table striped highlightOnHover>
           <Table.Thead>
@@ -25,9 +33,21 @@ export function StandingsPage() {
               <Table.Th>Spieler</Table.Th>
               <Table.Th ta="right">Punkte</Table.Th>
               <Table.Th ta="right">W-L-D</Table.Th>
-              <Table.Th ta="right">OMW%</Table.Th>
-              <Table.Th ta="right">GW%</Table.Th>
-              <Table.Th ta="right">OGW%</Table.Th>
+              <Table.Th ta="right">
+                <Tooltip label="Opponent Match Win % — Durchschnittliche Siegquote deiner Gegner" withArrow>
+                  <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>OMW%</Text>
+                </Tooltip>
+              </Table.Th>
+              <Table.Th ta="right">
+                <Tooltip label="Game Win % — Deine Einzelspiel-Siegquote (2-0 besser als 2-1)" withArrow>
+                  <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>GW%</Text>
+                </Tooltip>
+              </Table.Th>
+              <Table.Th ta="right">
+                <Tooltip label="Opponent Game Win % — Durchschnittliche Einzelspiel-Siegquote deiner Gegner" withArrow>
+                  <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>OGW%</Text>
+                </Tooltip>
+              </Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
