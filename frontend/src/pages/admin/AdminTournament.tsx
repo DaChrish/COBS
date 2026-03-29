@@ -36,11 +36,12 @@ import {
   IconCameraOff,
   IconDownload,
   IconMaximize,
+  IconTrophy,
 } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
-import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus } from "../../api/types";
+import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry } from "../../api/types";
 
 const STATUS_COLORS: Record<string, string> = {
   SETUP: "gray",
@@ -496,7 +497,21 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
         <Text c="dimmed">Noch keine Drafts.</Text>
       )}
 
-      {drafts?.map((draft) => (
+      {drafts?.map((draft) => {
+        const allDraftMatches = matchesByDraft[draft.id] ?? [];
+        const currentSwiss = allDraftMatches.length > 0 ? Math.max(...allDraftMatches.map((m) => m.swiss_round)) : 0;
+        const tableNumbers: Record<string, number> = {};
+        if (currentSwiss > 0) {
+          let tbl = 1;
+          for (const p of draft.pods) {
+            const currentRoundNonByes = allDraftMatches
+              .filter((m) => m.pod_id === p.id && m.swiss_round === currentSwiss && !m.is_bye);
+            for (const m of currentRoundNonByes) {
+              tableNumbers[m.id] = tbl++;
+            }
+          }
+        }
+        return (
         <Stack key={draft.id} gap="md">
           <Group justify="space-between" align="center">
             <Group gap="sm" align="center">
@@ -625,6 +640,11 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                       <Group key={m.id} justify="space-between" px="xs" py={4}
                                         style={{ borderRadius: 4 }}
                                         bg={m.has_conflict ? "var(--mantine-color-red-light)" : undefined}>
+                                        {tableNumbers[m.id] && (
+                                          <Text size="xs" c="dimmed" w={24} ta="center" style={{ flexShrink: 0 }}>
+                                            T{tableNumbers[m.id]}
+                                          </Text>
+                                        )}
                                         <Text size="sm" fw={500} style={{ flex: 1 }}>{m.player1_username}</Text>
                                         <Text size="sm" fw={600} c="dimmed" ta="center" w={60}>
                                           {m.reported ? `${m.player1_wins}–${m.player2_wins}` : m.is_bye ? "BYE" : "–"}
@@ -688,6 +708,12 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                     <Button size="xs" variant="light" loading={pairingFor === draft.id}
                       onClick={() => generatePairings(draft.id)}>Nächste Swiss-Runde</Button>
                   )}
+                  {hasMatches && (
+                    <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
+                      component="a" href={`/api/tournaments/${tournamentId}/drafts/${draft.id}/pairings/pdf`} target="_blank">
+                      Pairings PDF
+                    </Button>
+                  )}
                 </Group>
               </Group>
             );
@@ -717,7 +743,8 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
           })()}
           <Divider />
         </Stack>
-      ))}
+        );
+      })}
 
       <Modal
         opened={selectedPlayer !== null}
@@ -833,6 +860,78 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
           </Stack>
         )}
       </Modal>
+    </Stack>
+  );
+}
+
+// ─── Standings Tab ───────────────────────────────────────────────────────────
+
+function StandingsTab({ tournamentId }: { tournamentId: string }) {
+  const { data: standings, loading } = useApi<StandingsEntry[]>(
+    `/tournaments/${tournamentId}/standings`
+  );
+
+  if (loading) {
+    return (
+      <Center>
+        <Loader />
+      </Center>
+    );
+  }
+
+  return (
+    <Stack gap="md">
+      <Group>
+        <Button
+          size="xs"
+          variant="light"
+          leftSection={<IconDownload size={14} />}
+          component="a"
+          href={`/api/tournaments/${tournamentId}/standings/pdf`}
+          target="_blank"
+        >
+          Standings PDF
+        </Button>
+      </Group>
+      {(!standings || standings.length === 0) ? (
+        <Text c="dimmed">Keine Standings vorhanden.</Text>
+      ) : (
+        <ScrollArea>
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th ta="right">#</Table.Th>
+                <Table.Th>Spieler</Table.Th>
+                <Table.Th ta="right">Punkte</Table.Th>
+                <Table.Th ta="right">W-L-D</Table.Th>
+                <Table.Th ta="right">OMW%</Table.Th>
+                <Table.Th ta="right">GW%</Table.Th>
+                <Table.Th ta="right">OGW%</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {standings.map((s, i) => (
+                <Table.Tr key={s.player_id} opacity={s.dropped ? 0.5 : 1}>
+                  <Table.Td ta="right">{i + 1}</Table.Td>
+                  <Table.Td fw={500}>
+                    <Group gap="xs">
+                      {s.username}
+                      {s.dropped && (
+                        <Badge color="red" size="xs">Dropped</Badge>
+                      )}
+                    </Group>
+                  </Table.Td>
+                  <Table.Td ta="right">{s.match_points}</Table.Td>
+                  <Table.Td ta="right">{s.match_wins}-{s.match_losses}-{s.match_draws}</Table.Td>
+                  <Table.Td ta="right">{(s.omw_percent * 100).toFixed(2)}%</Table.Td>
+                  <Table.Td ta="right">{(s.gw_percent * 100).toFixed(2)}%</Table.Td>
+                  <Table.Td ta="right">{(s.ogw_percent * 100).toFixed(2)}%</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
+      )}
     </Stack>
   );
 }
@@ -1008,6 +1107,9 @@ export function AdminTournament() {
           <Tabs.Tab value="drafts" leftSection={<IconCards size={16} />}>
             Runden
           </Tabs.Tab>
+          <Tabs.Tab value="standings" leftSection={<IconTrophy size={16} />}>
+            Standings
+          </Tabs.Tab>
           <Tabs.Tab value="timer" leftSection={<IconClock size={16} />}>
             Timer
           </Tabs.Tab>
@@ -1027,6 +1129,10 @@ export function AdminTournament() {
 
         <Tabs.Panel value="drafts">
           <DraftsTab tournamentId={id} isTest={tournament.is_test} tournament={tournament} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="standings">
+          <StandingsTab tournamentId={id} />
         </Tabs.Panel>
 
         <Tabs.Panel value="timer">
