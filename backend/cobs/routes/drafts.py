@@ -12,13 +12,31 @@ from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, optimi
 from cobs.logic.pod_sizes import calculate_pod_sizes
 from cobs.models.cube import TournamentCube
 from cobs.models.draft import Draft, DraftStatus, Pod, PodPlayer
+from cobs.models.photo import DraftPhoto, PhotoType
 from cobs.models.match import Match
 from cobs.models.tournament import Tournament, TournamentPlayer, TournamentStatus
 from cobs.models.user import User
 from cobs.models.vote import CubeVote
 from cobs.schemas.draft import DraftCreate, DraftResponse, PodPlayerResponse, PodResponse
+from cobs.models.vote import CubeVote as CubeVoteModel
 
 router = APIRouter(prefix="/tournaments/{tournament_id}/drafts", tags=["drafts"])
+
+
+def _draft_load_options():
+    return [
+        selectinload(Draft.pods)
+        .selectinload(Pod.players)
+        .selectinload(PodPlayer.tournament_player)
+        .selectinload(TournamentPlayer.user),
+        selectinload(Draft.pods)
+        .selectinload(Pod.players)
+        .selectinload(PodPlayer.tournament_player)
+        .selectinload(TournamentPlayer.votes),
+        selectinload(Draft.pods)
+        .selectinload(Pod.tournament_cube)
+        .selectinload(TournamentCube.cube),
+    ]
 
 
 @router.get("", response_model=list[DraftResponse])
@@ -29,15 +47,7 @@ async def list_drafts(
     result = await db.execute(
         select(Draft)
         .where(Draft.tournament_id == tournament_id)
-        .options(
-            selectinload(Draft.pods)
-            .selectinload(Pod.players)
-            .selectinload(PodPlayer.tournament_player)
-            .selectinload(TournamentPlayer.user),
-            selectinload(Draft.pods)
-            .selectinload(Pod.tournament_cube)
-            .selectinload(TournamentCube.cube),
-        )
+        .options(*_draft_load_options())
         .order_by(Draft.round_number)
     )
     drafts = result.scalars().all()
@@ -53,15 +63,7 @@ async def get_draft(
     result = await db.execute(
         select(Draft)
         .where(Draft.id == draft_id, Draft.tournament_id == tournament_id)
-        .options(
-            selectinload(Draft.pods)
-            .selectinload(Pod.players)
-            .selectinload(PodPlayer.tournament_player)
-            .selectinload(TournamentPlayer.user),
-            selectinload(Draft.pods)
-            .selectinload(Pod.tournament_cube)
-            .selectinload(TournamentCube.cube),
-        )
+        .options(*_draft_load_options())
     )
     draft = result.scalar_one_or_none()
     if not draft:
@@ -95,6 +97,30 @@ async def create_draft(
     )
     last_draft = existing.scalars().first()
     round_number = (last_draft.round_number + 1) if last_draft else 1
+
+    # Check RETURNED photos from previous draft
+    if last_draft and not body.skip_photo_check:
+        pp_result = await db.execute(
+            select(PodPlayer).join(Pod).where(Pod.draft_id == last_draft.id)
+        )
+        player_ids = [pp.tournament_player_id for pp in pp_result.scalars().all()]
+
+        if player_ids:
+            returned_result = await db.execute(
+                select(DraftPhoto).where(
+                    DraftPhoto.draft_id == last_draft.id,
+                    DraftPhoto.tournament_player_id.in_(player_ids),
+                    DraftPhoto.photo_type == PhotoType.RETURNED,
+                )
+            )
+            returned_photos = {p.tournament_player_id for p in returned_result.scalars().all()}
+            missing = [pid for pid in player_ids if pid not in returned_photos]
+
+            if missing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Missing RETURNED photos for {len(missing)} player(s) from previous draft. Use skip_photo_check to override.",
+                )
 
     if round_number > tournament.max_rounds:
         raise HTTPException(status_code=400, detail="Max rounds reached")
@@ -279,14 +305,20 @@ async def create_draft(
 def _draft_to_response(draft: Draft) -> DraftResponse:
     pods = []
     for pod in sorted(draft.pods, key=lambda p: p.pod_number):
-        players = [
-            PodPlayerResponse(
+        tc_id = pod.tournament_cube_id
+        players = []
+        for pp in sorted(pod.players, key=lambda p: p.seat_number):
+            vote = None
+            for v in pp.tournament_player.votes:
+                if v.tournament_cube_id == tc_id:
+                    vote = v.vote.value
+                    break
+            players.append(PodPlayerResponse(
                 tournament_player_id=pp.tournament_player_id,
                 username=pp.tournament_player.user.username,
                 seat_number=pp.seat_number,
-            )
-            for pp in sorted(pod.players, key=lambda p: p.seat_number)
-        ]
+                vote=vote,
+            ))
         pods.append(PodResponse(
             id=pod.id,
             pod_number=pod.pod_number,

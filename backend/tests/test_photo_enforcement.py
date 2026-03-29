@@ -82,3 +82,63 @@ class TestPairingsPhotoEnforcement:
             json={"skip_photo_check": True}, headers=ah,
         )
         assert resp.status_code == 201
+
+
+async def _complete_draft_round(client: AsyncClient, ah: dict, tid: str, draft_id: str):
+    """Generate pairings and simulate results for one swiss round."""
+    await client.post(
+        f"/tournaments/{tid}/drafts/{draft_id}/pairings",
+        json={"skip_photo_check": True},
+        headers=ah,
+    )
+    await client.post(
+        f"/test/tournaments/{tid}/simulate-results",
+        json={"with_conflicts": False},
+        headers=ah,
+    )
+
+
+class TestDraftPhotoEnforcement:
+    async def test_second_draft_blocked_without_returned(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_draft(client)
+        await _complete_draft_round(client, ah, tid, draft_id)
+
+        resp = await client.post(f"/tournaments/{tid}/drafts", headers=ah)
+        assert resp.status_code == 400
+        assert "returned" in resp.json()["detail"].lower()
+
+    async def test_second_draft_allowed_with_returned(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_draft(client)
+        await _complete_draft_round(client, ah, tid, draft_id)
+
+        await client.post(
+            f"/test/tournaments/{tid}/simulate-photos",
+            json={"incomplete": False}, headers=ah,
+        )
+
+        resp = await client.post(f"/tournaments/{tid}/drafts", headers=ah)
+        assert resp.status_code == 201
+
+    async def test_second_draft_override(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_draft(client)
+        await _complete_draft_round(client, ah, tid, draft_id)
+
+        resp = await client.post(
+            f"/tournaments/{tid}/drafts",
+            json={"skip_photo_check": True}, headers=ah,
+        )
+        assert resp.status_code == 201
+
+    async def test_first_draft_not_blocked(self, client: AsyncClient):
+        admin = await client.post(
+            "/auth/admin/setup", json={"username": "admin", "password": "pw"}
+        )
+        ah = {"Authorization": f"Bearer {admin.json()['access_token']}"}
+        resp = await client.post(
+            "/test/tournament",
+            json={"num_players": 4, "num_cubes": 2, "seed": 99}, headers=ah,
+        )
+        tid = resp.json()["tournament_id"]
+
+        resp = await client.post(f"/tournaments/{tid}/drafts", headers=ah)
+        assert resp.status_code == 201

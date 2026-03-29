@@ -15,12 +15,14 @@ class DraftCreate(BaseModel):
     early_round_bonus: float = 3.0
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
+    skip_photo_check: bool = False
 
 
 class PodPlayerResponse(BaseModel):
     tournament_player_id: uuid.UUID
     username: str
     seat_number: int
+    vote: str | None = None
 
     model_config = {"from_attributes": True}
 

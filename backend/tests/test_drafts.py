@@ -101,5 +101,9 @@ async def test_cannot_exceed_max_rounds(client: AsyncClient):
     assert r1.status_code == 201
 
     # Second draft should fail (max_rounds=1)
-    r2 = await client.post(f"/tournaments/{tid}/drafts", headers=ah)
+    r2 = await client.post(
+        f"/tournaments/{tid}/drafts",
+        json={"skip_photo_check": True},
+        headers=ah,
+    )
     assert r2.status_code == 400
