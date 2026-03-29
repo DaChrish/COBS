@@ -182,6 +182,177 @@ async def generate_pairings(
     return await _get_draft_matches(draft_id, db)
 
 
+@router.post("/pods/{pod_id}/pairings", response_model=list[MatchResponse], status_code=201)
+async def generate_pod_pairings(
+    tournament_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    pod_id: uuid.UUID,
+    body: PairingsRequest = PairingsRequest(),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate Swiss pairings for the next round in a single pod."""
+    draft = await _get_draft(draft_id, tournament_id, db)
+
+    # Check for unresolved conflicts in THIS pod
+    conflict_result = await db.execute(
+        select(Match).where(Match.pod_id == pod_id, Match.has_conflict.is_(True))
+    )
+    if conflict_result.scalars().first():
+        raise HTTPException(status_code=400, detail="Unresolved match conflicts exist in this pod")
+
+    # Check for unreported non-bye matches in THIS pod
+    unreported_result = await db.execute(
+        select(Match).where(
+            Match.pod_id == pod_id,
+            Match.reported.is_(False),
+            Match.is_bye.is_(False),
+        )
+    )
+    if unreported_result.scalars().first():
+        raise HTTPException(status_code=400, detail="Unreported matches from previous round in this pod")
+
+    # Load the specific pod with eager-loaded players
+    pod_result = await db.execute(
+        select(Pod)
+        .where(Pod.id == pod_id, Pod.draft_id == draft_id)
+        .options(
+            selectinload(Pod.players)
+            .selectinload(PodPlayer.tournament_player)
+            .selectinload(TournamentPlayer.user),
+        )
+    )
+    pod = pod_result.scalar_one_or_none()
+    if not pod:
+        raise HTTPException(status_code=404, detail="Pod not found")
+
+    # Check for POOL+DECK photos (only before first swiss round for this pod)
+    if not body.skip_photo_check:
+        existing_pod_matches = await db.execute(
+            select(Match).where(Match.pod_id == pod_id)
+        )
+        if not existing_pod_matches.scalars().first():
+            # First round for this pod — check photos
+            player_ids = [pp.tournament_player_id for pp in pod.players]
+            if player_ids:
+                photo_result = await db.execute(
+                    select(DraftPhoto).where(
+                        DraftPhoto.draft_id == draft_id,
+                        DraftPhoto.tournament_player_id.in_(player_ids),
+                        DraftPhoto.photo_type.in_([PhotoType.POOL, PhotoType.DECK]),
+                    )
+                )
+                photos = photo_result.scalars().all()
+                photo_set = {(p.tournament_player_id, p.photo_type) for p in photos}
+                missing = []
+                for pid in player_ids:
+                    if (pid, PhotoType.POOL) not in photo_set or (pid, PhotoType.DECK) not in photo_set:
+                        missing.append(str(pid))
+                if missing:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Missing POOL/DECK photos for {len(missing)} player(s). Use skip_photo_check to override.",
+                    )
+
+    # Determine swiss round for THIS pod
+    pod_matches_result = await db.execute(
+        select(Match).where(Match.pod_id == pod_id)
+    )
+    pod_matches = pod_matches_result.scalars().all()
+    current_round = max((m.swiss_round for m in pod_matches), default=0) + 1
+
+    if current_round > 3:
+        raise HTTPException(status_code=400, detail="Max 3 swiss rounds per pod")
+
+    # Get players in this pod
+    players = [
+        {"id": str(pp.tournament_player_id), "match_points": pp.tournament_player.match_points}
+        for pp in pod.players
+    ]
+
+    # Get previous matches for this pod
+    prev_result = await db.execute(
+        select(Match).where(Match.pod_id == pod_id)
+    )
+    prev_matches = [
+        {"player1_id": str(m.player1_id), "player2_id": str(m.player2_id) if m.player2_id else None}
+        for m in prev_result.scalars().all()
+    ]
+
+    # Get previous byes
+    prev_byes = [
+        str(m.player1_id)
+        for m in (await db.execute(
+            select(Match).where(Match.pod_id == pod_id, Match.is_bye.is_(True))
+        )).scalars().all()
+    ]
+
+    result = generate_swiss_pairings(players, prev_matches, prev_byes)
+
+    new_matches: list[Match] = []
+    for pairing in result.pairings:
+        match = Match(
+            pod_id=pod_id,
+            swiss_round=current_round,
+            player1_id=uuid.UUID(pairing.player1_id),
+            player2_id=uuid.UUID(pairing.player2_id) if pairing.player2_id else None,
+            is_bye=pairing.is_bye,
+            reported=pairing.is_bye,
+            player1_wins=2 if pairing.is_bye else 0,
+        )
+        if pairing.is_bye:
+            tp_result = await db.execute(
+                select(TournamentPlayer).where(
+                    TournamentPlayer.id == uuid.UUID(pairing.player1_id)
+                )
+            )
+            tp = tp_result.scalar_one()
+            tp.match_points += 3
+            tp.game_wins += 2
+
+        db.add(match)
+        new_matches.append(match)
+
+    # Clear only THIS pod's timer
+    pod.timer_ends_at = None
+
+    await db.commit()
+    await manager.broadcast(str(tournament_id), "pairings_ready", {"draft_id": str(draft_id), "pod_id": str(pod_id)})
+
+    # Return matches for THIS pod
+    match_result = await db.execute(
+        select(Match)
+        .where(Match.pod_id == pod_id)
+        .options(
+            selectinload(Match.player1).selectinload(TournamentPlayer.user),
+            selectinload(Match.player2).selectinload(TournamentPlayer.user),
+        )
+        .order_by(Match.swiss_round)
+    )
+    matches = match_result.scalars().all()
+    return [
+        MatchResponse(
+            id=m.id,
+            pod_id=m.pod_id,
+            swiss_round=m.swiss_round,
+            player1_id=m.player1_id,
+            player1_username=m.player1.user.username,
+            player2_id=m.player2_id,
+            player2_username=m.player2.user.username if m.player2 else None,
+            player1_wins=m.player1_wins,
+            player2_wins=m.player2_wins,
+            is_bye=m.is_bye,
+            reported=m.reported,
+            has_conflict=m.has_conflict,
+            p1_reported_p1_wins=m.p1_reported_p1_wins,
+            p1_reported_p2_wins=m.p1_reported_p2_wins,
+            p2_reported_p1_wins=m.p2_reported_p1_wins,
+            p2_reported_p2_wins=m.p2_reported_p2_wins,
+        )
+        for m in matches
+    ]
+
+
 @router.get("/matches", response_model=list[MatchResponse])
 async def list_matches(
     tournament_id: uuid.UUID,
