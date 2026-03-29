@@ -308,6 +308,8 @@ const POD_ACCENT_COLORS = [
 ] as const;
 
 function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string; isTest: boolean; tournament: TournamentDetail }) {
+  const { token, setToken } = useAuth();
+  const navigate = useNavigate();
   const { data: drafts, loading, refetch } = useApi<Draft[]>(
     `/tournaments/${tournamentId}/drafts`
   );
@@ -671,14 +673,13 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                 color="blue"
                 onClick={async () => {
                   try {
-                    const token = localStorage.getItem("token");
                     const res = await apiFetch<{ access_token: string }>("/auth/impersonate", {
                       method: "POST",
                       body: JSON.stringify({ user_id: selectedPlayer.player.user_id }),
                     });
                     if (token) localStorage.setItem("admin_token", token);
-                    localStorage.setItem("token", res.access_token);
-                    window.location.reload();
+                    await setToken(res.access_token);
+                    navigate("/");
                   } catch (e) {
                     setError(e instanceof Error ? e.message : "Error");
                   }
