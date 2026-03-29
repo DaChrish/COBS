@@ -116,7 +116,7 @@ export function DraftPage() {
           <Text size="sm" c="dimmed" tt="uppercase">Dein Pod</Text>
           <Text fw={600} size="lg">{myPod.cube_name}</Text>
           <Text size="sm" c="dimmed">
-            Pod {myPod.pod_number} · Seat {myPod.players.find((p) => p.tournament_player_id === myPlayer?.id)?.seat_number} · {myPod.pod_size} Spieler
+            Tisch {myPod.pod_number} · Seat {myPod.players.find((p) => p.tournament_player_id === myPlayer?.id)?.seat_number} · {myPod.pod_size} Spieler
           </Text>
           <Group mt="xs" gap="xs">
             {myPod.players.map((pp) => (

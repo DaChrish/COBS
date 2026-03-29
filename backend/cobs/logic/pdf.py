@@ -104,3 +104,44 @@ def generate_pairings_pdf(
         pdf.ln(4)
 
     return bytes(pdf.output())
+
+
+def generate_pods_pdf(
+    tournament_name: str, round_label: str, pods: list[dict]
+) -> bytes:
+    """Generate a pods overview PDF.
+
+    pods: list of dicts with keys:
+        table, pod_name, players (list of {seat, username})
+    """
+    pdf = FPDF()
+    pdf.add_page()
+
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, _latin1_safe(f"COBS - {tournament_name}"), new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(0, 8, _latin1_safe(round_label), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    col_widths = [15, 55]
+
+    for pod in pods:
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 8, _latin1_safe(f"Tisch {pod['table']} - {pod['pod_name']}"), new_x="LMARGIN", new_y="NEXT")
+
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_fill_color(230, 230, 230)
+        pdf.cell(col_widths[0], 7, "Seat", border=1, fill=True)
+        pdf.cell(col_widths[1], 7, "Spieler", border=1, fill=True)
+        pdf.ln()
+
+        pdf.set_font("Helvetica", "", 9)
+        for player in pod["players"]:
+            pdf.cell(col_widths[0], 7, str(player["seat"]), border=1)
+            pdf.cell(col_widths[1], 7, player["username"], border=1)
+            pdf.ln()
+
+        pdf.ln(4)
+
+    return bytes(pdf.output())

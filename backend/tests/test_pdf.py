@@ -34,6 +34,16 @@ class TestPairingsPdf:
         assert resp.headers["content-type"] == "application/pdf"
         assert resp.content[:4] == b"%PDF"
 
+class TestPodsPdfEndpoint:
+    async def test_returns_pdf(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_tournament_with_results(client)
+        resp = await client.get(f"/tournaments/{tid}/drafts/{draft_id}/pods/pdf", headers=ah)
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "application/pdf"
+        assert resp.content[:4] == b"%PDF"
+
+
+class TestPairingsPdfNoMatches:
     async def test_no_matches_returns_pdf(self, client: AsyncClient):
         admin = await client.post("/auth/admin/setup", json={"username": "admin", "password": "pw"})
         ah = {"Authorization": f"Bearer {admin.json()['access_token']}"}

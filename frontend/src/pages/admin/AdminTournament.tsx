@@ -611,7 +611,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                     <Group justify="space-between" mb="xs">
                       <Group gap="xs" align="center">
                         <Text fw={700} size="sm" c={accent}>
-                          Pod {pod.pod_number}
+                          Tisch {pod.pod_number}
                         </Text>
                         <Text size="xs" c="dimmed">
                           ·
@@ -783,6 +783,10 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                     <Button size="xs" variant="light" loading={pairingFor === draft.id}
                       onClick={() => generatePairings(draft.id)}>Nächste Swiss-Runde</Button>
                   )}
+                  <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
+                    onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pods/pdf`, `pods-runde${draft.round_number}.pdf`)}>
+                    Pods PDF
+                  </Button>
                   {hasMatches && (
                     <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
                       onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pairings/pdf`, `pairings-runde${draft.round_number}.pdf`)}>

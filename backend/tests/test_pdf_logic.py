@@ -1,5 +1,5 @@
 import pytest
-from cobs.logic.pdf import generate_standings_pdf, generate_pairings_pdf
+from cobs.logic.pdf import generate_standings_pdf, generate_pairings_pdf, generate_pods_pdf
 
 
 class TestStandingsPdf:
@@ -44,4 +44,15 @@ class TestPairingsPdf:
             {"table": 1, "player1": "Alice", "player2": "Bob"},
         ], "byes": ["Charlie"]}]
         result = generate_pairings_pdf("Test", "Runde 1 \u2014 Swiss 1", pods)
+        assert result[:4] == b"%PDF"
+
+
+class TestPodsPdf:
+    def test_returns_pdf_bytes(self):
+        pods = [{"table": 1, "pod_name": "Test Cube", "players": [
+            {"seat": 1, "username": "Alice"},
+            {"seat": 2, "username": "Bob"},
+        ]}]
+        result = generate_pods_pdf("Test", "Runde 1 - Pods", pods)
+        assert isinstance(result, bytes)
         assert result[:4] == b"%PDF"

@@ -2,6 +2,7 @@ import random
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -9,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from cobs.auth.dependencies import require_admin
 from cobs.database import get_db
 from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, optimize_pods
+from cobs.logic.pdf import generate_pods_pdf
 from cobs.logic.pod_sizes import calculate_pod_sizes
 from cobs.models.cube import TournamentCube
 from cobs.models.draft import Draft, DraftStatus, Pod, PodPlayer
@@ -21,6 +23,57 @@ from cobs.schemas.draft import DraftCreate, DraftResponse, PodPlayerResponse, Po
 from cobs.models.vote import CubeVote as CubeVoteModel
 
 router = APIRouter(prefix="/tournaments/{tournament_id}/drafts", tags=["drafts"])
+
+
+@router.get("/{draft_id}/pods/pdf")
+async def get_pods_pdf(
+    tournament_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate pods overview PDF with table numbers and seats."""
+    result = await db.execute(
+        select(Draft)
+        .where(Draft.id == draft_id, Draft.tournament_id == tournament_id)
+        .options(
+            selectinload(Draft.pods)
+            .selectinload(Pod.players)
+            .selectinload(PodPlayer.tournament_player)
+            .selectinload(TournamentPlayer.user),
+            selectinload(Draft.pods)
+            .selectinload(Pod.tournament_cube)
+            .selectinload(TournamentCube.cube),
+        )
+    )
+    draft = result.scalar_one_or_none()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+    # Get tournament name
+    t_result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
+    tournament = t_result.scalar_one()
+
+    pods_data = []
+    for pod in sorted(draft.pods, key=lambda p: p.pod_number):
+        cube_name = pod.tournament_cube.cube.name if pod.tournament_cube else "?"
+        players = [
+            {"seat": pp.seat_number, "username": pp.tournament_player.user.username}
+            for pp in sorted(pod.players, key=lambda p: p.seat_number)
+        ]
+        pods_data.append({
+            "table": pod.pod_number,
+            "pod_name": cube_name,
+            "players": players,
+        })
+
+    round_label = f"Runde {draft.round_number} - Pods"
+    pdf_bytes = generate_pods_pdf(tournament.name, round_label, pods_data)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="pods-runde{draft.round_number}.pdf"'},
+    )
 
 
 def _draft_load_options():
