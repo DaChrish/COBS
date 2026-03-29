@@ -1,18 +1,20 @@
 import { Alert, Group, Text, Button } from "@mantine/core";
 import { IconUserExclamation } from "@tabler/icons-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export function ImpersonationBanner() {
-  const { user } = useAuth();
+  const { user, setToken } = useAuth();
+  const navigate = useNavigate();
 
   // Check if there's a stored admin token (set during impersonation)
   const adminToken = localStorage.getItem("admin_token");
   if (!adminToken || !user) return null;
 
-  const endImpersonation = () => {
-    localStorage.setItem("token", adminToken);
+  const endImpersonation = async () => {
     localStorage.removeItem("admin_token");
-    window.location.reload();
+    await setToken(adminToken);
+    navigate("/admin");
   };
 
   return (
