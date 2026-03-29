@@ -345,13 +345,32 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
   const [timerMinutes, setTimerMinutes] = useState<Record<string, number>>({});
   const [settingTimer, setSettingTimer] = useState<string | null>(null);
 
-  const setTimer = async (pod: Pod) => {
-    const minutes = timerMinutes[pod.id] ?? 50;
+  const [confirmCancelTimer, setConfirmCancelTimer] = useState<Pod | null>(null);
+
+  const setTimerForAllPods = async (draftPods: Pod[], minutes: number) => {
+    setSettingTimer("all");
+    setError(null);
+    try {
+      for (const pod of draftPods) {
+        await apiFetch(`/tournaments/${tournamentId}/pods/${pod.id}/timer`, {
+          method: "POST",
+          body: JSON.stringify({ minutes }),
+        });
+      }
+      refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setSettingTimer(null);
+    }
+  };
+
+  const clearTimerForPod = async (pod: Pod) => {
     setSettingTimer(pod.id);
     try {
       await apiFetch(`/tournaments/${tournamentId}/pods/${pod.id}/timer`, {
         method: "POST",
-        body: JSON.stringify({ minutes }),
+        body: JSON.stringify({ minutes: 0 }),
       });
       refetch();
     } catch (e) {
@@ -649,28 +668,20 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                         })}
                     </Group>
                     {/* Timer */}
-                    {draft.status === "ACTIVE" && (
+                    {draft.status === "ACTIVE" && pod.timer_ends_at && (
                       <Group gap="xs" mt="xs" align="center">
                         <IconClock size={14} style={{ opacity: 0.5 }} />
-                        {pod.timer_ends_at && new Date(pod.timer_ends_at) > new Date() ? (
+                        {new Date(pod.timer_ends_at) > new Date() ? (
                           <Text size="xs" c="green">
-                            bis {new Date(pod.timer_ends_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                            Timer bis {new Date(pod.timer_ends_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
                           </Text>
-                        ) : pod.timer_ends_at ? (
-                          <Text size="xs" c="dimmed">abgelaufen</Text>
                         ) : (
-                          <Text size="xs" c="dimmed">kein Timer</Text>
+                          <Text size="xs" c="red">Timer abgelaufen</Text>
                         )}
-                        <NumberInput
-                          w={70} size="xs" variant="filled"
-                          value={timerMinutes[pod.id] ?? 50}
-                          onChange={(v) => setTimerMinutes((prev) => ({ ...prev, [pod.id]: Number(v) }))}
-                          min={1} max={999} suffix=" min"
-                        />
-                        <Button size="compact-xs" variant="light"
+                        <Button size="compact-xs" variant="subtle" color="red"
                           loading={settingTimer === pod.id}
-                          onClick={() => setTimer(pod)}>
-                          Setzen
+                          onClick={() => setConfirmCancelTimer(pod)}>
+                          Abbrechen
                         </Button>
                       </Group>
                     )}
@@ -777,6 +788,20 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                       onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pairings/pdf`, `pairings-runde${draft.round_number}.pdf`)}>
                       Pairings PDF
                     </Button>
+                  )}
+                  {hasMatches && !allReported && draft.status !== "FINISHED" && (
+                    <Group gap={4}>
+                      <NumberInput w={70} size="xs" variant="filled"
+                        value={timerMinutes["_bulk"] ?? 50}
+                        onChange={(v) => setTimerMinutes((prev) => ({ ...prev, _bulk: Number(v) }))}
+                        min={1} max={999} suffix="m" />
+                      <Button size="xs" variant="light" color="orange"
+                        loading={settingTimer === "all"}
+                        leftSection={<IconClock size={14} />}
+                        onClick={() => setTimerForAllPods(draft.pods, timerMinutes["_bulk"] ?? 50)}>
+                        Timer
+                      </Button>
+                    </Group>
                   )}
                 </Group>
               </Group>
@@ -921,6 +946,33 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
             <NumberInput label={`Siege ${resolveState.match.player2_username ?? "Spieler 2"}`}
               value={resolveState.p2Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p2Wins: Number(v) } : s)} min={0} max={3} />
             <Button onClick={resolveMatch} loading={resolving} color="red">Ergebnis festlegen</Button>
+          </Stack>
+        )}
+      </Modal>
+      <Modal
+        opened={confirmCancelTimer !== null}
+        onClose={() => setConfirmCancelTimer(null)}
+        title="Timer abbrechen?"
+        size="sm"
+      >
+        {confirmCancelTimer && (
+          <Stack>
+            <Text size="sm">
+              Timer für Pod {confirmCancelTimer.pod_number} ({confirmCancelTimer.cube_name}) wirklich abbrechen?
+            </Text>
+            <Group justify="flex-end" gap="xs">
+              <Button variant="light" size="xs" onClick={() => setConfirmCancelTimer(null)}>
+                Nein
+              </Button>
+              <Button color="red" size="xs"
+                loading={settingTimer === confirmCancelTimer.id}
+                onClick={async () => {
+                  await clearTimerForPod(confirmCancelTimer);
+                  setConfirmCancelTimer(null);
+                }}>
+                Ja, abbrechen
+              </Button>
+            </Group>
           </Stack>
         )}
       </Modal>

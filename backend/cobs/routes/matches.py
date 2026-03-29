@@ -171,6 +171,10 @@ async def generate_pairings(
             db.add(match)
             new_matches.append(match)
 
+    # Clear pod timers for new round
+    for pod in pods:
+        pod.timer_ends_at = None
+
     await db.commit()
     await manager.broadcast(str(tournament_id), "pairings_ready", {"draft_id": str(draft_id)})
 
