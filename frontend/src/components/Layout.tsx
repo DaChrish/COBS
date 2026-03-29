@@ -9,12 +9,13 @@ export function Layout() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isImpersonating = !!localStorage.getItem("admin_token") && !!user;
 
   return (
-    <AppShell header={{ height: 56 }} padding="md">
+    <AppShell header={{ height: isImpersonating ? 90 : 56 }} padding="md">
       <AppShell.Header>
         <ImpersonationBanner />
-        <Group h="100%" px="md" justify="space-between">
+        <Group h={56} px="md" justify="space-between">
           <Group gap="xs" style={{ cursor: "pointer" }} onClick={() => navigate("/")}>
             <IconCube size={24} color="var(--mantine-color-blue-6)" />
             <Text fw={700} size="lg">COBS</Text>

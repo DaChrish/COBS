@@ -7,4 +7,4 @@ COPY . .
 
 RUN pip install uv && uv pip install --system ".[dev]"
 
-CMD ["uvicorn", "cobs.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn cobs.app:app --host 0.0.0.0 --port 8000"]
