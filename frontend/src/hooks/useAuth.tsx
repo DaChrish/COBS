@@ -6,6 +6,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import { apiFetch } from "../api/client";
 
 interface AuthUser {
@@ -32,15 +33,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [loading, setLoading] = useState(true);
 
-  const setToken = useCallback(async (t: string) => {
+  const setToken = useCallback(async (t: string): Promise<void> => {
     localStorage.setItem("token", t);
     setTokenState(t);
+    setLoading(true);
     // Fetch user immediately so AuthGuard works on redirect
     try {
       const me = await apiFetch<AuthUser>("/auth/me");
-      setUser(me);
-    } catch { /* will be retried by fetchMe effect */ }
-    setLoading(false);
+      // Use flushSync to ensure React commits state before caller navigates
+      flushSync(() => {
+        setUser(me);
+        setLoading(false);
+      });
+    } catch {
+      flushSync(() => setLoading(false));
+    }
   }, []);
 
   const fetchMe = useCallback(async () => {
@@ -68,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
+    localStorage.removeItem("admin_token");
     localStorage.setItem("token", res.access_token);
     setTokenState(res.access_token);
     // Fetch user immediately so AuthGuard sees user on redirect
@@ -78,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem("token");
+    localStorage.removeItem("admin_token");
     setTokenState(null);
     setUser(null);
   }, []);

@@ -218,7 +218,7 @@ function PlayersTab({
       if (token) {
         localStorage.setItem("admin_token", token);
       }
-      setToken(res.access_token);
+      await setToken(res.access_token);
       navigate("/");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Impersonation failed");
