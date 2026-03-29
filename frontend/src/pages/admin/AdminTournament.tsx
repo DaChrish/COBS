@@ -43,6 +43,26 @@ import { apiFetch } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
 import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry } from "../../api/types";
 
+function downloadPdf(path: string, filename: string) {
+  const token = localStorage.getItem("token");
+  fetch(`/api${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.blob();
+    })
+    .then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    })
+    .catch((e) => alert(e.message));
+}
+
 const STATUS_COLORS: Record<string, string> = {
   SETUP: "gray",
   VOTING: "blue",
@@ -710,7 +730,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                   )}
                   {hasMatches && (
                     <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
-                      component="a" href={`/api/tournaments/${tournamentId}/drafts/${draft.id}/pairings/pdf`} target="_blank">
+                      onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pairings/pdf`, `pairings-runde${draft.round_number}.pdf`)}>
                       Pairings PDF
                     </Button>
                   )}
@@ -886,9 +906,7 @@ function StandingsTab({ tournamentId }: { tournamentId: string }) {
           size="xs"
           variant="light"
           leftSection={<IconDownload size={14} />}
-          component="a"
-          href={`/api/tournaments/${tournamentId}/standings/pdf`}
-          target="_blank"
+          onClick={() => downloadPdf(`/tournaments/${tournamentId}/standings/pdf`, "standings.pdf")}
         >
           Standings PDF
         </Button>
