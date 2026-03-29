@@ -23,6 +23,7 @@ import {
   SimpleGrid,
   Paper,
   Image as MantineImage,
+  Accordion,
 } from "@mantine/core";
 import {
   IconInfoCircle,
@@ -321,6 +322,11 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
   const [selectedPlayer, setSelectedPlayer] = useState<{ player: PlayerPhotoStatus; draftId: string } | null>(null);
   const [forceOverride, setForceOverride] = useState<{ type: string; draftId: string | null } | null>(null);
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
+  const [matchesByDraft, setMatchesByDraft] = useState<Record<string, Match[]>>({});
+  const [resolveState, setResolveState] = useState<{
+    match: Match; draftId: string; p1Wins: number; p2Wins: number;
+  } | null>(null);
+  const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
     if (!drafts) return;
@@ -333,6 +339,18 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       } catch {
         // ignore
       }
+    });
+  }, [drafts, tournamentId]);
+
+  useEffect(() => {
+    if (!drafts) return;
+    drafts.forEach(async (draft) => {
+      try {
+        const matches = await apiFetch<Match[]>(
+          `/tournaments/${tournamentId}/drafts/${draft.id}/matches`
+        );
+        setMatchesByDraft((prev) => ({ ...prev, [draft.id]: matches }));
+      } catch { /* ignore */ }
     });
   }, [drafts, tournamentId]);
 
@@ -415,6 +433,24 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
     }
   };
 
+  const resolveMatch = async () => {
+    if (!resolveState) return;
+    setResolving(true);
+    setError(null);
+    try {
+      await apiFetch(
+        `/tournaments/${tournamentId}/drafts/${resolveState.draftId}/matches/${resolveState.match.id}/resolve`,
+        { method: "POST", body: JSON.stringify({ player1_wins: resolveState.p1Wins, player2_wins: resolveState.p2Wins }) }
+      );
+      setResolveState(null);
+      refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setResolving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Center>
@@ -484,16 +520,6 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                 </Badge>
               )}
             </Group>
-            {draft.status !== "FINISHED" && (
-              <Button
-                size="xs"
-                variant="light"
-                loading={pairingFor === draft.id}
-                onClick={() => generatePairings(draft.id)}
-              >
-                Pairings generieren
-              </Button>
-            )}
           </Group>
 
           {draft.pods.length > 0 && (
@@ -570,51 +596,126 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           );
                         })}
                     </Group>
+                    {/* Swiss Rounds */}
+                    {(() => {
+                      const podMatches = matchesByDraft[draft.id]?.filter((m) => m.pod_id === pod.id) ?? [];
+                      if (podMatches.length === 0) return null;
+                      const swissRounds = [...new Set(podMatches.map((m) => m.swiss_round))].sort();
+                      const latestRound = Math.max(...swissRounds);
+                      return (
+                        <Accordion variant="separated" mt="sm" defaultValue={`swiss-${latestRound}`}
+                          styles={{ item: { borderRadius: 8 }, content: { padding: '4px 0' } }}>
+                          {swissRounds.map((round) => {
+                            const roundMatches = podMatches.filter((m) => m.swiss_round === round);
+                            const reported = roundMatches.filter((m) => m.reported).length;
+                            const total = roundMatches.length;
+                            const allDone = reported === total;
+                            return (
+                              <Accordion.Item key={round} value={`swiss-${round}`}>
+                                <Accordion.Control>
+                                  <Group justify="space-between" pr="xs">
+                                    <Text size="sm" fw={600}>Swiss {round}</Text>
+                                    <Badge size="xs" variant="light" color={allDone ? "green" : "yellow"}>
+                                      {reported}/{total}
+                                    </Badge>
+                                  </Group>
+                                </Accordion.Control>
+                                <Accordion.Panel>
+                                  <Stack gap={4}>
+                                    {roundMatches.map((m) => (
+                                      <Group key={m.id} justify="space-between" px="xs" py={4}
+                                        style={{ borderRadius: 4 }}
+                                        bg={m.has_conflict ? "var(--mantine-color-red-light)" : undefined}>
+                                        <Text size="sm" fw={500} style={{ flex: 1 }}>{m.player1_username}</Text>
+                                        <Text size="sm" fw={600} c="dimmed" ta="center" w={60}>
+                                          {m.reported ? `${m.player1_wins}–${m.player2_wins}` : m.is_bye ? "BYE" : "–"}
+                                        </Text>
+                                        <Text size="sm" fw={500} style={{ flex: 1 }} ta="right">
+                                          {m.player2_username ?? "—"}
+                                        </Text>
+                                        <div style={{ width: 70, textAlign: "right" }}>
+                                          {m.is_bye ? (
+                                            <Badge color="gray" size="xs">Bye</Badge>
+                                          ) : m.has_conflict ? (
+                                            <Button size="compact-xs" color="red" variant="light"
+                                              onClick={() => setResolveState({
+                                                match: m, draftId: draft.id,
+                                                p1Wins: m.p1_reported_p1_wins ?? 0, p2Wins: m.p1_reported_p2_wins ?? 0,
+                                              })}>Lösen</Button>
+                                          ) : m.reported ? (
+                                            <Badge color="green" size="xs">✓</Badge>
+                                          ) : (
+                                            <Badge color="gray" size="xs">⏳</Badge>
+                                          )}
+                                        </div>
+                                      </Group>
+                                    ))}
+                                  </Stack>
+                                </Accordion.Panel>
+                              </Accordion.Item>
+                            );
+                          })}
+                        </Accordion>
+                      );
+                    })()}
                   </Paper>
                 );
               })}
             </SimpleGrid>
           )}
-          {isTest && draft.status !== "FINISHED" && (
-            <Group gap="xs">
-              <Button
-                size="xs"
-                variant="light"
-                color="green"
-                loading={simulating === "results"}
-                onClick={() => simulateResults(false)}
-              >
-                Ergebnisse simulieren
-              </Button>
-              <Button
-                size="xs"
-                variant="light"
-                color="red"
-                loading={simulating === "conflicts"}
-                onClick={() => simulateResults(true)}
-              >
-                Ergebnisse + Konflikte
-              </Button>
-              <Button
-                size="xs"
-                variant="light"
-                color="blue"
-                loading={simulating === "photos"}
-                onClick={() => simulatePhotos(false)}
-              >
-                Fotos simulieren
-              </Button>
-              <Button
-                size="xs"
-                variant="light"
-                color="orange"
-                loading={simulating === "photos-incomplete"}
-                onClick={() => simulatePhotos(true)}
-              >
-                Fotos (lückenhaft)
-              </Button>
-            </Group>
-          )}
+          {(() => {
+            const allMatches = matchesByDraft[draft.id] ?? [];
+            const hasMatches = allMatches.length > 0;
+            const openMatches = allMatches.filter((m) => !m.reported && !m.is_bye);
+            const conflicts = allMatches.filter((m) => m.has_conflict);
+            const allReported = hasMatches && openMatches.length === 0 && conflicts.length === 0;
+            const currentSwissRound = hasMatches ? Math.max(...allMatches.map((m) => m.swiss_round)) : 0;
+            return (
+              <Group justify="space-between" align="center">
+                {hasMatches && (
+                  <Group gap="xs">
+                    <Text size="sm" c="dimmed">
+                      {allMatches.filter((m) => m.reported).length}/{allMatches.length} Matches gemeldet
+                    </Text>
+                    {conflicts.length > 0 && <Badge color="red" size="xs">{conflicts.length} Konflikte</Badge>}
+                  </Group>
+                )}
+                <Group gap="xs">
+                  {!hasMatches && draft.status !== "FINISHED" && (
+                    <Button size="xs" variant="light" loading={pairingFor === draft.id}
+                      onClick={() => generatePairings(draft.id)}>Pairings generieren</Button>
+                  )}
+                  {hasMatches && allReported && currentSwissRound < 3 && draft.status !== "FINISHED" && (
+                    <Button size="xs" variant="light" loading={pairingFor === draft.id}
+                      onClick={() => generatePairings(draft.id)}>Nächste Swiss-Runde</Button>
+                  )}
+                </Group>
+              </Group>
+            );
+          })()}
+          {isTest && draft.status !== "FINISHED" && (() => {
+            const allMatches = matchesByDraft[draft.id] ?? [];
+            const hasMatches = allMatches.length > 0;
+            const hasOpenMatches = allMatches.some((m) => !m.reported && !m.is_bye);
+            const ps = photoStatus[draft.id];
+            const hasPhotoGaps = ps && (ps.pool_deck_ready < ps.total_players || ps.returned_ready < ps.total_players);
+            return (
+              <Group gap="xs">
+                {hasOpenMatches && (
+                  <>
+                    <Button size="xs" variant="light" color="green" loading={simulating === "results"} onClick={() => simulateResults(false)}>Ergebnisse simulieren</Button>
+                    <Button size="xs" variant="light" color="red" loading={simulating === "conflicts"} onClick={() => simulateResults(true)}>Ergebnisse + Konflikte</Button>
+                  </>
+                )}
+                {(hasPhotoGaps || !hasMatches) && (
+                  <>
+                    <Button size="xs" variant="light" color="blue" loading={simulating === "photos"} onClick={() => simulatePhotos(false)}>Fotos simulieren</Button>
+                    <Button size="xs" variant="light" color="orange" loading={simulating === "photos-incomplete"} onClick={() => simulatePhotos(true)}>Fotos (lückenhaft)</Button>
+                  </>
+                )}
+              </Group>
+            );
+          })()}
           <Divider />
         </Stack>
       ))}
@@ -711,6 +812,25 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
             >
               Download
             </Button>
+          </Stack>
+        )}
+      </Modal>
+      <Modal opened={resolveState !== null} onClose={() => setResolveState(null)} title="Konflikt lösen">
+        {resolveState && (
+          <Stack>
+            <Text><strong>{resolveState.match.player1_username}</strong> vs.{" "}
+              <strong>{resolveState.match.player2_username ?? "—"}</strong></Text>
+            {resolveState.match.p1_reported_p1_wins !== null && (
+              <Text size="sm" c="dimmed">Gemeldet von Sp.1: {resolveState.match.p1_reported_p1_wins} – {resolveState.match.p1_reported_p2_wins}</Text>
+            )}
+            {resolveState.match.p2_reported_p1_wins !== null && (
+              <Text size="sm" c="dimmed">Gemeldet von Sp.2: {resolveState.match.p2_reported_p1_wins} – {resolveState.match.p2_reported_p2_wins}</Text>
+            )}
+            <NumberInput label={`Siege ${resolveState.match.player1_username}`}
+              value={resolveState.p1Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p1Wins: Number(v) } : s)} min={0} max={3} />
+            <NumberInput label={`Siege ${resolveState.match.player2_username ?? "Spieler 2"}`}
+              value={resolveState.p2Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p2Wins: Number(v) } : s)} min={0} max={3} />
+            <Button onClick={resolveMatch} loading={resolving} color="red">Ergebnis festlegen</Button>
           </Stack>
         )}
       </Modal>
