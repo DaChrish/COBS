@@ -53,3 +53,32 @@ class TestPhotoStatus:
         for p in data["players"]:
             assert p["pool"] is not None
             assert p["pool"].startswith("/uploads/")
+
+
+class TestPairingsPhotoEnforcement:
+    async def test_pairings_blocked_without_photos(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_draft(client)
+        resp = await client.post(
+            f"/tournaments/{tid}/drafts/{draft_id}/pairings", headers=ah,
+        )
+        assert resp.status_code == 400
+        assert "photo" in resp.json()["detail"].lower()
+
+    async def test_pairings_allowed_with_photos(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_draft(client)
+        await client.post(
+            f"/test/tournaments/{tid}/simulate-photos",
+            json={"incomplete": False}, headers=ah,
+        )
+        resp = await client.post(
+            f"/tournaments/{tid}/drafts/{draft_id}/pairings", headers=ah,
+        )
+        assert resp.status_code == 201
+
+    async def test_pairings_override_skips_check(self, client: AsyncClient):
+        ah, tid, draft_id = await _setup_draft(client)
+        resp = await client.post(
+            f"/tournaments/{tid}/drafts/{draft_id}/pairings",
+            json={"skip_photo_check": True}, headers=ah,
+        )
+        assert resp.status_code == 201

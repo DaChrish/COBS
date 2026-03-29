@@ -28,7 +28,7 @@ async def _setup_tournament_with_matches(client: AsyncClient):
 
     # 4. Generate pairings
     pair_resp = await client.post(
-        f"/tournaments/{tid}/drafts/{draft_id}/pairings", headers=ah
+        f"/tournaments/{tid}/drafts/{draft_id}/pairings", json={"skip_photo_check": True}, headers=ah
     )
     assert pair_resp.status_code == 201
 

@@ -125,9 +125,9 @@ async def test_full_tournament_simulation(client: AsyncClient):
     assert photo_resp2.status_code == 200
     assert photo_resp2.json()["photos_skipped"] > 0
 
-    # 15. Generate pairings and simulate for draft 2
+    # 15. Generate pairings and simulate for draft 2 (incomplete photos → skip check)
     pair_resp3 = await client.post(
-        f"/tournaments/{tid}/drafts/{draft2['id']}/pairings", headers=ah
+        f"/tournaments/{tid}/drafts/{draft2['id']}/pairings", json={"skip_photo_check": True}, headers=ah
     )
     assert pair_resp3.status_code == 201
 

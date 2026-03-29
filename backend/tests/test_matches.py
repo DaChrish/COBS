@@ -43,7 +43,7 @@ async def _full_setup(client: AsyncClient, num_players: int = 8):
 async def test_generate_pairings(client: AsyncClient):
     tid, did, ah, _ = await _full_setup(client, 8)
 
-    resp = await client.post(f"/tournaments/{tid}/drafts/{did}/pairings", headers=ah)
+    resp = await client.post(f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah)
     assert resp.status_code == 201
     matches = resp.json()
     assert len(matches) >= 4  # 4 matches for 8 players
@@ -51,7 +51,7 @@ async def test_generate_pairings(client: AsyncClient):
 
 async def test_list_matches(client: AsyncClient):
     tid, did, ah, _ = await _full_setup(client, 8)
-    await client.post(f"/tournaments/{tid}/drafts/{did}/pairings", headers=ah)
+    await client.post(f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah)
 
     resp = await client.get(f"/tournaments/{tid}/drafts/{did}/matches")
     assert resp.status_code == 200
@@ -61,7 +61,7 @@ async def test_list_matches(client: AsyncClient):
 async def test_report_match(client: AsyncClient):
     tid, did, ah, pts = await _full_setup(client, 4)
     pairings = await client.post(
-        f"/tournaments/{tid}/drafts/{did}/pairings", headers=ah
+        f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah
     )
     matches = [m for m in pairings.json() if not m["is_bye"]]
     if not matches:
@@ -90,7 +90,7 @@ async def test_max_3_swiss_rounds(client: AsyncClient):
     # Generate 3 rounds of pairings
     for _ in range(3):
         resp = await client.post(
-            f"/tournaments/{tid}/drafts/{did}/pairings", headers=ah
+            f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah
         )
         assert resp.status_code == 201
 
@@ -106,6 +106,6 @@ async def test_max_3_swiss_rounds(client: AsyncClient):
 
     # 4th round should fail
     resp = await client.post(
-        f"/tournaments/{tid}/drafts/{did}/pairings", headers=ah
+        f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah
     )
     assert resp.status_code == 400

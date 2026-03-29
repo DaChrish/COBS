@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,6 +12,7 @@ from cobs.logic.swiss import generate_swiss_pairings
 from cobs.logic.ws_manager import manager
 from cobs.models.draft import Draft, Pod, PodPlayer
 from cobs.models.match import Match
+from cobs.models.photo import DraftPhoto, PhotoType
 from cobs.models.tournament import TournamentPlayer
 from cobs.models.user import User
 from cobs.schemas.match import MatchReportRequest, MatchResolveRequest, MatchResponse
@@ -21,10 +23,15 @@ router = APIRouter(
 )
 
 
+class PairingsRequest(PydanticBaseModel):
+    skip_photo_check: bool = False
+
+
 @router.post("/pairings", response_model=list[MatchResponse], status_code=201)
 async def generate_pairings(
     tournament_id: uuid.UUID,
     draft_id: uuid.UUID,
+    body: PairingsRequest = PairingsRequest(),
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -52,6 +59,40 @@ async def generate_pairings(
     )
     if unreported_result.scalars().first():
         raise HTTPException(status_code=400, detail="Unreported matches from previous round")
+
+    # Check for POOL+DECK photos (only before first swiss round)
+    if not body.skip_photo_check:
+        existing_matches_check = await db.execute(
+            select(Match).join(Pod).where(Pod.draft_id == draft_id)
+        )
+        if not existing_matches_check.scalars().first():
+            # First round — check photos
+            pp_result = await db.execute(
+                select(PodPlayer).join(Pod).where(Pod.draft_id == draft_id)
+            )
+            player_ids = [pp.tournament_player_id for pp in pp_result.scalars().all()]
+
+            if player_ids:
+                photo_result = await db.execute(
+                    select(DraftPhoto).where(
+                        DraftPhoto.draft_id == draft_id,
+                        DraftPhoto.tournament_player_id.in_(player_ids),
+                        DraftPhoto.photo_type.in_([PhotoType.POOL, PhotoType.DECK]),
+                    )
+                )
+                photos = photo_result.scalars().all()
+                photo_set = {(p.tournament_player_id, p.photo_type) for p in photos}
+
+                missing = []
+                for pid in player_ids:
+                    if (pid, PhotoType.POOL) not in photo_set or (pid, PhotoType.DECK) not in photo_set:
+                        missing.append(str(pid))
+
+                if missing:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Missing POOL/DECK photos for {len(missing)} player(s). Use skip_photo_check to override.",
+                    )
 
     # Determine current swiss round
     existing_matches = await db.execute(
