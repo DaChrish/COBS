@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput, Badge, Image } from "@mantine/core";
-import { IconUpload } from "@tabler/icons-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ActionIcon, Button, Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput, Badge, Image } from "@mantine/core";
+import { IconUpload, IconChevronLeft, IconChevronRight, IconTrophy } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -13,6 +13,7 @@ import type { Draft, Match, TournamentDetail } from "../../api/types";
 
 export function DraftPage() {
   const { id, round } = useParams<{ id: string; round: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: tournament } = useApi<TournamentDetail>(`/tournaments/${id}`);
   const { data: drafts, refetch: refetchDrafts } = useApi<Draft[]>(`/tournaments/${id}/drafts`);
@@ -88,7 +89,25 @@ export function DraftPage() {
 
   return (
     <Container size="sm">
-      <Title order={3} mb="md">Runde {round}</Title>
+      <Group justify="space-between" mb="md" align="center">
+        <Group gap="xs" align="center">
+          <ActionIcon variant="subtle" size="lg"
+            disabled={!round || Number(round) <= 1}
+            onClick={() => navigate(`/tournament/${id}/draft/${Number(round) - 1}`)}>
+            <IconChevronLeft size={20} />
+          </ActionIcon>
+          <Title order={3}>Runde {round}</Title>
+          <ActionIcon variant="subtle" size="lg"
+            disabled={!drafts || Number(round) >= drafts.length}
+            onClick={() => navigate(`/tournament/${id}/draft/${Number(round) + 1}`)}>
+            <IconChevronRight size={20} />
+          </ActionIcon>
+        </Group>
+        <Button variant="light" size="xs" leftSection={<IconTrophy size={14} />}
+          onClick={() => navigate(`/tournament/${id}/standings`)}>
+          Standings
+        </Button>
+      </Group>
 
       {myPod?.timer_ends_at && <Timer endsAt={myPod.timer_ends_at} />}
 
