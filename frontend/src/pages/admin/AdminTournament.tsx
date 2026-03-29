@@ -30,7 +30,6 @@ import {
   IconCube,
   IconUsers,
   IconCards,
-  IconSwords,
   IconClock,
   IconAlertTriangle,
   IconCamera,
@@ -523,7 +522,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
           </Group>
 
           {draft.pods.length > 0 && (
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+            <Stack gap="md">
               {draft.pods.map((pod, idx) => {
                 const accent = POD_ACCENT_COLORS[idx % POD_ACCENT_COLORS.length];
                 return (
@@ -661,7 +660,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                   </Paper>
                 );
               })}
-            </SimpleGrid>
+            </Stack>
           )}
           {(() => {
             const allMatches = matchesByDraft[draft.id] ?? [];
@@ -838,242 +837,6 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
   );
 }
 
-// ─── Matches Tab ──────────────────────────────────────────────────────────────
-
-interface ResolveState {
-  match: Match;
-  draftId: string;
-  p1Wins: number;
-  p2Wins: number;
-}
-
-function MatchesTab({ tournamentId }: { tournamentId: string }) {
-  const { data: drafts, loading: draftsLoading } = useApi<Draft[]>(
-    `/tournaments/${tournamentId}/drafts`
-  );
-
-  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
-  const [resolveState, setResolveState] = useState<ResolveState | null>(null);
-  const [resolving, setResolving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Pick the first draft by default when drafts load
-  const activeDraftId =
-    selectedDraftId ??
-    (drafts && drafts.length > 0 ? drafts[drafts.length - 1].id : null);
-
-  const { data: matches, loading: matchesLoading, refetch: refetchMatches } =
-    useApi<Match[]>(
-      activeDraftId
-        ? `/tournaments/${tournamentId}/drafts/${activeDraftId}/matches`
-        : null
-    );
-
-  const resolveMatch = async () => {
-    if (!resolveState) return;
-    setResolving(true);
-    setError(null);
-    try {
-      await apiFetch(
-        `/tournaments/${tournamentId}/drafts/${resolveState.draftId}/matches/${resolveState.match.id}/resolve`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            player1_wins: resolveState.p1Wins,
-            player2_wins: resolveState.p2Wins,
-          }),
-        }
-      );
-      setResolveState(null);
-      refetchMatches();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
-    } finally {
-      setResolving(false);
-    }
-  };
-
-  if (draftsLoading) {
-    return (
-      <Center>
-        <Loader />
-      </Center>
-    );
-  }
-
-  if (!drafts || drafts.length === 0) {
-    return <Text c="dimmed">Noch keine Drafts.</Text>;
-  }
-
-  const draftOptions = drafts.map((d) => ({
-    value: d.id,
-    label: `Runde ${d.round_number} (${d.status})`,
-  }));
-
-  return (
-    <Stack gap="md">
-      {error && (
-        <Alert color="red" icon={<IconAlertTriangle size={16} />}>
-          {error}
-        </Alert>
-      )}
-
-      <Select
-        w={280}
-        label="Draft"
-        value={activeDraftId}
-        onChange={(v) => setSelectedDraftId(v)}
-        data={draftOptions}
-      />
-
-      {matchesLoading && (
-        <Center>
-          <Loader />
-        </Center>
-      )}
-
-      {matches && matches.length === 0 && (
-        <Text c="dimmed">Keine Matches in diesem Draft.</Text>
-      )}
-
-      {matches && matches.length > 0 && (
-        <ScrollArea>
-          <Table striped highlightOnHover withTableBorder>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th ta="right">Rd</Table.Th>
-                <Table.Th>Spieler 1</Table.Th>
-                <Table.Th ta="center">Ergebnis</Table.Th>
-                <Table.Th>Spieler 2</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {matches.map((m) => (
-                <Table.Tr key={m.id}>
-                  <Table.Td ta="right">{m.swiss_round}</Table.Td>
-                  <Table.Td fw={500}>{m.player1_username}</Table.Td>
-                  <Table.Td ta="center">
-                    {m.reported ? (
-                      <Text fw={600}>
-                        {m.player1_wins} – {m.player2_wins}
-                      </Text>
-                    ) : m.is_bye ? (
-                      <Text c="dimmed">BYE</Text>
-                    ) : (
-                      <Text c="dimmed">–</Text>
-                    )}
-                  </Table.Td>
-                  <Table.Td>{m.player2_username ?? "—"}</Table.Td>
-                  <Table.Td>
-                    {m.is_bye ? (
-                      <Badge color="gray" size="xs">
-                        Bye
-                      </Badge>
-                    ) : m.has_conflict ? (
-                      <Badge color="red" size="xs">
-                        Konflikt
-                      </Badge>
-                    ) : m.reported ? (
-                      <Badge color="green" size="xs">
-                        Fertig
-                      </Badge>
-                    ) : (
-                      <Badge color="gray" size="xs">
-                        Offen
-                      </Badge>
-                    )}
-                  </Table.Td>
-                  <Table.Td>
-                    {m.has_conflict && activeDraftId && (
-                      <Button
-                        size="xs"
-                        color="red"
-                        variant="light"
-                        onClick={() =>
-                          setResolveState({
-                            match: m,
-                            draftId: activeDraftId,
-                            p1Wins: m.p1_reported_p1_wins ?? 0,
-                            p2Wins: m.p1_reported_p2_wins ?? 0,
-                          })
-                        }
-                      >
-                        Lösen
-                      </Button>
-                    )}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </ScrollArea>
-      )}
-
-      {/* Resolve Conflict Modal */}
-      <Modal
-        opened={resolveState !== null}
-        onClose={() => setResolveState(null)}
-        title="Konflikt lösen"
-      >
-        {resolveState && (
-          <Stack>
-            <Text>
-              <strong>{resolveState.match.player1_username}</strong> vs.{" "}
-              <strong>
-                {resolveState.match.player2_username ?? "—"}
-              </strong>
-            </Text>
-            {resolveState.match.p1_reported_p1_wins !== null && (
-              <Text size="sm" c="dimmed">
-                Gemeldet von Sp.1: {resolveState.match.p1_reported_p1_wins} –{" "}
-                {resolveState.match.p1_reported_p2_wins}
-              </Text>
-            )}
-            {resolveState.match.p2_reported_p1_wins !== null && (
-              <Text size="sm" c="dimmed">
-                Gemeldet von Sp.2: {resolveState.match.p2_reported_p1_wins} –{" "}
-                {resolveState.match.p2_reported_p2_wins}
-              </Text>
-            )}
-            <NumberInput
-              label={`Siege ${resolveState.match.player1_username}`}
-              value={resolveState.p1Wins}
-              onChange={(v) =>
-                setResolveState((s) =>
-                  s ? { ...s, p1Wins: Number(v) } : s
-                )
-              }
-              min={0}
-              max={3}
-            />
-            <NumberInput
-              label={`Siege ${resolveState.match.player2_username ?? "Spieler 2"}`}
-              value={resolveState.p2Wins}
-              onChange={(v) =>
-                setResolveState((s) =>
-                  s ? { ...s, p2Wins: Number(v) } : s
-                )
-              }
-              min={0}
-              max={3}
-            />
-            {error && (
-              <Alert color="red" icon={<IconAlertTriangle size={16} />}>
-                {error}
-              </Alert>
-            )}
-            <Button onClick={resolveMatch} loading={resolving} color="red">
-              Ergebnis festlegen
-            </Button>
-          </Stack>
-        )}
-      </Modal>
-    </Stack>
-  );
-}
-
 // ─── Timer Tab ────────────────────────────────────────────────────────────────
 
 function TimerTab({ tournamentId }: { tournamentId: string }) {
@@ -1243,10 +1006,7 @@ export function AdminTournament() {
             Spieler ({tournament.player_count})
           </Tabs.Tab>
           <Tabs.Tab value="drafts" leftSection={<IconCards size={16} />}>
-            Drafts
-          </Tabs.Tab>
-          <Tabs.Tab value="matches" leftSection={<IconSwords size={16} />}>
-            Matches
+            Runden
           </Tabs.Tab>
           <Tabs.Tab value="timer" leftSection={<IconClock size={16} />}>
             Timer
@@ -1267,10 +1027,6 @@ export function AdminTournament() {
 
         <Tabs.Panel value="drafts">
           <DraftsTab tournamentId={id} isTest={tournament.is_test} tournament={tournament} />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="matches">
-          <MatchesTab tournamentId={id} />
         </Tabs.Panel>
 
         <Tabs.Panel value="timer">
