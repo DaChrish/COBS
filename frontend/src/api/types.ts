@@ -104,3 +104,19 @@ export interface StandingsEntry {
   ogw_percent: number;
   dropped: boolean;
 }
+
+export interface PlayerPhotoStatus {
+  tournament_player_id: string;
+  user_id: string;
+  username: string;
+  pool: string | null;
+  deck: string | null;
+  returned: string | null;
+}
+
+export interface DraftPhotoStatus {
+  total_players: number;
+  pool_deck_ready: number;
+  returned_ready: number;
+  players: PlayerPhotoStatus[];
+}
