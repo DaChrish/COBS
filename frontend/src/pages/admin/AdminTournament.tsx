@@ -602,7 +602,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                       const swissRounds = [...new Set(podMatches.map((m) => m.swiss_round))].sort();
                       const latestRound = Math.max(...swissRounds);
                       return (
-                        <Accordion variant="separated" mt="sm" defaultValue={`swiss-${latestRound}`}
+                        <Accordion variant="separated" mt="sm" key={`pod-${pod.id}-rounds-${swissRounds.length}`} defaultValue={`swiss-${latestRound}`}
                           styles={{ item: { borderRadius: 8 }, content: { padding: '4px 0' } }}>
                           {swissRounds.map((round) => {
                             const roundMatches = podMatches.filter((m) => m.swiss_round === round);
