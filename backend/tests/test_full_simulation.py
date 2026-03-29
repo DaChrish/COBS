@@ -42,12 +42,16 @@ async def test_full_tournament_simulation(client: AsyncClient):
     assert photo_resp.status_code == 200
     assert photo_resp.json()["photos_created"] == 13 * 3
 
-    # 6. Generate Swiss pairings (round 1)
-    pair_resp = await client.post(
-        f"/tournaments/{tid}/drafts/{draft['id']}/pairings", headers=ah
-    )
-    assert pair_resp.status_code == 201
-    matches = pair_resp.json()
+    # 6. Generate Swiss pairings (round 1) — per pod
+    all_matches = []
+    for pod in draft["pods"]:
+        pair_resp = await client.post(
+            f"/tournaments/{tid}/drafts/{draft['id']}/pods/{pod['id']}/pairings",
+            json={}, headers=ah,
+        )
+        assert pair_resp.status_code == 201
+        all_matches.extend(pair_resp.json())
+    matches = all_matches
     byes = [m for m in matches if m["is_bye"]]
     non_byes = [m for m in matches if not m["is_bye"]]
     assert len(byes) >= 1  # odd pod → at least 1 bye
@@ -62,11 +66,13 @@ async def test_full_tournament_simulation(client: AsyncClient):
     assert sim_resp.json()["reported"] == len(non_byes)
     assert sim_resp.json()["conflicts"] == 0
 
-    # 8. Generate Swiss pairings (round 2)
-    pair_resp2 = await client.post(
-        f"/tournaments/{tid}/drafts/{draft['id']}/pairings", headers=ah
-    )
-    assert pair_resp2.status_code == 201
+    # 8. Generate Swiss pairings (round 2) — per pod
+    for pod in draft["pods"]:
+        pair_resp2 = await client.post(
+            f"/tournaments/{tid}/drafts/{draft['id']}/pods/{pod['id']}/pairings",
+            json={}, headers=ah,
+        )
+        assert pair_resp2.status_code == 201
 
     # 9. Simulate results WITH conflicts
     sim_resp2 = await client.post(
@@ -125,11 +131,13 @@ async def test_full_tournament_simulation(client: AsyncClient):
     assert photo_resp2.status_code == 200
     assert photo_resp2.json()["photos_skipped"] > 0
 
-    # 15. Generate pairings and simulate for draft 2 (incomplete photos → skip check)
-    pair_resp3 = await client.post(
-        f"/tournaments/{tid}/drafts/{draft2['id']}/pairings", json={"skip_photo_check": True}, headers=ah
-    )
-    assert pair_resp3.status_code == 201
+    # 15. Generate pairings and simulate for draft 2 (incomplete photos → skip check) — per pod
+    for pod in draft2["pods"]:
+        pair_resp3 = await client.post(
+            f"/tournaments/{tid}/drafts/{draft2['id']}/pods/{pod['id']}/pairings",
+            json={"skip_photo_check": True}, headers=ah,
+        )
+        assert pair_resp3.status_code == 201
 
     sim_resp3 = await client.post(
         f"/test/tournaments/{tid}/simulate-results",

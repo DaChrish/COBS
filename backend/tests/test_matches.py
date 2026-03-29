@@ -37,21 +37,31 @@ async def _full_setup(client: AsyncClient, num_players: int = 8):
     draft_resp = await client.post(f"/tournaments/{tid}/drafts", headers=ah)
     draft_id = draft_resp.json()["id"]
 
-    return tid, draft_id, ah, player_tokens
+    # Get pod id for per-pod pairings
+    drafts_resp = await client.get(f"/tournaments/{tid}/drafts", headers=ah)
+    pod_id = drafts_resp.json()[0]["pods"][0]["id"]
+
+    return tid, draft_id, ah, player_tokens, pod_id
 
 
 async def test_generate_pairings(client: AsyncClient):
-    tid, did, ah, _ = await _full_setup(client, 8)
+    tid, did, ah, _, pod_id = await _full_setup(client, 8)
 
-    resp = await client.post(f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah)
+    resp = await client.post(
+        f"/tournaments/{tid}/drafts/{did}/pods/{pod_id}/pairings",
+        json={"skip_photo_check": True}, headers=ah,
+    )
     assert resp.status_code == 201
     matches = resp.json()
     assert len(matches) >= 4  # 4 matches for 8 players
 
 
 async def test_list_matches(client: AsyncClient):
-    tid, did, ah, _ = await _full_setup(client, 8)
-    await client.post(f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah)
+    tid, did, ah, _, pod_id = await _full_setup(client, 8)
+    await client.post(
+        f"/tournaments/{tid}/drafts/{did}/pods/{pod_id}/pairings",
+        json={"skip_photo_check": True}, headers=ah,
+    )
 
     resp = await client.get(f"/tournaments/{tid}/drafts/{did}/matches")
     assert resp.status_code == 200
@@ -59,9 +69,10 @@ async def test_list_matches(client: AsyncClient):
 
 
 async def test_report_match(client: AsyncClient):
-    tid, did, ah, pts = await _full_setup(client, 4)
+    tid, did, ah, pts, pod_id = await _full_setup(client, 4)
     pairings = await client.post(
-        f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah
+        f"/tournaments/{tid}/drafts/{did}/pods/{pod_id}/pairings",
+        json={"skip_photo_check": True}, headers=ah,
     )
     matches = [m for m in pairings.json() if not m["is_bye"]]
     if not matches:
@@ -85,12 +96,13 @@ async def test_report_match(client: AsyncClient):
 
 
 async def test_max_3_swiss_rounds(client: AsyncClient):
-    tid, did, ah, _ = await _full_setup(client, 4)
+    tid, did, ah, _, pod_id = await _full_setup(client, 4)
 
     # Generate 3 rounds of pairings
     for _ in range(3):
         resp = await client.post(
-            f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah
+            f"/tournaments/{tid}/drafts/{did}/pods/{pod_id}/pairings",
+            json={"skip_photo_check": True}, headers=ah,
         )
         assert resp.status_code == 201
 
@@ -106,6 +118,7 @@ async def test_max_3_swiss_rounds(client: AsyncClient):
 
     # 4th round should fail
     resp = await client.post(
-        f"/tournaments/{tid}/drafts/{did}/pairings", json={"skip_photo_check": True}, headers=ah
+        f"/tournaments/{tid}/drafts/{did}/pods/{pod_id}/pairings",
+        json={"skip_photo_check": True}, headers=ah,
     )
     assert resp.status_code == 400

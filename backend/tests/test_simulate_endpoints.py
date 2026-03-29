@@ -26,11 +26,14 @@ async def _setup_tournament_with_matches(client: AsyncClient):
     assert draft_resp.status_code == 201
     draft_id = draft_resp.json()["id"]
 
-    # 4. Generate pairings
-    pair_resp = await client.post(
-        f"/tournaments/{tid}/drafts/{draft_id}/pairings", json={"skip_photo_check": True}, headers=ah
-    )
-    assert pair_resp.status_code == 201
+    # 4. Generate pairings (per pod)
+    drafts_resp = await client.get(f"/tournaments/{tid}/drafts", headers=ah)
+    for pod in drafts_resp.json()[0]["pods"]:
+        pair_resp = await client.post(
+            f"/tournaments/{tid}/drafts/{draft_id}/pods/{pod['id']}/pairings",
+            json={"skip_photo_check": True}, headers=ah,
+        )
+        assert pair_resp.status_code == 201
 
     return ah, tid, draft_id
 

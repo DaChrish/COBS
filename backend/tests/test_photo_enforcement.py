@@ -58,8 +58,10 @@ class TestPhotoStatus:
 class TestPairingsPhotoEnforcement:
     async def test_pairings_blocked_without_photos(self, client: AsyncClient):
         ah, tid, draft_id = await _setup_draft(client)
+        drafts = await client.get(f"/tournaments/{tid}/drafts", headers=ah)
+        pod_id = drafts.json()[0]["pods"][0]["id"]
         resp = await client.post(
-            f"/tournaments/{tid}/drafts/{draft_id}/pairings", headers=ah,
+            f"/tournaments/{tid}/drafts/{draft_id}/pods/{pod_id}/pairings", headers=ah,
         )
         assert resp.status_code == 400
         assert "photo" in resp.json()["detail"].lower()
@@ -70,27 +72,33 @@ class TestPairingsPhotoEnforcement:
             f"/test/tournaments/{tid}/simulate-photos",
             json={"incomplete": False}, headers=ah,
         )
+        drafts = await client.get(f"/tournaments/{tid}/drafts", headers=ah)
+        pod_id = drafts.json()[0]["pods"][0]["id"]
         resp = await client.post(
-            f"/tournaments/{tid}/drafts/{draft_id}/pairings", headers=ah,
+            f"/tournaments/{tid}/drafts/{draft_id}/pods/{pod_id}/pairings", headers=ah,
         )
         assert resp.status_code == 201
 
     async def test_pairings_override_skips_check(self, client: AsyncClient):
         ah, tid, draft_id = await _setup_draft(client)
+        drafts = await client.get(f"/tournaments/{tid}/drafts", headers=ah)
+        pod_id = drafts.json()[0]["pods"][0]["id"]
         resp = await client.post(
-            f"/tournaments/{tid}/drafts/{draft_id}/pairings",
+            f"/tournaments/{tid}/drafts/{draft_id}/pods/{pod_id}/pairings",
             json={"skip_photo_check": True}, headers=ah,
         )
         assert resp.status_code == 201
 
 
 async def _complete_draft_round(client: AsyncClient, ah: dict, tid: str, draft_id: str):
-    """Generate pairings and simulate results for one swiss round."""
-    await client.post(
-        f"/tournaments/{tid}/drafts/{draft_id}/pairings",
-        json={"skip_photo_check": True},
-        headers=ah,
-    )
+    """Generate pairings per pod and simulate results for one swiss round."""
+    drafts_resp = await client.get(f"/tournaments/{tid}/drafts", headers=ah)
+    draft = next(d for d in drafts_resp.json() if d["id"] == draft_id)
+    for pod in draft["pods"]:
+        await client.post(
+            f"/tournaments/{tid}/drafts/{draft_id}/pods/{pod['id']}/pairings",
+            json={"skip_photo_check": True}, headers=ah,
+        )
     await client.post(
         f"/test/tournaments/{tid}/simulate-results",
         json={"with_conflicts": False},

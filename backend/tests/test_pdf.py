@@ -12,7 +12,12 @@ async def _setup_tournament_with_results(client: AsyncClient):
     draft = await client.post(f"/tournaments/{tid}/drafts", headers=ah)
     draft_id = draft.json()["id"]
     await client.post(f"/test/tournaments/{tid}/simulate-photos", json={"incomplete": False}, headers=ah)
-    await client.post(f"/tournaments/{tid}/drafts/{draft_id}/pairings", json={}, headers=ah)
+    drafts_resp = await client.get(f"/tournaments/{tid}/drafts", headers=ah)
+    for pod in drafts_resp.json()[0]["pods"]:
+        await client.post(
+            f"/tournaments/{tid}/drafts/{draft_id}/pods/{pod['id']}/pairings",
+            json={}, headers=ah,
+        )
     await client.post(f"/test/tournaments/{tid}/simulate-results", json={"with_conflicts": False}, headers=ah)
     return ah, tid, draft_id
 
