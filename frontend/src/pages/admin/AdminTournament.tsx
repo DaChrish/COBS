@@ -342,6 +342,24 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
   const [selectedPlayer, setSelectedPlayer] = useState<{ player: PlayerPhotoStatus; draftId: string } | null>(null);
   const [forceOverride, setForceOverride] = useState<{ type: string; draftId: string | null } | null>(null);
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
+  const [timerMinutes, setTimerMinutes] = useState<Record<string, number>>({});
+  const [settingTimer, setSettingTimer] = useState<string | null>(null);
+
+  const setTimer = async (pod: Pod) => {
+    const minutes = timerMinutes[pod.id] ?? 50;
+    setSettingTimer(pod.id);
+    try {
+      await apiFetch(`/tournaments/${tournamentId}/pods/${pod.id}/timer`, {
+        method: "POST",
+        body: JSON.stringify({ minutes }),
+      });
+      refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setSettingTimer(null);
+    }
+  };
   const [matchesByDraft, setMatchesByDraft] = useState<Record<string, Match[]>>({});
   const [resolveState, setResolveState] = useState<{
     match: Match; draftId: string; p1Wins: number; p2Wins: number;
@@ -630,6 +648,32 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           );
                         })}
                     </Group>
+                    {/* Timer */}
+                    {draft.status === "ACTIVE" && (
+                      <Group gap="xs" mt="xs" align="center">
+                        <IconClock size={14} style={{ opacity: 0.5 }} />
+                        {pod.timer_ends_at && new Date(pod.timer_ends_at) > new Date() ? (
+                          <Text size="xs" c="green">
+                            bis {new Date(pod.timer_ends_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                          </Text>
+                        ) : pod.timer_ends_at ? (
+                          <Text size="xs" c="dimmed">abgelaufen</Text>
+                        ) : (
+                          <Text size="xs" c="dimmed">kein Timer</Text>
+                        )}
+                        <NumberInput
+                          w={70} size="xs" variant="filled"
+                          value={timerMinutes[pod.id] ?? 50}
+                          onChange={(v) => setTimerMinutes((prev) => ({ ...prev, [pod.id]: Number(v) }))}
+                          min={1} max={999} suffix=" min"
+                        />
+                        <Button size="compact-xs" variant="light"
+                          loading={settingTimer === pod.id}
+                          onClick={() => setTimer(pod)}>
+                          Setzen
+                        </Button>
+                      </Group>
+                    )}
                     {/* Swiss Rounds */}
                     {(() => {
                       const podMatches = matchesByDraft[draft.id]?.filter((m) => m.pod_id === pod.id) ?? [];
@@ -954,129 +998,6 @@ function StandingsTab({ tournamentId }: { tournamentId: string }) {
   );
 }
 
-// ─── Timer Tab ────────────────────────────────────────────────────────────────
-
-function TimerTab({ tournamentId }: { tournamentId: string }) {
-  const { data: drafts, loading } = useApi<Draft[]>(
-    `/tournaments/${tournamentId}/drafts`
-  );
-
-  const [timerMinutes, setTimerMinutes] = useState<Record<string, number>>({});
-  const [settingFor, setSettingFor] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const setTimer = async (pod: Pod) => {
-    const minutes = timerMinutes[pod.id] ?? 50;
-    setSettingFor(pod.id);
-    setError(null);
-    try {
-      await apiFetch(`/tournaments/${tournamentId}/pods/${pod.id}/timer`, {
-        method: "POST",
-        body: JSON.stringify({ minutes }),
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
-    } finally {
-      setSettingFor(null);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Center>
-        <Loader />
-      </Center>
-    );
-  }
-
-  // Show pods from the latest draft
-  const latestDraft =
-    drafts && drafts.length > 0 ? drafts[drafts.length - 1] : null;
-
-  if (!latestDraft || latestDraft.pods.length === 0) {
-    return <Text c="dimmed">Noch keine Pods vorhanden.</Text>;
-  }
-
-  return (
-    <Stack gap="md">
-      {error && (
-        <Alert color="red" icon={<IconAlertTriangle size={16} />}>
-          {error}
-        </Alert>
-      )}
-      <Text fw={500}>
-        Runde {latestDraft.round_number} — Timer setzen
-      </Text>
-      <Table striped withTableBorder>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Pod</Table.Th>
-            <Table.Th>Cube</Table.Th>
-            <Table.Th ta="right">Spieler</Table.Th>
-            <Table.Th>Timer aktiv bis</Table.Th>
-            <Table.Th ta="right">Minuten</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {latestDraft.pods.map((pod) => {
-            const timerActive =
-              pod.timer_ends_at && new Date(pod.timer_ends_at) > new Date();
-            return (
-              <Table.Tr key={pod.id}>
-                <Table.Td>{pod.pod_number}</Table.Td>
-                <Table.Td>{pod.cube_name}</Table.Td>
-                <Table.Td ta="right">{pod.pod_size}</Table.Td>
-                <Table.Td>
-                  {pod.timer_ends_at ? (
-                    <Text
-                      size="sm"
-                      c={timerActive ? "green" : "dimmed"}
-                    >
-                      {new Date(pod.timer_ends_at).toLocaleTimeString("de-DE", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {timerActive ? " (aktiv)" : " (abgelaufen)"}
-                    </Text>
-                  ) : (
-                    <Text size="sm" c="dimmed">
-                      —
-                    </Text>
-                  )}
-                </Table.Td>
-                <Table.Td ta="right">
-                  <NumberInput
-                    w={90}
-                    size="xs"
-                    value={timerMinutes[pod.id] ?? 50}
-                    onChange={(v) =>
-                      setTimerMinutes((prev) => ({
-                        ...prev,
-                        [pod.id]: Number(v),
-                      }))
-                    }
-                    min={1}
-                    max={999}
-                  />
-                </Table.Td>
-                <Table.Td>
-                  <Button
-                    size="xs"
-                    loading={settingFor === pod.id}
-                    onClick={() => setTimer(pod)}
-                  >
-                    Setzen
-                  </Button>
-                </Table.Td>
-              </Table.Tr>
-            );
-          })}
-        </Table.Tbody>
-      </Table>
-    </Stack>
-  );
-}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -1128,9 +1049,6 @@ export function AdminTournament() {
           <Tabs.Tab value="standings" leftSection={<IconTrophy size={16} />}>
             Standings
           </Tabs.Tab>
-          <Tabs.Tab value="timer" leftSection={<IconClock size={16} />}>
-            Timer
-          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="overview">
@@ -1153,9 +1071,6 @@ export function AdminTournament() {
           <StandingsTab tournamentId={id} />
         </Tabs.Panel>
 
-        <Tabs.Panel value="timer">
-          <TimerTab tournamentId={id} />
-        </Tabs.Panel>
       </Tabs>
     </Container>
   );
