@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,12 +9,14 @@ from sqlalchemy.orm import selectinload
 
 from cobs.auth.dependencies import get_current_user, require_admin
 from cobs.database import get_db
+from cobs.logic.pdf import generate_pairings_pdf
 from cobs.logic.swiss import generate_swiss_pairings
 from cobs.logic.ws_manager import manager
+from cobs.models.cube import TournamentCube
 from cobs.models.draft import Draft, Pod, PodPlayer
 from cobs.models.match import Match
 from cobs.models.photo import DraftPhoto, PhotoType
-from cobs.models.tournament import TournamentPlayer
+from cobs.models.tournament import Tournament, TournamentPlayer
 from cobs.models.user import User
 from cobs.schemas.match import MatchReportRequest, MatchResolveRequest, MatchResponse
 
@@ -381,3 +384,85 @@ async def _match_to_response(match: Match, db: AsyncSession) -> MatchResponse:
         p2_reported_p1_wins=match.p2_reported_p1_wins,
         p2_reported_p2_wins=match.p2_reported_p2_wins,
     )
+
+
+@router.get("/pairings/pdf")
+async def get_pairings_pdf(
+    tournament_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    # Load tournament
+    t_result = await db.execute(
+        select(Tournament).where(Tournament.id == tournament_id)
+    )
+    tournament = t_result.scalar_one_or_none()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    # Verify draft
+    draft = await _get_draft(draft_id, tournament_id, db)
+
+    # Load pods with players and cube info
+    pods_result = await db.execute(
+        select(Pod)
+        .where(Pod.draft_id == draft_id)
+        .options(
+            selectinload(Pod.players)
+            .selectinload(PodPlayer.tournament_player)
+            .selectinload(TournamentPlayer.user),
+            selectinload(Pod.tournament_cube).selectinload(TournamentCube.cube),
+        )
+        .order_by(Pod.pod_number)
+    )
+    pods = pods_result.scalars().all()
+
+    # Load matches
+    matches_result = await db.execute(
+        select(Match)
+        .join(Pod)
+        .where(Pod.draft_id == draft_id)
+        .options(
+            selectinload(Match.player1).selectinload(TournamentPlayer.user),
+            selectinload(Match.player2).selectinload(TournamentPlayer.user),
+        )
+        .order_by(Match.pod_id, Match.swiss_round)
+    )
+    all_matches = matches_result.scalars().all()
+
+    if not all_matches:
+        # No matches — return empty pairings PDF
+        round_label = f"Draft {draft.round_number} - Runde 1 Pairings"
+        pdf_bytes = generate_pairings_pdf(tournament.name, round_label, [])
+        return Response(content=pdf_bytes, media_type="application/pdf")
+
+    # Determine current swiss round
+    current_round = max(m.swiss_round for m in all_matches)
+    current_matches = [m for m in all_matches if m.swiss_round == current_round]
+
+    round_label = f"Draft {draft.round_number} - Runde {current_round} Pairings"
+
+    pods_data = []
+    table_number = 1
+    for pod in pods:
+        pod_matches = [m for m in current_matches if m.pod_id == pod.id and not m.is_bye]
+        pod_byes = [m for m in current_matches if m.pod_id == pod.id and m.is_bye]
+        cube_name = pod.tournament_cube.cube.name
+        matches_data = []
+        for m in pod_matches:
+            matches_data.append({
+                "table": table_number,
+                "player1": m.player1.user.username,
+                "player2": m.player2.user.username if m.player2 else "\u2014",
+            })
+            table_number += 1
+        byes_data = [m.player1.user.username for m in pod_byes]
+        pods_data.append({
+            "pod_name": f"Pod {pod.pod_number} \u00b7 {cube_name}",
+            "matches": matches_data,
+            "byes": byes_data,
+        })
+
+    pdf_bytes = generate_pairings_pdf(tournament.name, round_label, pods_data)
+    return Response(content=pdf_bytes, media_type="application/pdf")

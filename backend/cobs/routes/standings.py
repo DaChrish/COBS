@@ -1,16 +1,20 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from cobs.auth.dependencies import require_admin
 from cobs.database import get_db
+from cobs.logic.pdf import generate_standings_pdf
 from cobs.logic.standings import calculate_standings
 from cobs.logic.swiss import MatchResult
 from cobs.models.draft import Draft, Pod
 from cobs.models.match import Match
 from cobs.models.tournament import Tournament, TournamentPlayer
+from cobs.models.user import User
 from cobs.schemas.standings import StandingsEntryResponse
 
 router = APIRouter(prefix="/tournaments/{tournament_id}/standings", tags=["standings"])
@@ -79,3 +83,78 @@ async def get_standings(
         )
         for e in entries
     ]
+
+
+@router.get("/pdf")
+async def get_standings_pdf(
+    tournament_id: uuid.UUID,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    # Load tournament
+    t_result = await db.execute(
+        select(Tournament).where(Tournament.id == tournament_id)
+    )
+    tournament = t_result.scalar_one_or_none()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    # Get latest draft for round label
+    draft_result = await db.execute(
+        select(Draft)
+        .where(Draft.tournament_id == tournament_id)
+        .order_by(Draft.round_number.desc())
+    )
+    latest_draft = draft_result.scalars().first()
+    round_label = f"Runde {latest_draft.round_number}" if latest_draft else "Runde 0"
+
+    # Get all players
+    tp_result = await db.execute(
+        select(TournamentPlayer)
+        .where(TournamentPlayer.tournament_id == tournament_id)
+        .options(selectinload(TournamentPlayer.user))
+    )
+    tournament_players = tp_result.scalars().all()
+    tp_map = {str(tp.id): tp for tp in tournament_players}
+
+    # Get all reported matches
+    match_result = await db.execute(
+        select(Match)
+        .join(Pod)
+        .join(Draft)
+        .where(Draft.tournament_id == tournament_id, Match.reported.is_(True))
+    )
+    matches = match_result.scalars().all()
+
+    results = [
+        MatchResult(
+            player1_id=str(m.player1_id),
+            player2_id=str(m.player2_id) if m.player2_id else None,
+            player1_wins=m.player1_wins,
+            player2_wins=m.player2_wins,
+            is_bye=m.is_bye,
+        )
+        for m in matches
+    ]
+
+    dropped_ids = {str(tp.id) for tp in tournament_players if tp.dropped}
+    player_ids = [str(tp.id) for tp in tournament_players]
+
+    entries = calculate_standings(player_ids, results, dropped_ids)
+
+    standings = [
+        {
+            "rank": i + 1,
+            "username": tp_map[e.player_id].user.username,
+            "match_points": e.match_points,
+            "record": f"{e.match_wins}-{e.match_losses}-{e.match_draws}",
+            "omw": f"{e.omw_percent * 100:.2f}%",
+            "gw": f"{e.gw_percent * 100:.2f}%",
+            "ogw": f"{e.ogw_percent * 100:.2f}%",
+            "dropped": e.dropped,
+        }
+        for i, e in enumerate(entries)
+    ]
+
+    pdf_bytes = generate_standings_pdf(tournament.name, round_label, standings)
+    return Response(content=pdf_bytes, media_type="application/pdf")
