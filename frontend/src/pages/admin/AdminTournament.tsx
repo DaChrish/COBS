@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
+  ActionIcon,
   Container,
   Title,
   Tabs,
@@ -33,6 +34,8 @@ import {
   IconAlertTriangle,
   IconCamera,
   IconCameraOff,
+  IconDownload,
+  IconMaximize,
 } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
@@ -315,6 +318,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
   const [photoStatus, setPhotoStatus] = useState<Record<string, DraftPhotoStatus>>({});
   const [selectedPlayer, setSelectedPlayer] = useState<{ player: PlayerPhotoStatus; draftId: string } | null>(null);
   const [forceOverride, setForceOverride] = useState<{ type: string; draftId: string | null } | null>(null);
+  const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     if (!drafts) return;
@@ -622,23 +626,43 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
         {selectedPlayer && (
           <Stack gap="md">
             <SimpleGrid cols={3} spacing="md">
-              {(["pool", "deck", "returned"] as const).map((type) => (
-                <Stack key={type} gap={4} align="center">
-                  <Text size="xs" fw={600} c="dimmed">{type.toUpperCase()}</Text>
-                  {selectedPlayer.player[type] ? (
-                    <MantineImage
-                      src={`/api${selectedPlayer.player[type]}`}
-                      radius="md"
-                      fit="contain"
-                      h={200}
-                    />
-                  ) : (
-                    <Paper withBorder p="xl" radius="md" style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
-                      <Text c="red" size="sm">Fehlt</Text>
-                    </Paper>
-                  )}
-                </Stack>
-              ))}
+              {(["pool", "deck", "returned"] as const).map((type) => {
+                const url = selectedPlayer.player[type];
+                return (
+                  <Stack key={type} gap={4} align="center">
+                    <Text size="xs" fw={600} c="dimmed">{type.toUpperCase()}</Text>
+                    {url ? (
+                      <div style={{ position: "relative", width: "100%" }}>
+                        <MantineImage
+                          src={`/api${url}`}
+                          radius="md"
+                          fit="contain"
+                          h={200}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => setFullscreenPhoto(`/api${url}`)}
+                        />
+                        <Group gap={4} style={{ position: "absolute", top: 4, right: 4 }}>
+                          <ActionIcon size="xs" variant="filled" color="dark" opacity={0.7} onClick={() => setFullscreenPhoto(`/api${url}`)}>
+                            <IconMaximize size={12} />
+                          </ActionIcon>
+                          <ActionIcon
+                            size="xs" variant="filled" color="dark" opacity={0.7}
+                            component="a"
+                            href={`/api${url}`}
+                            download={`${selectedPlayer.player.username}_${type}.jpg`}
+                          >
+                            <IconDownload size={12} />
+                          </ActionIcon>
+                        </Group>
+                      </div>
+                    ) : (
+                      <Paper withBorder p="xl" radius="md" style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
+                        <Text c="red" size="sm">Fehlt</Text>
+                      </Paper>
+                    )}
+                  </Stack>
+                );
+              })}
             </SimpleGrid>
             {(!selectedPlayer.player.pool || !selectedPlayer.player.deck || !selectedPlayer.player.returned) && (
               <Button
@@ -663,6 +687,29 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                 Als {selectedPlayer.player.username} anmelden
               </Button>
             )}
+          </Stack>
+        )}
+      </Modal>
+      <Modal
+        opened={fullscreenPhoto !== null}
+        onClose={() => setFullscreenPhoto(null)}
+        size="xl"
+        padding={0}
+        withCloseButton
+      >
+        {fullscreenPhoto && (
+          <Stack gap="xs" p="md">
+            <MantineImage src={fullscreenPhoto} radius="md" fit="contain" />
+            <Button
+              size="xs"
+              variant="light"
+              leftSection={<IconDownload size={14} />}
+              component="a"
+              href={fullscreenPhoto}
+              download
+            >
+              Download
+            </Button>
           </Stack>
         )}
       </Modal>
