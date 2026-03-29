@@ -340,7 +340,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
   const [simulating, setSimulating] = useState<string | null>(null);
   const [photoStatus, setPhotoStatus] = useState<Record<string, DraftPhotoStatus>>({});
   const [selectedPlayer, setSelectedPlayer] = useState<{ player: PlayerPhotoStatus; draftId: string } | null>(null);
-  const [forceOverride, setForceOverride] = useState<{ type: string; draftId: string | null } | null>(null);
+  const [forceOverride, setForceOverride] = useState<{ type: string; draftId: string | null; podId?: string } | null>(null);
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
   const [timerMinutes, setTimerMinutes] = useState<Record<string, number>>({});
   const [settingTimer, setSettingTimer] = useState<string | null>(null);
@@ -465,12 +465,12 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
     }
   };
 
-  const generatePairings = async (draftId: string, skipPhotoCheck = false) => {
-    setPairingFor(draftId);
+  const generatePairings = async (draftId: string, podId: string, skipPhotoCheck = false) => {
+    setPairingFor(podId);
     setError(null);
     try {
       await apiFetch(
-        `/tournaments/${tournamentId}/drafts/${draftId}/pairings`,
+        `/tournaments/${tournamentId}/drafts/${draftId}/pods/${podId}/pairings`,
         {
           method: "POST",
           body: JSON.stringify({ skip_photo_check: skipPhotoCheck }),
@@ -481,7 +481,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       const msg = e instanceof Error ? e.message : "Error";
       if (msg.toLowerCase().includes("photo") && !skipPhotoCheck) {
         setError(msg);
-        setForceOverride({ type: "pairings", draftId });
+        setForceOverride({ type: "pairings", draftId, podId });
       } else {
         setError(msg);
       }
@@ -528,11 +528,11 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
               color="red"
               mt="xs"
               onClick={() => {
-                const { type, draftId } = forceOverride;
+                const { type, draftId, podId } = forceOverride;
                 setForceOverride(null);
                 setError(null);
-                if (type === "pairings" && draftId) {
-                  generatePairings(draftId, true);
+                if (type === "pairings" && draftId && podId) {
+                  generatePairings(draftId, podId, true);
                 } else if (type === "draft") {
                   generateDraft(true);
                 }
@@ -752,6 +752,43 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                         </Accordion>
                       );
                     })()}
+                    {draft.status !== "FINISHED" && (() => {
+                      const podMatches = matchesByDraft[draft.id]?.filter((m) => m.pod_id === pod.id) ?? [];
+                      const hasPodMatches = podMatches.length > 0;
+                      const openPodMatches = podMatches.filter((m) => !m.reported && !m.is_bye);
+                      const podConflicts = podMatches.filter((m) => m.has_conflict);
+                      const podAllReported = hasPodMatches && openPodMatches.length === 0 && podConflicts.length === 0;
+                      const podSwissRound = hasPodMatches ? Math.max(...podMatches.map((m) => m.swiss_round)) : 0;
+
+                      return (
+                        <Group justify="space-between" mt="xs" align="center">
+                          {hasPodMatches ? (
+                            <Group gap="xs">
+                              <Text size="xs" c="dimmed">
+                                {podMatches.filter((m) => m.reported).length}/{podMatches.length} gemeldet
+                              </Text>
+                              {podConflicts.length > 0 && <Badge color="red" size="xs">{podConflicts.length} Konflikte</Badge>}
+                            </Group>
+                          ) : <div />}
+                          <Group gap="xs">
+                            {!hasPodMatches && (
+                              <Button size="compact-xs" variant="light"
+                                loading={pairingFor === pod.id}
+                                onClick={() => generatePairings(draft.id, pod.id)}>
+                                Pairings
+                              </Button>
+                            )}
+                            {podAllReported && podSwissRound < 3 && (
+                              <Button size="compact-xs" variant="light"
+                                loading={pairingFor === pod.id}
+                                onClick={() => generatePairings(draft.id, pod.id)}>
+                                Nächste Runde
+                              </Button>
+                            )}
+                          </Group>
+                        </Group>
+                      );
+                    })()}
                   </Paper>
                 );
               })}
@@ -763,7 +800,6 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
             const openMatches = allMatches.filter((m) => !m.reported && !m.is_bye);
             const conflicts = allMatches.filter((m) => m.has_conflict);
             const allReported = hasMatches && openMatches.length === 0 && conflicts.length === 0;
-            const currentSwissRound = hasMatches ? Math.max(...allMatches.map((m) => m.swiss_round)) : 0;
             return (
               <Group justify="space-between" align="center">
                 {hasMatches && (
@@ -775,14 +811,6 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                   </Group>
                 )}
                 <Group gap="xs">
-                  {!hasMatches && draft.status !== "FINISHED" && (
-                    <Button size="xs" variant="light" loading={pairingFor === draft.id}
-                      onClick={() => generatePairings(draft.id)}>Pairings generieren</Button>
-                  )}
-                  {hasMatches && allReported && currentSwissRound < 3 && draft.status !== "FINISHED" && (
-                    <Button size="xs" variant="light" loading={pairingFor === draft.id}
-                      onClick={() => generatePairings(draft.id)}>Nächste Swiss-Runde</Button>
-                  )}
                   <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
                     onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pods/pdf`, `pods-runde${draft.round_number}.pdf`)}>
                     Pods PDF
