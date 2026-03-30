@@ -1001,12 +1001,16 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                             T{tableNumbers[m.id]}
                                           </Text>
                                         )}
-                                        <Text size="sm" fw={500} style={{ flex: 1 }}>{m.player1_username}</Text>
+                                        <Text size="sm" fw={500} style={{ flex: 1 }}>
+                                          {m.player1_username}
+                                          {(() => { const pts = pod.players.find((p) => p.tournament_player_id === m.player1_id)?.match_points; return pts ? <Text span size="xs" c="dimmed"> ({pts})</Text> : null; })()}
+                                        </Text>
                                         <Text size="sm" fw={600} c="dimmed" ta="center" w={60}>
                                           {m.reported ? `${m.player1_wins}–${m.player2_wins}` : m.is_bye ? "BYE" : "–"}
                                         </Text>
                                         <Text size="sm" fw={500} style={{ flex: 1 }} ta="right">
                                           {m.player2_username ?? "—"}
+                                          {(() => { const pts = m.player2_id ? pod.players.find((p) => p.tournament_player_id === m.player2_id)?.match_points : null; return pts ? <Text span size="xs" c="dimmed"> ({pts})</Text> : null; })()}
                                         </Text>
                                         <div style={{ width: 70, textAlign: "right" }}>
                                           {m.is_bye ? (
