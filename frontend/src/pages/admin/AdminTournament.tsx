@@ -606,6 +606,21 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
     }
   };
 
+  const setTimerForPod = async (pod: Pod, minutes: number) => {
+    setSettingTimer(pod.id);
+    try {
+      await apiFetch(`/tournaments/${tournamentId}/pods/${pod.id}/timer`, {
+        method: "POST",
+        body: JSON.stringify({ minutes }),
+      });
+      refetch();
+    } catch (e) {
+      setError(translateError(e instanceof Error ? e.message : "Error"));
+    } finally {
+      setSettingTimer(null);
+    }
+  };
+
   const clearTimerForPod = async (pod: Pod) => {
     setSettingTimer(pod.id);
     try {
@@ -1069,6 +1084,20 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                 onClick={() => generatePairings(draft.id, pod.id)}>
                                 Nächste Runde
                               </Button>
+                            )}
+                            {hasPodMatches && !podAllReported && !pod.timer_ends_at && (
+                              <Group gap={4}>
+                                <NumberInput w={60} size="xs" variant="filled"
+                                  value={timerMinutes[pod.id] ?? 50}
+                                  onChange={(v) => setTimerMinutes((prev) => ({ ...prev, [pod.id]: Number(v) }))}
+                                  min={1} max={999} suffix="m" />
+                                <Button size="compact-xs" variant="light" color="orange"
+                                  loading={settingTimer === pod.id}
+                                  leftSection={<IconClock size={12} />}
+                                  onClick={() => setTimerForPod(pod, timerMinutes[pod.id] ?? 50)}>
+                                  Timer
+                                </Button>
+                              </Group>
                             )}
                           </Group>
                         </Group>
