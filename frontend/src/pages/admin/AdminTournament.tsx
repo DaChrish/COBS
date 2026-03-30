@@ -92,6 +92,22 @@ function translateError(msg: string): string {
   return msg;
 }
 
+function Countdown({ endsAt }: { endsAt: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  const diff = Math.floor((new Date(endsAt).getTime() - now) / 1000);
+  const isNegative = diff < 0;
+  const absDiff = Math.abs(diff);
+  const min = Math.floor(absDiff / 60);
+  const sec = absDiff % 60;
+  const display = `${isNegative ? "-" : ""}${min}:${sec.toString().padStart(2, "0")}`;
+  const color = diff <= 0 ? "red" : diff <= 300 ? "orange" : "green";
+  return <Text size="xs" fw={600} c={color}>{display}</Text>;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   SETUP: "gray",
   VOTING: "blue",
@@ -967,13 +983,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                     {draft.status === "ACTIVE" && pod.timer_ends_at && (
                       <Group gap="xs" mt="xs" align="center">
                         <IconClock size={14} style={{ opacity: 0.5 }} />
-                        {new Date(pod.timer_ends_at) > new Date() ? (
-                          <Text size="xs" c="green">
-                            Timer bis {new Date(pod.timer_ends_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
-                          </Text>
-                        ) : (
-                          <Text size="xs" c="red">Timer abgelaufen</Text>
-                        )}
+                        <Countdown endsAt={pod.timer_ends_at} />
                         <Button size="compact-xs" variant="subtle" color="red"
                           loading={settingTimer === pod.id}
                           onClick={() => setConfirmCancelTimer(pod)}>
