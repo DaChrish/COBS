@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ActionIcon,
@@ -26,6 +26,7 @@ import {
   Accordion,
   TextInput,
   Popover,
+  Tooltip,
 } from "@mantine/core";
 import {
   IconInfoCircle,
@@ -411,6 +412,21 @@ function PlayersTab({
   const navigate = useNavigate();
   const [dropping, setDropping] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { data: voteSummary } = useApi<CubeVoteSummary[]>(`/tournaments/${tournament.id}/votes/summary`);
+
+  const playerVotes = useMemo(() => {
+    if (!voteSummary) return {};
+    const map: Record<string, { desired: number; neutral: number; avoid: number }> = {};
+    for (const cs of voteSummary) {
+      for (const v of cs.votes) {
+        if (!map[v.username]) map[v.username] = { desired: 0, neutral: 0, avoid: 0 };
+        if (v.vote === "DESIRED") map[v.username].desired++;
+        else if (v.vote === "NEUTRAL") map[v.username].neutral++;
+        else if (v.vote === "AVOID") map[v.username].avoid++;
+      }
+    }
+    return map;
+  }, [voteSummary]);
 
   const dropPlayer = async (playerId: string) => {
     setDropping(playerId);
@@ -460,6 +476,7 @@ function PlayersTab({
               <Table.Th ta="right">W</Table.Th>
               <Table.Th ta="right">L</Table.Th>
               <Table.Th>Status</Table.Th>
+              <Table.Th>Votes</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -480,6 +497,19 @@ function PlayersTab({
                       Aktiv
                     </Badge>
                   )}
+                </Table.Td>
+                <Table.Td>
+                  {(() => {
+                    const pv = playerVotes[p.username];
+                    if (!pv) return "—";
+                    return (
+                      <Group gap={4}>
+                        {pv.desired > 0 && <Badge size="xs" color="green" variant="light">{pv.desired}D</Badge>}
+                        {pv.neutral > 0 && <Badge size="xs" color="gray" variant="light">{pv.neutral}N</Badge>}
+                        {pv.avoid > 0 && <Badge size="xs" color="red" variant="light">{pv.avoid}A</Badge>}
+                      </Group>
+                    );
+                  })()}
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs" justify="flex-end">
@@ -544,6 +574,19 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
   const [settingTimer, setSettingTimer] = useState<string | null>(null);
 
   const [confirmCancelTimer, setConfirmCancelTimer] = useState<Pod | null>(null);
+  const { data: voteSummary } = useApi<CubeVoteSummary[]>(`/tournaments/${tournamentId}/votes/summary`);
+
+  const playerAllVotes = useMemo(() => {
+    if (!voteSummary) return {};
+    const map: Record<string, { cube: string; vote: string }[]> = {};
+    for (const cs of voteSummary) {
+      for (const v of cs.votes) {
+        if (!map[v.username]) map[v.username] = [];
+        map[v.username].push({ cube: cs.cube_name, vote: v.vote });
+      }
+    }
+    return map;
+  }, [voteSummary]);
 
   const setTimerForAllPods = async (draftPods: Pod[], minutes: number) => {
     setSettingTimer("all");
@@ -842,28 +885,37 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           );
                           const hasPoolDeck = ps?.pool && ps?.deck;
                           return (
-                            <Badge
+                            <Tooltip
                               key={p.tournament_player_id}
-                              size="sm"
-                              variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
-                              color={voteColor}
-                              style={{ cursor: ps ? "pointer" : undefined }}
-                              onClick={() => ps && setSelectedPlayer({ player: ps, draftId: draft.id })}
-                              leftSection={
-                                <Group gap={2} wrap="nowrap">
-                                  <Text span size="xs" c="dimmed" fw={600}>
-                                    {p.seat_number}
-                                  </Text>
-                                  {ps && (
-                                    hasPoolDeck
-                                      ? <IconCamera size={10} color="var(--mantine-color-green-6)" />
-                                      : <IconCameraOff size={10} color="var(--mantine-color-red-6)" />
-                                  )}
-                                </Group>
+                              multiline
+                              w={220}
+                              label={
+                                playerAllVotes[p.username]?.map((v) => `${v.cube}: ${v.vote}`).join("\n") || "Keine Votes"
                               }
+                              withArrow
                             >
-                              {p.username}
-                            </Badge>
+                              <Badge
+                                size="sm"
+                                variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
+                                color={voteColor}
+                                style={{ cursor: ps ? "pointer" : undefined }}
+                                onClick={() => ps && setSelectedPlayer({ player: ps, draftId: draft.id })}
+                                leftSection={
+                                  <Group gap={2} wrap="nowrap">
+                                    <Text span size="xs" c="dimmed" fw={600}>
+                                      {p.seat_number}
+                                    </Text>
+                                    {ps && (
+                                      hasPoolDeck
+                                        ? <IconCamera size={10} color="var(--mantine-color-green-6)" />
+                                        : <IconCameraOff size={10} color="var(--mantine-color-red-6)" />
+                                    )}
+                                  </Group>
+                                }
+                              >
+                                {p.username}
+                              </Badge>
+                            </Tooltip>
                           );
                         })}
                     </Group>
