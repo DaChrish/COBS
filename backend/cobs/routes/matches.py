@@ -20,6 +20,32 @@ from cobs.models.tournament import Tournament, TournamentPlayer
 from cobs.models.user import User
 from cobs.schemas.match import MatchReportRequest, MatchResolveRequest, MatchResponse
 
+def _pod_local_points(matches: list, player_ids: list[str]) -> dict[str, int]:
+    """Calculate match points earned within a pod's matches only."""
+    points: dict[str, int] = {pid: 0 for pid in player_ids}
+    for m in matches:
+        if not m.reported:
+            continue
+        p1 = str(m.player1_id)
+        p2 = str(m.player2_id) if m.player2_id else None
+        if m.is_bye:
+            if p1 in points:
+                points[p1] += 3
+        elif p2:
+            if m.player1_wins > m.player2_wins:
+                if p1 in points:
+                    points[p1] += 3
+            elif m.player2_wins > m.player1_wins:
+                if p2 in points:
+                    points[p2] += 3
+            else:
+                if p1 in points:
+                    points[p1] += 1
+                if p2 in points:
+                    points[p2] += 1
+    return points
+
+
 router = APIRouter(
     prefix="/tournaments/{tournament_id}/drafts/{draft_id}",
     tags=["matches"],
@@ -122,19 +148,24 @@ async def generate_pairings(
     new_matches: list[Match] = []
 
     for pod in pods:
-        # Get players in this pod
-        players = [
-            {"id": str(pp.tournament_player_id), "match_points": pp.tournament_player.match_points}
-            for pp in pod.players
-        ]
-
         # Get previous matches for this pod
         prev_result = await db.execute(
             select(Match).where(Match.pod_id == pod.id)
         )
+        prev_matches_list = prev_result.scalars().all()
+
+        # Calculate pod-local match points (not global tournament points)
+        player_ids = [str(pp.tournament_player_id) for pp in pod.players]
+        local_points = _pod_local_points(prev_matches_list, player_ids)
+
+        players = [
+            {"id": str(pp.tournament_player_id), "match_points": local_points.get(str(pp.tournament_player_id), 0)}
+            for pp in pod.players
+        ]
+
         prev_matches = [
             {"player1_id": str(m.player1_id), "player2_id": str(m.player2_id) if m.player2_id else None}
-            for m in prev_result.scalars().all()
+            for m in prev_matches_list
         ]
 
         # Get previous byes
@@ -264,19 +295,18 @@ async def generate_pod_pairings(
     if current_round > 3:
         raise HTTPException(status_code=400, detail="Max 3 swiss rounds per pod")
 
-    # Get players in this pod
+    # Calculate pod-local match points (not global tournament points)
+    player_ids = [str(pp.tournament_player_id) for pp in pod.players]
+    local_points = _pod_local_points(pod_matches, player_ids)
+
     players = [
-        {"id": str(pp.tournament_player_id), "match_points": pp.tournament_player.match_points}
+        {"id": str(pp.tournament_player_id), "match_points": local_points.get(str(pp.tournament_player_id), 0)}
         for pp in pod.players
     ]
 
-    # Get previous matches for this pod
-    prev_result = await db.execute(
-        select(Match).where(Match.pod_id == pod_id)
-    )
     prev_matches = [
         {"player1_id": str(m.player1_id), "player2_id": str(m.player2_id) if m.player2_id else None}
-        for m in prev_result.scalars().all()
+        for m in pod_matches
     ]
 
     # Get previous byes
