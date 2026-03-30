@@ -146,6 +146,9 @@ export function DraftPage() {
             <Group justify="space-between" align="center">
               <Group gap="xs" align="center">
                 <Text size="sm" fw={500} w={80}>{type}</Text>
+                {type === "RETURNED" && (
+                  <Text size="xs" c="dimmed" ml="xs">(nach der letzten Runde)</Text>
+                )}
                 {myPhotos[type] ? (
                   <Badge color="green" size="xs" variant="light">Hochgeladen</Badge>
                 ) : (

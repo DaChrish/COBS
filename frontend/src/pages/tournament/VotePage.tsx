@@ -80,7 +80,13 @@ export function VotePage() {
             )}
             <Stack p="md" gap="xs">
               <Text fw={600} size="lg">{currentCube.cube_name}</Text>
-              <Text size="sm" c="dimmed">{currentCube.cube_description}</Text>
+              {currentCube.cube_description?.startsWith("http") ? (
+                <Text size="sm" c="dimmed" component="a" href={currentCube.cube_description} target="_blank" style={{ textDecoration: "underline" }}>
+                  {currentCube.cube_description}
+                </Text>
+              ) : (
+                <Text size="sm" c="dimmed">{currentCube.cube_description}</Text>
+              )}
             </Stack>
             <Group grow p="md" pt={0}>
               <VoteButton icon={<IconThumbDown />} color="red" label="Avoid"
@@ -108,7 +114,13 @@ export function VotePage() {
               <Group justify="space-between" wrap="nowrap">
                 <div style={{ minWidth: 0 }}>
                   <Text fw={500} truncate>{cube.cube_name}</Text>
-                  <Text size="xs" c="dimmed" truncate>{cube.cube_description}</Text>
+                  {cube.cube_description?.startsWith("http") ? (
+                    <Text size="xs" c="dimmed" truncate component="a" href={cube.cube_description} target="_blank" style={{ textDecoration: "underline" }}>
+                      {cube.cube_description}
+                    </Text>
+                  ) : (
+                    <Text size="xs" c="dimmed" truncate>{cube.cube_description}</Text>
+                  )}
                 </div>
                 <Group gap={4} wrap="nowrap">
                   <ActionIcon color="red" variant={votes[cube.id] === "AVOID" ? "filled" : "subtle"} size="sm"

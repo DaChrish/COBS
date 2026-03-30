@@ -40,6 +40,7 @@ import {
   IconTrophy,
   IconPlus,
   IconTrash,
+  IconCopy,
 } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
@@ -64,6 +65,29 @@ function downloadPdf(path: string, filename: string) {
       URL.revokeObjectURL(url);
     })
     .catch((e) => alert(e.message));
+}
+
+function translateError(msg: string): string {
+  if (msg.toLowerCase().includes("missing pool/deck photo")) {
+    const match = msg.match(/(\d+) player/);
+    const count = match ? match[1] : "einigen";
+    return `POOL/DECK Fotos fehlen bei ${count} Spieler(n). Bitte Fotos hochladen lassen.`;
+  }
+  if (msg.toLowerCase().includes("missing returned photo")) {
+    const match = msg.match(/(\d+) player/);
+    const count = match ? match[1] : "einigen";
+    return `RETURNED Fotos fehlen bei ${count} Spieler(n) der vorherigen Runde.`;
+  }
+  if (msg.toLowerCase().includes("unreported match")) {
+    return "Es gibt noch offene Matches in diesem Pod.";
+  }
+  if (msg.toLowerCase().includes("unresolved match conflict")) {
+    return "Es gibt ungelöste Konflikte in diesem Pod.";
+  }
+  if (msg.toLowerCase().includes("max 3 swiss rounds")) {
+    return "Maximale Anzahl Swiss-Runden (3) erreicht.";
+  }
+  return msg;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -149,7 +173,13 @@ function OverviewTab({
           <Table.Tr>
             <Table.Td fw={500}>Join-Code</Table.Td>
             <Table.Td>
-              <Code>{tournament.join_code}</Code>
+              <Group gap="xs">
+                <Code style={{ fontSize: 16 }}>{tournament.join_code}</Code>
+                <ActionIcon size="xs" variant="subtle"
+                  onClick={() => navigator.clipboard.writeText(tournament.join_code)}>
+                  <IconCopy size={14} />
+                </ActionIcon>
+              </Group>
             </Table.Td>
           </Table.Tr>
           <Table.Tr>
@@ -494,7 +524,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       }
       refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(translateError(e instanceof Error ? e.message : "Error"));
     } finally {
       setSettingTimer(null);
     }
@@ -509,7 +539,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       });
       refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(translateError(e instanceof Error ? e.message : "Error"));
     } finally {
       setSettingTimer(null);
     }
@@ -556,7 +586,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       });
       refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(translateError(e instanceof Error ? e.message : "Error"));
     } finally {
       setSimulating(null);
     }
@@ -572,7 +602,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       });
       refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(translateError(e instanceof Error ? e.message : "Error"));
     } finally {
       setSimulating(null);
     }
@@ -590,10 +620,10 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error";
       if (msg.toLowerCase().includes("photo") && !skipPhotoCheck) {
-        setError(msg);
+        setError(translateError(msg));
         setForceOverride({ type: "draft", draftId: null });
       } else {
-        setError(msg);
+        setError(translateError(msg));
       }
     } finally {
       setGenerating(false);
@@ -615,10 +645,10 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error";
       if (msg.toLowerCase().includes("photo") && !skipPhotoCheck) {
-        setError(msg);
+        setError(translateError(msg));
         setForceOverride({ type: "pairings", draftId, podId });
       } else {
-        setError(msg);
+        setError(translateError(msg));
       }
     } finally {
       setPairingFor(null);
@@ -637,7 +667,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       setResolveState(null);
       refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(translateError(e instanceof Error ? e.message : "Error"));
     } finally {
       setResolving(false);
     }
@@ -1064,7 +1094,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                     await setToken(res.access_token);
                     navigate("/");
                   } catch (e) {
-                    setError(e instanceof Error ? e.message : "Error");
+                    setError(translateError(e instanceof Error ? e.message : "Error"));
                   }
                 }}
               >
