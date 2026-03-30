@@ -842,7 +842,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
             </Group>
           </Accordion.Control>
           <Accordion.Panel>
-
+          <Stack gap="md" pt="xs">
           {draft.pods.length > 0 && (
             <Stack gap="md">
               {draft.pods.map((pod, idx) => {
@@ -1143,6 +1143,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
               </Group>
             );
           })()}
+          </Stack>
           </Accordion.Panel>
         </Accordion.Item>
         );
