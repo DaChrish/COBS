@@ -1,8 +1,13 @@
+import logging
+
 from fastapi import FastAPI
+
+from cobs.config import settings
 from cobs.routes import auth, cubes, drafts, health, matches, photos, simulate, standings, test_data, timer, tournaments, votes, websocket
 
 
 def create_app() -> FastAPI:
+    logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
     app = FastAPI(title="COBS", version="2.0.0")
     app.include_router(health.router, tags=["health"])
     app.include_router(auth.router)

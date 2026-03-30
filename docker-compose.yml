@@ -23,6 +23,7 @@ services:
     environment:
       COBS_DATABASE_URL: "postgresql+asyncpg://drafttool:drafttool@db:5432/drafttool"
       COBS_JWT_SECRET: "change-me-in-production"
+      COBS_LOG_LEVEL: "INFO"  # DEBUG for CP-SAT solver details
     volumes:
       - cobs-v2-uploads:/app/uploads
     ports:
