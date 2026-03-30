@@ -13,6 +13,7 @@ import { DraftPage } from "./pages/tournament/DraftPage";
 import { StandingsPage } from "./pages/tournament/StandingsPage";
 import { AdminOverview } from "./pages/admin/AdminOverview";
 import { AdminTournament } from "./pages/admin/AdminTournament";
+import { AdminCubes } from "./pages/admin/AdminCubes";
 
 export function App() {
   return (
@@ -29,6 +30,7 @@ export function App() {
           <Route path="/tournament/:id/standings" element={<AuthGuard><StandingsPage /></AuthGuard>} />
           <Route path="/admin" element={<AdminGuard><AdminOverview /></AdminGuard>} />
           <Route path="/admin/tournament/:id" element={<AdminGuard><AdminTournament /></AdminGuard>} />
+          <Route path="/admin/cubes" element={<AdminGuard><AdminCubes /></AdminGuard>} />
         </Route>
       </Routes>
     </AuthProvider>

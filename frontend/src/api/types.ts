@@ -39,6 +39,7 @@ export interface Cube {
   name: string;
   description: string;
   image_url: string | null;
+  max_players: number | null;
 }
 
 export interface Vote {
