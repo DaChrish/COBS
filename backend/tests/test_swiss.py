@@ -2,10 +2,10 @@ from cobs.logic.swiss import generate_swiss_pairings, _circular_distance
 
 
 def test_circular_distance():
-    assert _circular_distance(1, 5, 8) == 4  # max distance in 8-pod
+    assert _circular_distance(1, 5, 8) == 4
     assert _circular_distance(1, 2, 8) == 1
-    assert _circular_distance(1, 8, 8) == 1  # wraps around
-    assert _circular_distance(1, 4, 6) == 3  # max distance in 6-pod
+    assert _circular_distance(1, 8, 8) == 1
+    assert _circular_distance(1, 4, 6) == 3
     assert _circular_distance(3, 6, 6) == 3
 
 
@@ -56,9 +56,9 @@ def test_round2_swiss_by_points():
             assert p1_pts == p2_pts
 
 
-def test_round2_seat_distance_tiebreaker():
-    """Within same point group, prefer max seat distance."""
-    # 8-player pod, all same points, round 1 was crosspod (1v5, 2v6, 3v7, 4v8)
+def test_round2_standard_swiss():
+    """Round 2+: standard Swiss by points, no seat tiebreaker."""
+    # 8-player pod, all same points — should still pair without error
     players = [
         {"id": f"p{i}", "match_points": 3, "seat_number": i}
         for i in range(1, 9)
@@ -70,18 +70,11 @@ def test_round2_seat_distance_tiebreaker():
         {"player1_id": "p4", "player2_id": "p8"},
     ]
     result = generate_swiss_pairings(players, prev, [])
-
-    seat_map = {p["id"]: p["seat_number"] for p in players}
-    total_distance = 0
+    assert len(result.pairings) == 4
+    # All pairings should avoid repeats from round 1
     for p in result.pairings:
-        s1 = seat_map[p.player1_id]
-        s2 = seat_map[p.player2_id]
-        dist = _circular_distance(s1, s2, 8)
-        total_distance += dist
-    # With seat tiebreaker, total distance should be higher than adjacent pairings
-    # Adjacent would be: 1v2, 3v4, 5v6, 7v8 = total 4
-    # Good would be: 1v4, 2v7, 3v8, 5v6 or similar with higher distances
-    assert total_distance > 4
+        key = "-".join(sorted([p.player1_id, p.player2_id]))
+        assert key not in {"-".join(sorted([m["player1_id"], m["player2_id"]])) for m in prev}
 
 
 def test_odd_players_bye():
