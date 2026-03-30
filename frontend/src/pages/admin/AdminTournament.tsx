@@ -913,21 +913,38 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           label={(() => {
                             const cubeVotes = voteSummary?.find((v) => v.cube_name === pod.cube_name);
                             if (!cubeVotes) return "Keine Votes";
-                            const podPlayerNames = new Set(pod.players.map((p) => p.username));
-                            const podVotes = cubeVotes.votes.filter((v) => podPlayerNames.has(v.username) && v.vote !== "NEUTRAL");
-                            if (podVotes.length === 0) return "Alle neutral";
+                            const podPlayerIds = new Set(pod.players.map((p) => p.username));
+                            const desired = cubeVotes.votes.filter((v) => v.vote === "DESIRED");
+                            const avoid = cubeVotes.votes.filter((v) => v.vote === "AVOID");
+                            if (desired.length === 0 && avoid.length === 0) return "Alle neutral";
                             return (
-                              <Stack gap={2}>
-                                {podVotes.map((v, i) => (
-                                  <Group key={i} justify="space-between" gap="xs">
-                                    <Text size="xs" fw={500} c={v.vote === "DESIRED" ? "green.7" : "red.7"}>
-                                      {v.username}
-                                    </Text>
-                                    <Text size="xs" fw={700} c={v.vote === "DESIRED" ? "green.7" : "red.7"}>
-                                      {v.vote === "DESIRED" ? "✓" : "✗"}
-                                    </Text>
-                                  </Group>
-                                ))}
+                              <Stack gap={4}>
+                                {desired.length > 0 && (
+                                  <>
+                                    <Text size="xs" fw={700} c="green.7">Desired ({desired.length})</Text>
+                                    <Group gap={4} wrap="wrap">
+                                      {desired.map((v, i) => (
+                                        <Text key={i} size="xs" fw={podPlayerIds.has(v.username) ? 700 : 400}
+                                          c={podPlayerIds.has(v.username) ? "green.7" : "dimmed"}>
+                                          {v.username}{podPlayerIds.has(v.username) ? " ●" : ""}
+                                        </Text>
+                                      ))}
+                                    </Group>
+                                  </>
+                                )}
+                                {avoid.length > 0 && (
+                                  <>
+                                    <Text size="xs" fw={700} c="red.7" mt={desired.length > 0 ? 4 : 0}>Avoid ({avoid.length})</Text>
+                                    <Group gap={4} wrap="wrap">
+                                      {avoid.map((v, i) => (
+                                        <Text key={i} size="xs" fw={podPlayerIds.has(v.username) ? 700 : 400}
+                                          c={podPlayerIds.has(v.username) ? "red.7" : "dimmed"}>
+                                          {v.username}{podPlayerIds.has(v.username) ? " ●" : ""}
+                                        </Text>
+                                      ))}
+                                    </Group>
+                                  </>
+                                )}
                               </Stack>
                             );
                           })()}
