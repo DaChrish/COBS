@@ -3,8 +3,11 @@ OR-Tools CP-SAT optimizer for pod/cube assignment.
 Port of optimizer/optimizer_service.py — runs as a direct function call.
 """
 
+import logging
 from dataclasses import dataclass, field
 from ortools.sat.python import cp_model
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -171,9 +174,19 @@ def optimize_pods(
 
     model.Maximize(sum(objective_terms))
 
+    logger.info("Optimizer: %d players, %d pods %s, %d cubes, round %d", P, K, pod_sizes, C, round_number)
+
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 300
-    solver.Solve(model)
+    solver.parameters.log_search_progress = True
+    solver.parameters.log_to_stdout = False
+    solver.log_callback = lambda msg: logger.debug("[CP-SAT] %s", msg)
+
+    status = solver.Solve(model)
+    status_name = solver.StatusName(status)
+
+    logger.info("Optimizer finished: status=%s, objective=%.1f, wall_time=%.2fs",
+                status_name, solver.ObjectiveValue(), solver.WallTime())
 
     pods: list[list[str]] = [[] for _ in range(K)]
     cube_assignments: list[str | None] = [None] * K
@@ -187,5 +200,28 @@ def optimize_pods(
         for c in range(C):
             if solver.Value(y[k, c]) == 1:
                 cube_assignments[k] = cubes[c].id
+
+    # Log result summary
+    player_map = {p.id: p for p in active}
+    total_avoids = 0
+    for k in range(K):
+        cid = cube_assignments[k]
+        pod_players = pods[k]
+        votes = []
+        for pid in pod_players:
+            pl = player_map[pid]
+            vote = pl.votes.get(cid, "NEUTRAL") if cid else "?"
+            votes.append(vote)
+            if vote == "AVOID":
+                total_avoids += 1
+        d = votes.count("DESIRED")
+        n = votes.count("NEUTRAL")
+        a = votes.count("AVOID")
+        logger.info("  Pod %d: %d players, %dD/%dN/%dA", k + 1, len(pod_players), d, n, a)
+
+    if total_avoids > 0:
+        logger.warning("  %d AVOID assignment(s)!", total_avoids)
+    else:
+        logger.info("  No AVOID assignments")
 
     return OptimizerResult(pods=pods, cube_ids=cube_assignments, objective=solver.ObjectiveValue())
