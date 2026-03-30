@@ -888,11 +888,22 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                             <Tooltip
                               key={p.tournament_player_id}
                               multiline
-                              w={220}
-                              label={
-                                playerAllVotes[p.username]?.map((v) => `${v.cube}: ${v.vote}`).join("\n") || "Keine Votes"
-                              }
+                              w={250}
                               withArrow
+                              label={
+                                <Stack gap={2}>
+                                  {playerAllVotes[p.username]?.map((v, i) => (
+                                    <Group key={i} justify="space-between" gap="xs">
+                                      <Text size="xs" c={v.vote === "DESIRED" ? "green.3" : v.vote === "AVOID" ? "red.3" : "gray.5"}>
+                                        {v.cube}
+                                      </Text>
+                                      <Text size="xs" fw={600} c={v.vote === "DESIRED" ? "green.3" : v.vote === "AVOID" ? "red.3" : "gray.5"}>
+                                        {v.vote === "DESIRED" ? "✓" : v.vote === "AVOID" ? "✗" : "–"}
+                                      </Text>
+                                    </Group>
+                                  )) || <Text size="xs">Keine Votes</Text>}
+                                </Stack>
+                              }
                             >
                               <Badge
                                 size="sm"
