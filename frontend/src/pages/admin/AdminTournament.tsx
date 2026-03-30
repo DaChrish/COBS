@@ -914,17 +914,17 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                             const cubeVotes = voteSummary?.find((v) => v.cube_name === pod.cube_name);
                             if (!cubeVotes) return "Keine Votes";
                             const podPlayerNames = new Set(pod.players.map((p) => p.username));
-                            const podVotes = cubeVotes.votes.filter((v) => podPlayerNames.has(v.username));
-                            if (podVotes.length === 0) return "Keine Votes";
+                            const podVotes = cubeVotes.votes.filter((v) => podPlayerNames.has(v.username) && v.vote !== "NEUTRAL");
+                            if (podVotes.length === 0) return "Alle neutral";
                             return (
                               <Stack gap={2}>
                                 {podVotes.map((v, i) => (
                                   <Group key={i} justify="space-between" gap="xs">
-                                    <Text size="xs" c={v.vote === "DESIRED" ? "green.3" : v.vote === "AVOID" ? "red.3" : "gray.5"}>
+                                    <Text size="xs" fw={500} c={v.vote === "DESIRED" ? "green.1" : "red.1"}>
                                       {v.username}
                                     </Text>
-                                    <Text size="xs" fw={600} c={v.vote === "DESIRED" ? "green.3" : v.vote === "AVOID" ? "red.3" : "gray.5"}>
-                                      {v.vote === "DESIRED" ? "✓" : v.vote === "AVOID" ? "✗" : "–"}
+                                    <Text size="xs" fw={700} c={v.vote === "DESIRED" ? "green.1" : "red.1"}>
+                                      {v.vote === "DESIRED" ? "✓" : "✗"}
                                     </Text>
                                   </Group>
                                 ))}
@@ -977,16 +977,16 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                               withArrow
                               label={
                                 <Stack gap={2}>
-                                  {playerAllVotes[p.username]?.map((v, i) => (
+                                  {playerAllVotes[p.username]?.filter((v) => v.vote !== "NEUTRAL").map((v, i) => (
                                     <Group key={i} justify="space-between" gap="xs">
-                                      <Text size="xs" c={v.vote === "DESIRED" ? "green.3" : v.vote === "AVOID" ? "red.3" : "gray.5"}>
+                                      <Text size="xs" fw={500} c={v.vote === "DESIRED" ? "green.1" : "red.1"}>
                                         {v.cube}
                                       </Text>
-                                      <Text size="xs" fw={600} c={v.vote === "DESIRED" ? "green.3" : v.vote === "AVOID" ? "red.3" : "gray.5"}>
-                                        {v.vote === "DESIRED" ? "✓" : v.vote === "AVOID" ? "✗" : "–"}
+                                      <Text size="xs" fw={700} c={v.vote === "DESIRED" ? "green.1" : "red.1"}>
+                                        {v.vote === "DESIRED" ? "✓" : "✗"}
                                       </Text>
                                     </Group>
-                                  )) || <Text size="xs">Keine Votes</Text>}
+                                  )) || <Text size="xs">Alle neutral</Text>}
                                 </Stack>
                               }
                             >
