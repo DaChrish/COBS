@@ -685,27 +685,29 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
     <Stack gap="lg">
       {error && (
         <Alert color="red" icon={<IconAlertTriangle size={16} />}>
-          {error}
-          {forceOverride && (
-            <Button
-              size="xs"
-              variant="light"
-              color="red"
-              mt="xs"
-              onClick={() => {
-                const { type, draftId, podId } = forceOverride;
-                setForceOverride(null);
-                setError(null);
-                if (type === "pairings" && draftId && podId) {
-                  generatePairings(draftId, podId, true);
-                } else if (type === "draft") {
-                  generateDraft(true);
-                }
-              }}
-            >
-              Trotzdem fortfahren
-            </Button>
-          )}
+          <Group justify="space-between" align="center" wrap="nowrap">
+            <Text size="sm">{error}</Text>
+            {forceOverride && (
+              <Button
+                size="xs"
+                variant="light"
+                color="red"
+                style={{ flexShrink: 0 }}
+                onClick={() => {
+                  const { type, draftId, podId } = forceOverride;
+                  setForceOverride(null);
+                  setError(null);
+                  if (type === "pairings" && draftId && podId) {
+                    generatePairings(draftId, podId, true);
+                  } else if (type === "draft") {
+                    generateDraft(true);
+                  }
+                }}
+              >
+                Trotzdem fortfahren
+              </Button>
+            )}
+          </Group>
         </Alert>
       )}
 
