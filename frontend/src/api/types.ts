@@ -48,6 +48,15 @@ export interface Vote {
   vote: "DESIRED" | "NEUTRAL" | "AVOID";
 }
 
+export interface CubeVoteSummary {
+  tournament_cube_id: string;
+  cube_name: string;
+  desired: number;
+  neutral: number;
+  avoid: number;
+  votes: { username: string; vote: string }[];
+}
+
 export interface Draft {
   id: string;
   round_number: number;

@@ -14,3 +14,15 @@ class VoteUpdate(BaseModel):
 
 class VoteBulkUpdate(BaseModel):
     votes: list[VoteUpdate]
+
+class VoteSummaryEntry(BaseModel):
+    username: str
+    vote: str
+
+class CubeVoteSummary(BaseModel):
+    tournament_cube_id: uuid.UUID
+    cube_name: str
+    desired: int
+    neutral: int
+    avoid: int
+    votes: list[VoteSummaryEntry]

@@ -25,6 +25,7 @@ import {
   Image as MantineImage,
   Accordion,
   TextInput,
+  Popover,
 } from "@mantine/core";
 import {
   IconInfoCircle,
@@ -45,7 +46,7 @@ import {
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
-import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry, Cube } from "../../api/types";
+import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry, Cube, CubeVoteSummary } from "../../api/types";
 
 function downloadPdf(path: string, filename: string) {
   const token = localStorage.getItem("token");
@@ -204,6 +205,7 @@ function OverviewTab({
 
 function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onRefetch: () => void }) {
   const { data: allCubes, refetch: refetchCubes } = useApi<Cube[]>("/cubes");
+  const { data: voteSummary } = useApi<CubeVoteSummary[]>(`/tournaments/${tournament.id}/votes/summary`);
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -323,6 +325,7 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
                 <Table.Th>Name</Table.Th>
                 <Table.Th>Beschreibung</Table.Th>
                 <Table.Th ta="right">Max. Spieler</Table.Th>
+                <Table.Th>Votes</Table.Th>
                 <Table.Th />
               </Table.Tr>
             </Table.Thead>
@@ -334,6 +337,36 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
                     {renderDescription(c.cube_description)}
                   </Table.Td>
                   <Table.Td ta="right">{c.max_players ?? "—"}</Table.Td>
+                  <Table.Td>
+                    {(() => {
+                      const vs = voteSummary?.find((v) => v.tournament_cube_id === c.id);
+                      if (!vs || (vs.desired === 0 && vs.neutral === 0 && vs.avoid === 0)) return "—";
+                      return (
+                        <Popover width={250} position="bottom" withArrow>
+                          <Popover.Target>
+                            <Group gap={4} style={{ cursor: "pointer" }}>
+                              {vs.desired > 0 && <Badge size="xs" color="green" variant="light">{vs.desired}</Badge>}
+                              {vs.neutral > 0 && <Badge size="xs" color="gray" variant="light">{vs.neutral}</Badge>}
+                              {vs.avoid > 0 && <Badge size="xs" color="red" variant="light">{vs.avoid}</Badge>}
+                            </Group>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Stack gap={2}>
+                              <Text size="xs" fw={600} c="dimmed">{vs.cube_name} — Votes</Text>
+                              {vs.votes.map((v, i) => (
+                                <Group key={i} justify="space-between">
+                                  <Text size="xs">{v.username}</Text>
+                                  <Badge size="xs" color={v.vote === "DESIRED" ? "green" : v.vote === "AVOID" ? "red" : "gray"} variant="light">
+                                    {v.vote}
+                                  </Badge>
+                                </Group>
+                              ))}
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      );
+                    })()}
+                  </Table.Td>
                   <Table.Td>
                     <ActionIcon
                       color="red"
