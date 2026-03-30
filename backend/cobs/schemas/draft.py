@@ -23,6 +23,7 @@ class PodPlayerResponse(BaseModel):
     username: str
     seat_number: int
     vote: str | None = None
+    match_points: int = 0
 
     model_config = {"from_attributes": True}
 

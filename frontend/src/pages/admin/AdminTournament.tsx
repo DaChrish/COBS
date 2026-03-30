@@ -866,9 +866,20 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           </Text>
                         </Group>
                       </Group>
-                      <Badge size="sm" variant="light" color={accent}>
-                        {pod.pod_size} Spieler
-                      </Badge>
+                      <Group gap="xs">
+                        {(() => {
+                          const pts = pod.players.map((p) => p.match_points);
+                          const avg = pts.length > 0 ? (pts.reduce((a, b) => a + b, 0) / pts.length).toFixed(1) : "0";
+                          const min = pts.length > 0 ? Math.min(...pts) : 0;
+                          const max = pts.length > 0 ? Math.max(...pts) : 0;
+                          return pts.some((p) => p > 0) ? (
+                            <Text size="xs" c="dimmed">Ø{avg} · {min}–{max} Pkt</Text>
+                          ) : null;
+                        })()}
+                        <Badge size="sm" variant="light" color={accent}>
+                          {pod.pod_size} Spieler
+                        </Badge>
+                      </Group>
                     </Group>
                     <Group gap={6} wrap="wrap">
                       {pod.players
@@ -924,7 +935,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                   </Group>
                                 }
                               >
-                                {p.username}
+                                {p.username}{p.match_points > 0 ? ` (${p.match_points})` : ""}
                               </Badge>
                             </Tooltip>
                           );

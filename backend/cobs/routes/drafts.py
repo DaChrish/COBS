@@ -371,6 +371,7 @@ def _draft_to_response(draft: Draft) -> DraftResponse:
                 username=pp.tournament_player.user.username,
                 seat_number=pp.seat_number,
                 vote=vote,
+                match_points=pp.tournament_player.match_points,
             ))
         pods.append(PodResponse(
             id=pod.id,

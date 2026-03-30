@@ -79,6 +79,7 @@ export interface PodPlayer {
   username: string;
   seat_number: number;
   vote: "DESIRED" | "NEUTRAL" | "AVOID" | null;
+  match_points: number;
 }
 
 export interface Match {
