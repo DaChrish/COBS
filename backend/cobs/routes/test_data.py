@@ -54,9 +54,11 @@ async def create_test_tournament(
         cubes.append(cube)
 
     # Create tournament
+    join_code = _generate_join_code()
+
     tournament = Tournament(
         name=body.name,
-        join_code=_generate_join_code(),
+        join_code=join_code,
         status=TournamentStatus.VOTING,
         is_test=True,
         seed=body.seed,
@@ -77,10 +79,13 @@ async def create_test_tournament(
     password_hash = hash_password("test")
 
     for i in range(body.num_players):
-        username = f"test_player_{tournament.join_code}_{i+1}"
-        user = User(username=username, password_hash=password_hash)
-        db.add(user)
-        await db.flush()
+        username = f"Spieler {i+1}"
+        existing_user = await db.execute(select(User).where(User.username == username))
+        user = existing_user.scalar_one_or_none()
+        if not user:
+            user = User(username=username, password_hash=password_hash)
+            db.add(user)
+            await db.flush()
 
         tp = TournamentPlayer(tournament_id=tournament.id, user_id=user.id)
         db.add(tp)
