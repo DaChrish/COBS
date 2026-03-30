@@ -30,7 +30,7 @@ class OptimizerConfig:
     score_want: float = 5.0
     score_avoid: float = -200.0
     score_neutral: float = 0.0
-    match_point_penalty_weight: float = 10000.0
+    match_point_penalty_weight: float = 100000.0
     early_round_bonus: float = 3.0
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
@@ -49,6 +49,7 @@ def optimize_pods(
     pod_sizes: list[int],
     round_number: int,
     config: OptimizerConfig | None = None,
+    seed: int = 0,
 ) -> OptimizerResult:
     if config is None:
         config = OptimizerConfig()
@@ -174,10 +175,12 @@ def optimize_pods(
 
     model.Maximize(sum(objective_terms))
 
-    logger.info("Optimizer: %d players, %d pods %s, %d cubes, round %d", P, K, pod_sizes, C, round_number)
+    logger.info("Optimizer: %d players, %d pods %s, %d cubes, round %d, seed %d", P, K, pod_sizes, C, round_number, seed)
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 300
+    solver.parameters.random_seed = seed % (2**31)  # CP-SAT expects int32
+    solver.parameters.num_workers = 1  # deterministic with single worker
     solver.parameters.log_search_progress = True
     solver.parameters.log_to_stdout = False
     solver.log_callback = lambda msg: logger.debug("[CP-SAT] %s", msg)

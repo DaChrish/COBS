@@ -293,9 +293,11 @@ async def create_draft(
         repeat_avoid_multiplier=body.repeat_avoid_multiplier,
     )
 
-    # Run optimizer
+    # Run optimizer (use tournament seed for reproducibility)
+    tournament_seed = tournament.seed or 0
     opt_result = optimize_pods(
-        optimizer_players, optimizer_cubes, pod_sizes, round_number, config
+        optimizer_players, optimizer_cubes, pod_sizes, round_number, config,
+        seed=tournament_seed + round_number,
     )
 
     # Create draft + pods + pod_players
@@ -306,6 +308,9 @@ async def create_draft(
     )
     db.add(draft)
     await db.flush()
+
+    # Seeded RNG for seat assignment
+    seat_rng = random.Random(tournament_seed + round_number + 500)
 
     for k, (player_ids, cube_id) in enumerate(zip(opt_result.pods, opt_result.cube_ids)):
         # Find tournament_cube by cube_id
@@ -322,9 +327,9 @@ async def create_draft(
         db.add(pod)
         await db.flush()
 
-        # Assign seats randomly
+        # Assign seats with seeded RNG
         shuffled_ids = list(player_ids)
-        random.shuffle(shuffled_ids)
+        seat_rng.shuffle(shuffled_ids)
         for seat, pid in enumerate(shuffled_ids, 1):
             pp = PodPlayer(
                 pod_id=pod.id,
