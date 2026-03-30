@@ -24,6 +24,7 @@ import {
   Paper,
   Image as MantineImage,
   Accordion,
+  TextInput,
 } from "@mantine/core";
 import {
   IconInfoCircle,
@@ -37,11 +38,13 @@ import {
   IconDownload,
   IconMaximize,
   IconTrophy,
+  IconPlus,
+  IconTrash,
 } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
-import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry } from "../../api/types";
+import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry, Cube } from "../../api/types";
 
 function downloadPdf(path: string, filename: string) {
   const token = localStorage.getItem("token");
@@ -169,34 +172,166 @@ function OverviewTab({
 
 // ─── Cubes Tab ────────────────────────────────────────────────────────────────
 
-function CubesTab({ tournament }: { tournament: TournamentDetail }) {
-  if (tournament.cubes.length === 0) {
-    return <Text c="dimmed">Keine Cubes in diesem Turnier.</Text>;
-  }
+function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onRefetch: () => void }) {
+  const { data: allCubes, refetch: refetchCubes } = useApi<Cube[]>("/cubes");
+  const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Create-modal state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newMaxPlayers, setNewMaxPlayers] = useState<number | string>("");
+  const [saving, setSaving] = useState(false);
+
+  const tournamentCubeIds = tournament.cubes.map((c) => c.cube_id);
+  const availableCubes = allCubes?.filter((c) => !tournamentCubeIds.includes(c.id)) ?? [];
+
+  const addCube = async (cubeId: string) => {
+    setAdding(true);
+    setError(null);
+    try {
+      await apiFetch(`/tournaments/${tournament.id}/cubes`, {
+        method: "POST",
+        body: JSON.stringify({ cube_id: cubeId }),
+      });
+      onRefetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Fehler beim Hinzufügen");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const removeCube = async (cubeId: string) => {
+    setRemoving(cubeId);
+    setError(null);
+    try {
+      await apiFetch(`/tournaments/${tournament.id}/cubes/${cubeId}`, {
+        method: "DELETE",
+      });
+      onRefetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Fehler beim Entfernen");
+    } finally {
+      setRemoving(null);
+    }
+  };
+
+  const createAndAdd = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const cube = await apiFetch<Cube>("/cubes", {
+        method: "POST",
+        body: JSON.stringify({
+          name: newName.trim(),
+          description: newDescription.trim(),
+          max_players: newMaxPlayers === "" ? null : Number(newMaxPlayers),
+        }),
+      });
+      await apiFetch(`/tournaments/${tournament.id}/cubes`, {
+        method: "POST",
+        body: JSON.stringify({ cube_id: cube.id }),
+      });
+      refetchCubes();
+      onRefetch();
+      setCreateOpen(false);
+      setNewName("");
+      setNewDescription("");
+      setNewMaxPlayers("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Fehler beim Erstellen");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderDescription = (desc: string | null) => {
+    if (!desc) return "—";
+    if (desc.startsWith("http")) {
+      return (
+        <a href={desc} target="_blank" rel="noopener noreferrer">
+          {desc}
+        </a>
+      );
+    }
+    return desc;
+  };
 
   return (
-    <ScrollArea>
-      <Table striped highlightOnHover>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Beschreibung</Table.Th>
-            <Table.Th ta="right">Max. Spieler</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {tournament.cubes.map((c) => (
-            <Table.Tr key={c.id}>
-              <Table.Td fw={500}>{c.cube_name}</Table.Td>
-              <Table.Td c="dimmed" maw={400}>
-                {c.cube_description || "—"}
-              </Table.Td>
-              <Table.Td ta="right">{c.max_players ?? "—"}</Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </ScrollArea>
+    <Stack>
+      {error && (
+        <Alert color="red" variant="light" withCloseButton onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      <Group>
+        <Select
+          placeholder="Cube hinzufügen..."
+          data={availableCubes.map((c) => ({ value: c.id, label: `${c.name}${c.max_players ? ` (max ${c.max_players})` : ""}` }))}
+          searchable
+          disabled={adding}
+          value={null}
+          onChange={(v) => { if (v) addCube(v); }}
+          style={{ flex: 1 }}
+        />
+        <Button leftSection={<IconPlus size={16} />} variant="light" onClick={() => setCreateOpen(true)}>
+          Neuer Cube
+        </Button>
+      </Group>
+
+      {tournament.cubes.length === 0 ? (
+        <Text c="dimmed">Keine Cubes in diesem Turnier.</Text>
+      ) : (
+        <ScrollArea>
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Name</Table.Th>
+                <Table.Th>Beschreibung</Table.Th>
+                <Table.Th ta="right">Max. Spieler</Table.Th>
+                <Table.Th />
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {tournament.cubes.map((c) => (
+                <Table.Tr key={c.id}>
+                  <Table.Td fw={500}>{c.cube_name}</Table.Td>
+                  <Table.Td c="dimmed" maw={400}>
+                    {renderDescription(c.cube_description)}
+                  </Table.Td>
+                  <Table.Td ta="right">{c.max_players ?? "—"}</Table.Td>
+                  <Table.Td>
+                    <ActionIcon
+                      color="red"
+                      variant="subtle"
+                      loading={removing === c.cube_id}
+                      onClick={() => removeCube(c.cube_id)}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
+      )}
+
+      <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Neuen Cube erstellen">
+        <Stack>
+          <TextInput label="Name" required value={newName} onChange={(e) => setNewName(e.currentTarget.value)} />
+          <TextInput label="Beschreibung" value={newDescription} onChange={(e) => setNewDescription(e.currentTarget.value)} />
+          <NumberInput label="Max. Spieler" value={newMaxPlayers} onChange={setNewMaxPlayers} min={2} />
+          <Button loading={saving} disabled={!newName.trim()} onClick={createAndAdd}>
+            Erstellen & hinzufügen
+          </Button>
+        </Stack>
+      </Modal>
+    </Stack>
   );
 }
 
@@ -1140,7 +1275,7 @@ export function AdminTournament() {
         </Tabs.Panel>
 
         <Tabs.Panel value="cubes">
-          <CubesTab tournament={tournament} />
+          <CubesTab tournament={tournament} onRefetch={refetch} />
         </Tabs.Panel>
 
         <Tabs.Panel value="players">
