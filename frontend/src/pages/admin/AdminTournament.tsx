@@ -920,10 +920,10 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                               <Stack gap={2}>
                                 {podVotes.map((v, i) => (
                                   <Group key={i} justify="space-between" gap="xs">
-                                    <Text size="xs" fw={500} c={v.vote === "DESIRED" ? "green.1" : "red.1"}>
+                                    <Text size="xs" fw={500} c={v.vote === "DESIRED" ? "green.7" : "red.7"}>
                                       {v.username}
                                     </Text>
-                                    <Text size="xs" fw={700} c={v.vote === "DESIRED" ? "green.1" : "red.1"}>
+                                    <Text size="xs" fw={700} c={v.vote === "DESIRED" ? "green.7" : "red.7"}>
                                       {v.vote === "DESIRED" ? "✓" : "✗"}
                                     </Text>
                                   </Group>
@@ -979,10 +979,10 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                 <Stack gap={2}>
                                   {playerAllVotes[p.username]?.filter((v) => v.vote !== "NEUTRAL").map((v, i) => (
                                     <Group key={i} justify="space-between" gap="xs">
-                                      <Text size="xs" fw={500} c={v.vote === "DESIRED" ? "green.1" : "red.1"}>
+                                      <Text size="xs" fw={500} c={v.vote === "DESIRED" ? "green.7" : "red.7"}>
                                         {v.cube}
                                       </Text>
-                                      <Text size="xs" fw={700} c={v.vote === "DESIRED" ? "green.1" : "red.1"}>
+                                      <Text size="xs" fw={700} c={v.vote === "DESIRED" ? "green.7" : "red.7"}>
                                         {v.vote === "DESIRED" ? "✓" : "✗"}
                                       </Text>
                                     </Group>
