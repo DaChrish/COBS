@@ -23,7 +23,7 @@ export function DraftPage() {
   );
 
   useWebSocket(id, (event) => {
-    if (["pairings_ready", "match_reported", "timer_update"].includes(event.event)) {
+    if (["pairings_ready", "match_reported", "timer_update", "draft_created", "status_changed"].includes(event.event)) {
       refetchMatches();
       refetchDrafts();
     }

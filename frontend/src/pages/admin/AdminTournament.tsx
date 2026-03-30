@@ -47,6 +47,7 @@ import {
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
+import { useWebSocket } from "../../hooks/useWebSocket";
 import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry, Cube, CubeVoteSummary } from "../../api/types";
 
 function downloadPdf(path: string, filename: string) {
@@ -682,6 +683,16 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       } catch { /* ignore */ }
     });
   }, [drafts, tournamentId]);
+
+  // Live updates via WebSocket
+  const reloadAll = () => {
+    refetch(); // reloads drafts → triggers photo + match reload via useEffect
+  };
+  useWebSocket(tournamentId, (event) => {
+    if (["pairings_ready", "match_reported", "timer_update", "draft_created", "status_changed"].includes(event.event)) {
+      reloadAll();
+    }
+  });
 
   const simulateResults = async (withConflicts: boolean) => {
     setSimulating(withConflicts ? "conflicts" : "results");

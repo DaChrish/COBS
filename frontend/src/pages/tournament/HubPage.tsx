@@ -19,7 +19,7 @@ export function HubPage() {
   const { data: drafts, refetch: refetchDrafts } = useApi<Draft[]>(`/tournaments/${id}/drafts`);
 
   useWebSocket(id, (event) => {
-    if (["pairings_ready", "match_reported", "timer_update"].includes(event.event)) {
+    if (["pairings_ready", "match_reported", "timer_update", "draft_created", "status_changed"].includes(event.event)) {
       refetchDrafts();
     }
   });

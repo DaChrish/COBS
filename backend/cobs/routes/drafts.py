@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from cobs.auth.dependencies import require_admin
+from cobs.logic.ws_manager import manager
 from cobs.database import get_db
 from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, optimize_pods
 from cobs.logic.pdf import generate_pods_pdf
@@ -341,6 +342,8 @@ async def create_draft(
     # Update tournament status to DRAFTING
     tournament.status = TournamentStatus.DRAFTING
     await db.commit()
+
+    await manager.broadcast(str(tournament_id), "draft_created", {"draft_id": str(draft.id)})
 
     # Reload draft with relationships
     result = await db.execute(

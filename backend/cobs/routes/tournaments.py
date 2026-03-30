@@ -3,6 +3,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel as PydanticBaseModel
+
+from cobs.logic.ws_manager import manager
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -210,6 +212,9 @@ async def update_tournament(
 
     await db.commit()
     await db.refresh(tournament)
+
+    if body.status:
+        await manager.broadcast(str(tournament_id), "status_changed", {"status": tournament.status.value})
 
     player_count = await db.scalar(
         select(func.count()).where(TournamentPlayer.tournament_id == tournament.id)
