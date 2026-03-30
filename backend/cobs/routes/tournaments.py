@@ -2,6 +2,7 @@ import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -81,9 +82,10 @@ async def create_tournament(
 
     for cube_id in body.cube_ids:
         result = await db.execute(select(Cube).where(Cube.id == cube_id))
-        if not result.scalar_one_or_none():
+        cube_obj = result.scalar_one_or_none()
+        if not cube_obj:
             raise HTTPException(status_code=404, detail=f"Cube {cube_id} not found")
-        tc = TournamentCube(tournament_id=tournament.id, cube_id=cube_id)
+        tc = TournamentCube(tournament_id=tournament.id, cube_id=cube_id, max_players=cube_obj.max_players)
         db.add(tc)
 
     await db.commit()
@@ -317,3 +319,58 @@ async def drop_player(
     tp.dropped = True
     await db.commit()
     return {"ok": True}
+
+
+class AddCubeRequest(PydanticBaseModel):
+    cube_id: uuid.UUID
+
+
+@router.post("/{tournament_id}/cubes", status_code=201)
+async def add_cube_to_tournament(
+    tournament_id: uuid.UUID,
+    body: AddCubeRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    cube_result = await db.execute(select(Cube).where(Cube.id == body.cube_id))
+    cube = cube_result.scalar_one_or_none()
+    if not cube:
+        raise HTTPException(status_code=404, detail="Cube not found")
+
+    existing = await db.execute(
+        select(TournamentCube).where(
+            TournamentCube.tournament_id == tournament_id,
+            TournamentCube.cube_id == body.cube_id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Cube already in tournament")
+
+    tc = TournamentCube(tournament_id=tournament_id, cube_id=body.cube_id, max_players=cube.max_players)
+    db.add(tc)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.delete("/{tournament_id}/cubes/{cube_id}", status_code=204)
+async def remove_cube_from_tournament(
+    tournament_id: uuid.UUID,
+    cube_id: uuid.UUID,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(TournamentCube).where(
+            TournamentCube.tournament_id == tournament_id,
+            TournamentCube.cube_id == cube_id,
+        )
+    )
+    tc = result.scalar_one_or_none()
+    if not tc:
+        raise HTTPException(status_code=404, detail="Cube not in tournament")
+    await db.delete(tc)
+    await db.commit()
