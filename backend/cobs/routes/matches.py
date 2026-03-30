@@ -159,7 +159,7 @@ async def generate_pairings(
         local_points = _pod_local_points(prev_matches_list, player_ids)
 
         players = [
-            {"id": str(pp.tournament_player_id), "match_points": local_points.get(str(pp.tournament_player_id), 0)}
+            {"id": str(pp.tournament_player_id), "match_points": local_points.get(str(pp.tournament_player_id), 0), "seat_number": pp.seat_number}
             for pp in pod.players
         ]
 
@@ -300,7 +300,7 @@ async def generate_pod_pairings(
     local_points = _pod_local_points(pod_matches, player_ids)
 
     players = [
-        {"id": str(pp.tournament_player_id), "match_points": local_points.get(str(pp.tournament_player_id), 0)}
+        {"id": str(pp.tournament_player_id), "match_points": local_points.get(str(pp.tournament_player_id), 0), "seat_number": pp.seat_number}
         for pp in pod.players
     ]
 
