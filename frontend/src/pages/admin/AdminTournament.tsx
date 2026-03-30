@@ -908,12 +908,37 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                         <Text size="xs" c="dimmed">
                           ·
                         </Text>
-                        <Group gap={4} align="center">
-                          <IconCube size={14} style={{ opacity: 0.6 }} />
-                          <Text size="sm" fw={500}>
-                            {pod.cube_name}
-                          </Text>
-                        </Group>
+                        <Tooltip
+                          multiline w={250} withArrow
+                          label={(() => {
+                            const cubeVotes = voteSummary?.find((v) => v.cube_name === pod.cube_name);
+                            if (!cubeVotes) return "Keine Votes";
+                            const podPlayerNames = new Set(pod.players.map((p) => p.username));
+                            const podVotes = cubeVotes.votes.filter((v) => podPlayerNames.has(v.username));
+                            if (podVotes.length === 0) return "Keine Votes";
+                            return (
+                              <Stack gap={2}>
+                                {podVotes.map((v, i) => (
+                                  <Group key={i} justify="space-between" gap="xs">
+                                    <Text size="xs" c={v.vote === "DESIRED" ? "green.3" : v.vote === "AVOID" ? "red.3" : "gray.5"}>
+                                      {v.username}
+                                    </Text>
+                                    <Text size="xs" fw={600} c={v.vote === "DESIRED" ? "green.3" : v.vote === "AVOID" ? "red.3" : "gray.5"}>
+                                      {v.vote === "DESIRED" ? "✓" : v.vote === "AVOID" ? "✗" : "–"}
+                                    </Text>
+                                  </Group>
+                                ))}
+                              </Stack>
+                            );
+                          })()}
+                        >
+                          <Group gap={4} align="center" style={{ cursor: "pointer" }}>
+                            <IconCube size={14} style={{ opacity: 0.6 }} />
+                            <Text size="sm" fw={500}>
+                              {pod.cube_name}
+                            </Text>
+                          </Group>
+                        </Tooltip>
                       </Group>
                       <Group gap="xs">
                         {(() => {
