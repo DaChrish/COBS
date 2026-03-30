@@ -797,7 +797,13 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
         <Text c="dimmed">Noch keine Drafts.</Text>
       )}
 
-      {drafts?.map((draft) => {
+      {drafts && drafts.length > 0 && (
+      <Accordion
+        variant="separated"
+        defaultValue={`draft-${Math.max(...drafts.map((d) => d.round_number))}`}
+        styles={{ item: { borderRadius: 8 } }}
+      >
+      {[...drafts].reverse().map((draft) => {
         const allDraftMatches = matchesByDraft[draft.id] ?? [];
         const currentSwiss = allDraftMatches.length > 0 ? Math.max(...allDraftMatches.map((m) => m.swiss_round)) : 0;
         const tableNumbers: Record<string, number> = {};
@@ -812,8 +818,8 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
           }
         }
         return (
-        <Stack key={draft.id} gap="md">
-          <Group justify="space-between" align="center">
+        <Accordion.Item key={draft.id} value={`draft-${draft.round_number}`}>
+          <Accordion.Control>
             <Group gap="sm" align="center">
               <Text fw={700} size="lg">Runde {draft.round_number}</Text>
               <Badge
@@ -834,7 +840,8 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                 </Badge>
               )}
             </Group>
-          </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
 
           {draft.pods.length > 0 && (
             <Stack gap="md">
@@ -1136,10 +1143,12 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
               </Group>
             );
           })()}
-          <Divider />
-        </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
         );
       })}
+      </Accordion>
+      )}
 
       <Modal
         opened={selectedPlayer !== null}
