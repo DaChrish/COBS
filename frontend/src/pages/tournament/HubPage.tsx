@@ -86,6 +86,10 @@ export function HubPage() {
               onClick={() => navigate(`/tournament/${id}/standings`)}>
               Standings
             </Button>
+            <Button variant="light" leftSection={<IconHandFinger size={16} />}
+              onClick={() => navigate(`/tournament/${id}/vote`)}>
+              Meine Votes
+            </Button>
           </Group>
         </Stack>
       )}
@@ -95,10 +99,16 @@ export function HubPage() {
           <Alert color="green" title="Turnier beendet">
             Das Turnier ist abgeschlossen.
           </Alert>
-          <Button variant="light" fullWidth leftSection={<IconTrophy size={20} />}
-            onClick={() => navigate(`/tournament/${id}/standings`)}>
-            Endergebnis ansehen
-          </Button>
+          <Group grow>
+            <Button variant="light" leftSection={<IconTrophy size={20} />}
+              onClick={() => navigate(`/tournament/${id}/standings`)}>
+              Endergebnis
+            </Button>
+            <Button variant="light" leftSection={<IconHandFinger size={16} />}
+              onClick={() => navigate(`/tournament/${id}/vote`)}>
+              Meine Votes
+            </Button>
+          </Group>
           {drafts && drafts.length > 0 && (
             <Stack gap="xs">
               <Text size="sm" c="dimmed" tt="uppercase" fw={500}>Drafts</Text>

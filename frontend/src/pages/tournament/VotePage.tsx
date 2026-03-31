@@ -36,8 +36,10 @@ export function VotePage() {
 
   const cubes = tournament.cubes;
   const currentCube = cubes[cardIndex];
+  const readonly = tournament.status !== "VOTING";
 
   const setVote = (tcId: string, vote: VoteValue) => {
+    if (readonly) return;
     setVotes((prev) => ({ ...prev, [tcId]: vote }));
   };
 
@@ -61,7 +63,7 @@ export function VotePage() {
   return (
     <Container size="sm">
       <Group justify="space-between" mb="md">
-        <Title order={3}>Cube Voting</Title>
+        <Title order={3}>{readonly ? "Meine Votes" : "Cube Voting"}</Title>
         <SegmentedControl size="xs" value={viewMode} onChange={(v) => setViewMode(v as "card" | "list")}
           data={[{ label: "Cards", value: "card" }, { label: "Liste", value: "list" }]} />
       </Group>
@@ -124,11 +126,11 @@ export function VotePage() {
                 </div>
                 <Group gap={4} wrap="nowrap">
                   <ActionIcon color="red" variant={votes[cube.id] === "AVOID" ? "filled" : "subtle"} size="sm"
-                    onClick={() => setVote(cube.id, "AVOID")}><IconThumbDown size={14} /></ActionIcon>
+                    disabled={readonly} onClick={() => setVote(cube.id, "AVOID")}><IconThumbDown size={14} /></ActionIcon>
                   <ActionIcon color="gray" variant={votes[cube.id] === "NEUTRAL" ? "filled" : "subtle"} size="sm"
-                    onClick={() => setVote(cube.id, "NEUTRAL")}><IconMinus size={14} /></ActionIcon>
+                    disabled={readonly} onClick={() => setVote(cube.id, "NEUTRAL")}><IconMinus size={14} /></ActionIcon>
                   <ActionIcon color="green" variant={votes[cube.id] === "DESIRED" ? "filled" : "subtle"} size="sm"
-                    onClick={() => setVote(cube.id, "DESIRED")}><IconThumbUp size={14} /></ActionIcon>
+                    disabled={readonly} onClick={() => setVote(cube.id, "DESIRED")}><IconThumbUp size={14} /></ActionIcon>
                 </Group>
               </Group>
             </Paper>
@@ -136,7 +138,8 @@ export function VotePage() {
         </Stack>
       )}
 
-      <Button fullWidth mt="lg" loading={saving} onClick={save}>Votes speichern</Button>
+      {!readonly && <Button fullWidth mt="lg" loading={saving} onClick={save}>Votes speichern</Button>}
+      {readonly && <Button fullWidth mt="lg" variant="light" onClick={() => navigate(`/tournament/${id}`)}>Zurück</Button>}
     </Container>
   );
 }
