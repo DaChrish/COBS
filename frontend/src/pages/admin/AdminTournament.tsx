@@ -362,7 +362,11 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
             <Table.Tbody>
               {tournament.cubes.map((c) => (
                 <Table.Tr key={c.id}>
-                  <Table.Td fw={500}>{c.cube_name}</Table.Td>
+                  <Table.Td fw={500}>
+                    {c.cube_description?.startsWith("http") ? (
+                      <Text component="a" href={c.cube_description} target="_blank" c="blue" td="underline" size="sm">{c.cube_name}</Text>
+                    ) : c.cube_name}
+                  </Table.Td>
                   <Table.Td ta="right">{c.max_players ?? "—"}</Table.Td>
                   <Table.Td>
                     {(() => {
