@@ -848,14 +848,24 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       {[...drafts].reverse().map((draft) => {
         const allDraftMatches = matchesByDraft[draft.id] ?? [];
         const currentSwiss = allDraftMatches.length > 0 ? Math.max(...allDraftMatches.map((m) => m.swiss_round)) : 0;
+        // Compute stable table numbers per pod based on pod sizes (not dependent on which pods have matches)
+        const podTableOffset: Record<string, number> = {};
+        let tblOffset = 1;
+        for (const p of draft.pods) {
+          podTableOffset[p.id] = tblOffset;
+          const maxMatches = Math.floor(p.pod_size / 2);
+          tblOffset += maxMatches;
+        }
         const tableNumbers: Record<string, number> = {};
-        if (currentSwiss > 0) {
-          let tbl = 1;
-          for (const p of draft.pods) {
-            const currentRoundNonByes = allDraftMatches
-              .filter((m) => m.pod_id === p.id && m.swiss_round === currentSwiss && !m.is_bye);
-            for (const m of currentRoundNonByes) {
-              tableNumbers[m.id] = tbl++;
+        for (const p of draft.pods) {
+          let podTbl = podTableOffset[p.id];
+          // For each swiss round, assign table numbers to non-bye matches in this pod
+          const podNonByes = allDraftMatches.filter((m) => m.pod_id === p.id && !m.is_bye);
+          const rounds = [...new Set(podNonByes.map((m) => m.swiss_round))];
+          for (const round of rounds) {
+            let t = podTableOffset[p.id];
+            for (const m of podNonByes.filter((m) => m.swiss_round === round)) {
+              tableNumbers[m.id] = t++;
             }
           }
         }

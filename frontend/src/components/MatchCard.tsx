@@ -5,9 +5,10 @@ interface Props {
   match: Match;
   myPlayerId: string | undefined;
   onReport: (match: Match) => void;
+  tableNumber?: number;
 }
 
-export function MatchCard({ match, myPlayerId, onReport }: Props) {
+export function MatchCard({ match, myPlayerId, onReport, tableNumber }: Props) {
   const isP1 = match.player1_id === myPlayerId;
   const isP2 = match.player2_id === myPlayerId;
   const isMyMatch = isP1 || isP2;
@@ -33,11 +34,12 @@ export function MatchCard({ match, myPlayerId, onReport }: Props) {
   return (
     <Paper withBorder p="sm" radius="md">
       <Group justify="space-between" wrap="nowrap">
-        <div style={{ minWidth: 0 }}>
+        <Group gap="xs" style={{ minWidth: 0 }}>
+          {tableNumber && <Text size="xs" c="dimmed" fw={600}>T{tableNumber}</Text>}
           <Text size="sm" fw={500}>
             {isMyMatch ? `vs. ${opponentName}` : `${match.player1_username} vs. ${match.player2_username}`}
           </Text>
-        </div>
+        </Group>
         {match.reported && (
           <Badge color="green">{match.player1_wins}-{match.player2_wins} ✓</Badge>
         )}

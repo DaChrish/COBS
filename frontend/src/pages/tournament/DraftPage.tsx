@@ -51,6 +51,24 @@ export function DraftPage() {
     (m) => m.player1_id === myPlayer?.id || m.player2_id === myPlayer?.id
   ) ?? [];
 
+  // Compute stable table number for my matches based on pod offsets
+  const tableNumbers: Record<string, number> = {};
+  if (draft && matches) {
+    let tblOffset = 1;
+    for (const p of draft.pods) {
+      const maxMatches = Math.floor(p.pod_size / 2);
+      const podNonByes = matches.filter((m) => m.pod_id === p.id && !m.is_bye);
+      const rounds = [...new Set(podNonByes.map((m) => m.swiss_round))];
+      for (const round of rounds) {
+        let t = tblOffset;
+        for (const m of podNonByes.filter((m) => m.swiss_round === round)) {
+          tableNumbers[m.id] = t++;
+        }
+      }
+      tblOffset += maxMatches;
+    }
+  }
+
   const handleReport = async (myWins: number, oppWins: number) => {
     if (!reportMatch || !myPlayer || !draft) return;
     const isP1 = reportMatch.player1_id === myPlayer.id;
@@ -132,7 +150,7 @@ export function DraftPage() {
       {myMatches.length > 0 ? (
         <Stack gap="xs" mb="md">
           {myMatches.map((m) => (
-            <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} />
+            <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} tableNumber={tableNumbers[m.id]} />
           ))}
         </Stack>
       ) : (
