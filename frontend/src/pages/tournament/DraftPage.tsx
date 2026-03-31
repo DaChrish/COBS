@@ -128,15 +128,20 @@ export function DraftPage() {
         </Card>
       )}
 
-      {myMatches.length > 0 && (
-        <>
-          <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Matches</Text>
-          <Stack gap="xs" mb="md">
-            {myMatches.map((m) => (
-              <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} />
-            ))}
-          </Stack>
-        </>
+      <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Matches</Text>
+      {myMatches.length > 0 ? (
+        <Stack gap="xs" mb="md">
+          {myMatches.map((m) => (
+            <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} />
+          ))}
+        </Stack>
+      ) : (
+        <Card withBorder mb="md" padding="md" radius="md" bg="var(--mantine-color-blue-light)">
+          <Group gap="xs" align="center">
+            <Loader size="xs" />
+            <Text size="sm">Warte auf Pairings... Dein Gegner wird gleich ermittelt.</Text>
+          </Group>
+        </Card>
       )}
 
       <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Fotos</Text>
