@@ -903,7 +903,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                     <Group justify="space-between" mb="xs">
                       <Group gap="xs" align="center">
                         <Text fw={700} size="sm" c={accent}>
-                          Tisch {pod.pod_number}
+                          Pod {pod.pod_number}
                         </Text>
                         <Text size="xs" c="dimmed">
                           ·

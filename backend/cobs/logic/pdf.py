@@ -128,7 +128,7 @@ def generate_pods_pdf(
 
     for pod in pods:
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 8, _latin1_safe(f"Tisch {pod['table']} - {pod['pod_name']}"), new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 8, _latin1_safe(f"Pod {pod['table']} - {pod['pod_name']}"), new_x="LMARGIN", new_y="NEXT")
 
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_fill_color(230, 230, 230)
