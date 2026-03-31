@@ -140,7 +140,7 @@ export function AdminCubes() {
                             position: "absolute",
                             bottom: 1,
                             right: 2,
-                            textShadow: "0 0 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)",
+                            textShadow: "0 0 8px rgba(0,0,0,0.7)",
                             lineHeight: 1,
                           }}
                         >
