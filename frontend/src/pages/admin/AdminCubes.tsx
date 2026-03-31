@@ -14,13 +14,12 @@ import {
   ScrollArea,
   ActionIcon,
   Image,
-  FileInput,
 } from "@mantine/core";
 import {
   IconPlus,
   IconEdit,
   IconTrash,
-  IconUpload,
+  IconRefresh,
   IconArrowLeft,
 } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
@@ -33,57 +32,46 @@ export function AdminCubes() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCube, setEditingCube] = useState<Cube | null>(null);
-  const [cubeName, setCubeName] = useState("");
-  const [cubeDescription, setCubeDescription] = useState("");
-  const [cubeMaxPlayers, setCubeMaxPlayers] = useState<number | undefined>();
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [cobraId, setCobraId] = useState("");
+  const [maxPlayers, setMaxPlayers] = useState<number | undefined>();
   const [loading, setLoading] = useState(false);
 
   const openCreate = () => {
     setEditingCube(null);
-    setCubeName("");
-    setCubeDescription("");
-    setCubeMaxPlayers(undefined);
-    setImageFile(null);
+    setCobraId("");
+    setMaxPlayers(undefined);
     setModalOpen(true);
   };
 
   const openEdit = (cube: Cube) => {
     setEditingCube(cube);
-    setCubeName(cube.name);
-    setCubeDescription(cube.description);
-    setCubeMaxPlayers(cube.max_players ?? undefined);
-    setImageFile(null);
+    setCobraId(cube.cubecobra_id ?? "");
+    setMaxPlayers(cube.max_players ?? undefined);
     setModalOpen(true);
   };
 
   const saveCube = async () => {
     setLoading(true);
     try {
-      const body: Record<string, unknown> = {
-        name: cubeName,
-        description: cubeDescription,
-        max_players: cubeMaxPlayers ?? null,
-      };
-
       if (editingCube) {
+        const body: Record<string, unknown> = {
+          max_players: maxPlayers ?? null,
+        };
+        if (cobraId && cobraId !== editingCube.cubecobra_id) {
+          body.cubecobra_id = cobraId;
+        }
         await apiFetch(`/cubes/${editingCube.id}`, {
           method: "PATCH",
           body: JSON.stringify(body),
         });
-
-        if (imageFile) {
-          await uploadImage(editingCube.id, imageFile);
-        }
       } else {
-        const created = await apiFetch<Cube>("/cubes", {
+        await apiFetch<Cube>("/cubes", {
           method: "POST",
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            cubecobra_id: cobraId,
+            max_players: maxPlayers ?? null,
+          }),
         });
-
-        if (imageFile) {
-          await uploadImage(created.id, imageFile);
-        }
       }
 
       setModalOpen(false);
@@ -93,34 +81,14 @@ export function AdminCubes() {
     }
   };
 
-  const uploadImage = async (cubeId: string, file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = localStorage.getItem("token");
-    await fetch(`/api/cubes/${cubeId}/image`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-  };
-
   const deleteCube = async (id: string) => {
     await apiFetch(`/cubes/${id}`, { method: "DELETE" });
     refetch();
   };
 
-  const handleImageClick = (cube: Cube) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (file) {
-        await uploadImage(cube.id, file);
-        refetch();
-      }
-    };
-    input.click();
+  const refreshCube = async (id: string) => {
+    await apiFetch(`/cubes/${id}/refresh`, { method: "POST" });
+    refetch();
   };
 
   return (
@@ -145,11 +113,10 @@ export function AdminCubes() {
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th w={60}>Bild</Table.Th>
+              <Table.Th w={70}>Bild</Table.Th>
               <Table.Th>Name</Table.Th>
-              <Table.Th>Beschreibung</Table.Th>
               <Table.Th ta="right">Max Spieler</Table.Th>
-              <Table.Th w={100} />
+              <Table.Th w={120} />
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -157,41 +124,50 @@ export function AdminCubes() {
               <Table.Tr key={cube.id}>
                 <Table.Td>
                   {cube.image_url ? (
-                    <Image
-                      src={`/api${cube.image_url}`}
-                      w={40}
-                      h={40}
-                      radius="sm"
-                      fit="cover"
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleImageClick(cube)}
-                    />
+                    <div style={{ position: "relative", width: 60, height: 60 }}>
+                      <Image
+                        src={cube.image_url}
+                        w={60}
+                        h={60}
+                        radius="sm"
+                        fit="cover"
+                      />
+                      {cube.artist && (
+                        <Text
+                          size="8px"
+                          c="white"
+                          style={{
+                            position: "absolute",
+                            bottom: 1,
+                            right: 2,
+                            textShadow: "0 0 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)",
+                            lineHeight: 1,
+                          }}
+                        >
+                          {cube.artist}
+                        </Text>
+                      )}
+                    </div>
                   ) : (
-                    <ActionIcon
-                      variant="light"
-                      size={40}
-                      onClick={() => handleImageClick(cube)}
-                    >
-                      <IconUpload size={18} />
-                    </ActionIcon>
+                    <Text size="xs" c="dimmed">
+                      –
+                    </Text>
                   )}
                 </Table.Td>
-                <Table.Td fw={500}>{cube.name}</Table.Td>
-                <Table.Td>
-                  {cube.description.startsWith("http") ? (
+                <Table.Td fw={500}>
+                  {cube.description?.startsWith("http") ? (
                     <Text
                       component="a"
                       href={cube.description}
                       target="_blank"
-                      rel="noopener noreferrer"
-                      size="sm"
                       c="blue"
                       td="underline"
+                      size="sm"
                     >
-                      {cube.description}
+                      {cube.name}
                     </Text>
                   ) : (
-                    <Text size="sm">{cube.description}</Text>
+                    <Text size="sm">{cube.name}</Text>
                   )}
                 </Table.Td>
                 <Table.Td ta="right">
@@ -199,6 +175,15 @@ export function AdminCubes() {
                 </Table.Td>
                 <Table.Td>
                   <Group gap={4} wrap="nowrap">
+                    {cube.cubecobra_id && (
+                      <ActionIcon
+                        variant="subtle"
+                        onClick={() => refreshCube(cube.id)}
+                        title="Von CubeCobra aktualisieren"
+                      >
+                        <IconRefresh size={16} />
+                      </ActionIcon>
+                    )}
                     <ActionIcon
                       variant="subtle"
                       onClick={() => openEdit(cube)}
@@ -227,34 +212,20 @@ export function AdminCubes() {
       >
         <Stack>
           <TextInput
-            label="Name"
+            label="CubeCobra ID"
             required
-            value={cubeName}
-            onChange={(e) => setCubeName(e.target.value)}
-          />
-          <TextInput
-            label="Beschreibung / Link"
-            value={cubeDescription}
-            onChange={(e) => setCubeDescription(e.target.value)}
+            placeholder="z.B. 5d8d292a884bf534916603d7"
+            value={cobraId}
+            onChange={(e) => setCobraId(e.target.value)}
           />
           <NumberInput
             label="Max Spieler"
-            value={cubeMaxPlayers}
-            onChange={(v) =>
-              setCubeMaxPlayers(v ? Number(v) : undefined)
-            }
+            value={maxPlayers}
+            onChange={(v) => setMaxPlayers(v ? Number(v) : undefined)}
             min={1}
             placeholder="Optional"
           />
-          <FileInput
-            label="Bild"
-            accept="image/*"
-            value={imageFile}
-            onChange={setImageFile}
-            leftSection={<IconUpload size={16} />}
-            placeholder="Bild auswählen..."
-          />
-          <Button onClick={saveCube} loading={loading} disabled={!cubeName}>
+          <Button onClick={saveCube} loading={loading} disabled={!cobraId}>
             {editingCube ? "Speichern" : "Erstellen"}
           </Button>
         </Stack>

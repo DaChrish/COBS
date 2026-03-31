@@ -78,7 +78,14 @@ export function VotePage() {
         <Stack>
           <Card withBorder radius="md" padding={0}>
             {currentCube.cube_image_url && (
-              <Image src={currentCube.cube_image_url} height={200} alt={currentCube.cube_name} />
+              <div style={{ position: "relative" }}>
+                <Image src={currentCube.cube_image_url} height={200} alt={currentCube.cube_name} />
+                {currentCube.cube_artist && (
+                  <Text size="xs" c="white" style={{ position: "absolute", bottom: 4, right: 8, textShadow: "0 0 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)" }}>
+                    {currentCube.cube_artist}
+                  </Text>
+                )}
+              </div>
             )}
             {!currentCube.cube_image_url && (
               <Center h={200} bg="var(--mantine-color-dark-6)">
