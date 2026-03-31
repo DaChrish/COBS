@@ -230,9 +230,10 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
 
   // Create-modal state
   const [createOpen, setCreateOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newDescription, setNewDescription] = useState("");
+  const [newCobraId, setNewCobraId] = useState("");
   const [newMaxPlayers, setNewMaxPlayers] = useState<number | string>("");
+  const [newCubeName, setNewCubeName] = useState("");
+  const [cobraPreview, setCobraPreview] = useState<{name: string; image_url: string | null; artist: string | null; max_players: number | null} | null>(null);
   const [saving, setSaving] = useState(false);
 
   const tournamentCubeIds = tournament.cubes.map((c) => c.cube_id);
@@ -269,6 +270,21 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
     }
   };
 
+  const loadCobraPreview = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const meta = await apiFetch<{name: string; image_url: string | null; artist: string | null; max_players: number | null}>(`/cubes/cubecobra/${newCobraId.trim()}`);
+      setCobraPreview(meta);
+      setNewCubeName(meta.name);
+      setNewMaxPlayers(meta.max_players ?? "");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Fehler beim Laden");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const createAndAdd = async () => {
     setSaving(true);
     setError(null);
@@ -276,8 +292,8 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
       const cube = await apiFetch<Cube>("/cubes", {
         method: "POST",
         body: JSON.stringify({
-          name: newName.trim(),
-          description: newDescription.trim(),
+          cubecobra_id: newCobraId.trim(),
+          name: newCubeName,
           max_players: newMaxPlayers === "" ? null : Number(newMaxPlayers),
         }),
       });
@@ -288,9 +304,10 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
       refetchCubes();
       onRefetch();
       setCreateOpen(false);
-      setNewName("");
-      setNewDescription("");
+      setNewCobraId("");
       setNewMaxPlayers("");
+      setNewCubeName("");
+      setCobraPreview(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fehler beim Erstellen");
     } finally {
@@ -298,16 +315,12 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
     }
   };
 
-  const renderDescription = (desc: string | null) => {
-    if (!desc) return "—";
-    if (desc.startsWith("http")) {
-      return (
-        <a href={desc} target="_blank" rel="noopener noreferrer">
-          {desc}
-        </a>
-      );
-    }
-    return desc;
+  const resetCreateModal = () => {
+    setCreateOpen(false);
+    setCobraPreview(null);
+    setNewCobraId("");
+    setNewCubeName("");
+    setNewMaxPlayers("");
   };
 
   return (
@@ -341,7 +354,6 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Name</Table.Th>
-                <Table.Th>Beschreibung</Table.Th>
                 <Table.Th ta="right">Max. Spieler</Table.Th>
                 <Table.Th>Votes</Table.Th>
                 <Table.Th />
@@ -351,9 +363,6 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
               {tournament.cubes.map((c) => (
                 <Table.Tr key={c.id}>
                   <Table.Td fw={500}>{c.cube_name}</Table.Td>
-                  <Table.Td c="dimmed" maw={400}>
-                    {renderDescription(c.cube_description)}
-                  </Table.Td>
                   <Table.Td ta="right">{c.max_players ?? "—"}</Table.Td>
                   <Table.Td>
                     {(() => {
@@ -402,14 +411,35 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
         </ScrollArea>
       )}
 
-      <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Neuen Cube erstellen">
+      <Modal opened={createOpen} onClose={resetCreateModal} title="Neuen Cube erstellen">
         <Stack>
-          <TextInput label="Name" required value={newName} onChange={(e) => setNewName(e.currentTarget.value)} />
-          <TextInput label="Beschreibung" value={newDescription} onChange={(e) => setNewDescription(e.currentTarget.value)} />
-          <NumberInput label="Max. Spieler" value={newMaxPlayers} onChange={setNewMaxPlayers} min={2} />
-          <Button loading={saving} disabled={!newName.trim()} onClick={createAndAdd}>
-            Erstellen & hinzufügen
-          </Button>
+          {!cobraPreview && (
+            <>
+              <TextInput label="CubeCobra ID" required placeholder="z.B. 5d8d292a884bf534916603d7" value={newCobraId} onChange={(e) => setNewCobraId(e.currentTarget.value)} />
+              <Button loading={saving} disabled={!newCobraId.trim()} onClick={loadCobraPreview}>
+                Laden
+              </Button>
+            </>
+          )}
+          {cobraPreview && (
+            <>
+              {cobraPreview.image_url && (
+                <div style={{ position: "relative" }}>
+                  <MantineImage src={cobraPreview.image_url} height={120} radius="md" fit="cover" />
+                  {cobraPreview.artist && (
+                    <Text size="xs" c="white" style={{ position: "absolute", bottom: 4, right: 8, textShadow: "0 0 8px rgba(0,0,0,0.7)" }}>
+                      {cobraPreview.artist}
+                    </Text>
+                  )}
+                </div>
+              )}
+              <TextInput label="Name" value={newCubeName} onChange={(e) => setNewCubeName(e.currentTarget.value)} />
+              <NumberInput label="Max. Spieler" value={newMaxPlayers} onChange={setNewMaxPlayers} min={2} />
+              <Button loading={saving} disabled={!newCubeName.trim()} onClick={createAndAdd}>
+                Erstellen & hinzufügen
+              </Button>
+            </>
+          )}
         </Stack>
       </Modal>
     </Stack>
