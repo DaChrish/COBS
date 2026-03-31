@@ -68,7 +68,7 @@ function TournamentCard({ tournament: t }: { tournament: TournamentDetail }) {
         <div>
           <Text fw={600}>{t.name}</Text>
           <Text size="sm" c="dimmed">
-            {t.player_count} Spieler · {t.cube_count} Cubes · Max {t.max_rounds} Runden
+            {t.player_count} Spieler · {t.cube_count} Cubes · Max {t.max_rounds} Drafts
           </Text>
         </div>
         <Badge color={STATUS_COLORS[t.status]}>{t.status}</Badge>

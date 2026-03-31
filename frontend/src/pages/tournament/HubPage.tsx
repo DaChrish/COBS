@@ -38,7 +38,7 @@ export function HubPage() {
         <div>
           <Title order={2}>{tournament.name}</Title>
           <Text size="sm" c="dimmed">
-            {tournament.player_count} Spieler · {tournament.cube_count} Cubes · {drafts?.length ?? 0}/{tournament.max_rounds} Runden
+            {tournament.player_count} Spieler · {tournament.cube_count} Cubes · {drafts?.length ?? 0}/{tournament.max_rounds} Drafts
           </Text>
         </div>
         <Badge color={STATUS_COLORS[tournament.status]} size="lg">{tournament.status}</Badge>
@@ -64,7 +64,7 @@ export function HubPage() {
         <Stack gap="md">
           {myPod && (
             <Card withBorder padding="md" radius="md">
-              <Text size="sm" c="dimmed" tt="uppercase">Dein Pod — Runde {latestDraft.round_number}</Text>
+              <Text size="sm" c="dimmed" tt="uppercase">Dein Pod — Draft {latestDraft.round_number}</Text>
               <Text fw={600} size="lg" mt={4}>{myPod.cube_name}</Text>
               <Text size="sm" c="dimmed">
                 Pod {myPod.pod_number} · Seat {myPod.players.find(p => p.tournament_player_id === myPlayer?.id)?.seat_number}
@@ -77,7 +77,7 @@ export function HubPage() {
               <Button key={d.id} fullWidth variant={d.id === latestDraft?.id ? "filled" : "light"}
                 leftSection={<IconCards size={16} />}
                 onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
-                Runde {d.round_number} {d.status === "ACTIVE" ? "" : `(${d.status})`}
+                Draft {d.round_number} {d.status === "ACTIVE" ? "" : `(${d.status})`}
               </Button>
             ))}
           </Stack>
@@ -101,11 +101,11 @@ export function HubPage() {
           </Button>
           {drafts && drafts.length > 0 && (
             <Stack gap="xs">
-              <Text size="sm" c="dimmed" tt="uppercase" fw={500}>Runden</Text>
+              <Text size="sm" c="dimmed" tt="uppercase" fw={500}>Drafts</Text>
               {drafts.map((d) => (
                 <Button key={d.id} fullWidth variant="light" leftSection={<IconCards size={16} />}
                   onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
-                  Runde {d.round_number}
+                  Draft {d.round_number}
                 </Button>
               ))}
             </Stack>
@@ -121,7 +121,7 @@ function InfoCards({ tournament }: { tournament: TournamentDetail }) {
     <Stack gap="xs">
       <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">Spieler</Text><Text fw={600}>{tournament.player_count}</Text></Group></Card>
       <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">Cubes</Text><Text fw={600}>{tournament.cube_count}</Text></Group></Card>
-      <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">Max Runden</Text><Text fw={600}>{tournament.max_rounds}</Text></Group></Card>
+      <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">Max Drafts</Text><Text fw={600}>{tournament.max_rounds}</Text></Group></Card>
     </Stack>
   );
 }

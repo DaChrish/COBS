@@ -96,7 +96,7 @@ export function DraftPage() {
             onClick={() => navigate(`/tournament/${id}/draft/${Number(round) - 1}`)}>
             <IconChevronLeft size={20} />
           </ActionIcon>
-          <Title order={3}>Runde {round}</Title>
+          <Title order={3}>Draft {round}</Title>
           <ActionIcon variant="subtle" size="lg"
             disabled={!drafts || Number(round) >= drafts.length}
             onClick={() => navigate(`/tournament/${id}/draft/${Number(round) + 1}`)}>

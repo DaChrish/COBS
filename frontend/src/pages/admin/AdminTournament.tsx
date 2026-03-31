@@ -863,7 +863,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
         <Accordion.Item key={draft.id} value={`draft-${draft.round_number}`}>
           <Accordion.Control>
             <Group gap="sm" align="center">
-              <Text fw={700} size="lg">Runde {draft.round_number}</Text>
+              <Text fw={700} size="lg">Draft {draft.round_number}</Text>
               <Badge
                 size="lg"
                 variant="dot"
@@ -1508,7 +1508,7 @@ export function AdminTournament() {
             Spieler ({tournament.player_count})
           </Tabs.Tab>
           <Tabs.Tab value="drafts" leftSection={<IconCards size={16} />}>
-            Runden
+            Drafts
           </Tabs.Tab>
           <Tabs.Tab value="standings" leftSection={<IconTrophy size={16} />}>
             Standings

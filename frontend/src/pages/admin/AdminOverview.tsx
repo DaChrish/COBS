@@ -159,7 +159,7 @@ export function AdminOverview() {
             onChange={(e) => setName(e.target.value)}
           />
           <NumberInput
-            label="Max Runden"
+            label="Max Drafts"
             value={maxRounds}
             onChange={(v) => setMaxRounds(Number(v))}
             min={1}
