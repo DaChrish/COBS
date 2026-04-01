@@ -130,22 +130,37 @@ export function DraftPage() {
 
       {myPod?.timer_ends_at && <Timer endsAt={myPod.timer_ends_at} />}
 
-      {myPod && (
-        <Card withBorder mb="md" padding="md" radius="md">
-          <Text size="sm" c="dimmed" tt="uppercase">Dein Pod</Text>
-          <Text fw={600} size="lg">{myPod.cube_name}</Text>
-          <Text size="sm" c="dimmed">
-            Pod {myPod.pod_number} · Seat {myPod.players.find((p) => p.tournament_player_id === myPlayer?.id)?.seat_number} · {myPod.pod_size} Spieler
-          </Text>
-          <Group mt="xs" gap="xs">
-            {myPod.players.map((pp) => (
-              <Text key={pp.tournament_player_id} size="xs" c="dimmed">
-                {pp.seat_number}. {pp.username}
+      {myPod && (() => {
+        const tc = tournament.cubes.find((c) => c.cube_name === myPod.cube_name);
+        return (
+          <Card withBorder mb="md" padding={0} radius="md">
+            {tc?.cube_image_url && (
+              <div style={{ position: "relative" }}>
+                <Image src={tc.cube_image_url} h={120} fit="cover" />
+                {tc.cube_artist && (
+                  <Text size="xs" c="white" style={{ position: "absolute", bottom: 4, right: 8, textShadow: "0 0 8px rgba(0,0,0,0.7)" }}>
+                    {tc.cube_artist}
+                  </Text>
+                )}
+              </div>
+            )}
+            <Stack p="md" gap="xs">
+              <Text size="sm" c="dimmed" tt="uppercase">Dein Pod</Text>
+              <Text fw={600} size="lg">{myPod.cube_name}</Text>
+              <Text size="sm" c="dimmed">
+                Pod {myPod.pod_number} · Seat {myPod.players.find((p) => p.tournament_player_id === myPlayer?.id)?.seat_number} · {myPod.pod_size} Spieler
               </Text>
-            ))}
-          </Group>
-        </Card>
-      )}
+              <Group mt="xs" gap="xs">
+                {myPod.players.map((pp) => (
+                  <Text key={pp.tournament_player_id} size="xs" c="dimmed">
+                    {pp.seat_number}. {pp.username}
+                  </Text>
+                ))}
+              </Group>
+            </Stack>
+          </Card>
+        );
+      })()}
 
       <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Matches</Text>
       {myMatches.length > 0 ? (
