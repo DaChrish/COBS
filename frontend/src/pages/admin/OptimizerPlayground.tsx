@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Container,
   Title,
@@ -19,6 +19,8 @@ import {
   Accordion,
   SimpleGrid,
   Divider,
+  Tooltip,
+  ScrollArea,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -31,7 +33,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
-import type { Tournament, Simulation } from "../../api/types";
+import type { Tournament, Simulation, CubeVoteSummary } from "../../api/types";
 
 export function OptimizerPlayground() {
   const navigate = useNavigate();
@@ -60,6 +62,29 @@ export function OptimizerPlayground() {
   const [testCubes, setTestCubes] = useState(4);
   const [testSeed, setTestSeed] = useState<number | undefined>();
   const [testLoading, setTestLoading] = useState(false);
+
+  // Vote summary for the selected tournament
+  const [voteSummary, setVoteSummary] = useState<CubeVoteSummary[]>([]);
+
+  useEffect(() => {
+    if (!selectedTournament) { setVoteSummary([]); return; }
+    apiFetch<CubeVoteSummary[]>(`/tournaments/${selectedTournament}/votes/summary`)
+      .then(setVoteSummary)
+      .catch(() => setVoteSummary([]));
+  }, [selectedTournament]);
+
+  // Per-player all votes (only D/A) for tooltips
+  const playerAllVotes = useMemo(() => {
+    const map: Record<string, { cube: string; vote: string }[]> = {};
+    for (const cs of voteSummary) {
+      for (const v of cs.votes) {
+        if (v.vote === "NEUTRAL") continue;
+        if (!map[v.username]) map[v.username] = [];
+        map[v.username].push({ cube: cs.cube_name, vote: v.vote });
+      }
+    }
+    return map;
+  }, [voteSummary]);
 
   const resetDefaults = () => {
     setScoreWant(5.0);
@@ -232,6 +257,35 @@ export function OptimizerPlayground() {
         </Paper>
       )}
 
+      {/* Vote Overview */}
+      {selectedTournament && voteSummary.length > 0 && !selectedSim && (
+        <Paper withBorder p="md" mb="md" radius="md">
+          <Title order={4} mb="sm">Vote-Übersicht</Title>
+          <ScrollArea>
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Cube</Table.Th>
+                  <Table.Th ta="right">Desired</Table.Th>
+                  <Table.Th ta="right">Neutral</Table.Th>
+                  <Table.Th ta="right">Avoid</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {voteSummary.map((vs) => (
+                  <Table.Tr key={vs.tournament_cube_id}>
+                    <Table.Td fw={500}>{vs.cube_name}</Table.Td>
+                    <Table.Td ta="right"><Text c="green" size="sm">{vs.desired}</Text></Table.Td>
+                    <Table.Td ta="right"><Text c="dimmed" size="sm">{vs.neutral}</Text></Table.Td>
+                    <Table.Td ta="right"><Text c="red" size="sm">{vs.avoid}</Text></Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
+        </Paper>
+      )}
+
       {error && (
         <Alert color="red" mb="md" withCloseButton onClose={() => setError(null)}>
           {error}
@@ -325,28 +379,79 @@ export function OptimizerPlayground() {
               </Accordion>
 
               <Stack gap="sm">
-                {selectedSim.result.pods.map((pod, i) => (
-                  <Paper key={i} withBorder p="md" radius="md">
-                    <Group justify="space-between" mb="xs">
-                      <Text fw={600}>Pod {i + 1} · {pod.cube_name}</Text>
-                      <Group gap="xs">
-                        <Badge size="xs" color="green" variant="light">{pod.desired}D</Badge>
-                        <Badge size="xs" color="gray" variant="light">{pod.neutral}N</Badge>
-                        <Badge size="xs" color="red" variant="light">{pod.avoid}A</Badge>
-                        {pod.standings_diff > 0 && <Badge size="xs" color="orange" variant="light">Δ{pod.standings_diff}</Badge>}
+                {selectedSim.result.pods.map((pod, i) => {
+                  const podPlayerNames = new Set(pod.players.map((p) => p.username));
+                  const cubeVotes = voteSummary.find((v) => v.cube_name === pod.cube_name);
+                  return (
+                    <Paper key={i} withBorder p="md" radius="md">
+                      <Group justify="space-between" mb="xs">
+                        <Tooltip multiline w={250} withArrow label={(() => {
+                          if (!cubeVotes) return "Keine Votes";
+                          const desired = cubeVotes.votes.filter((v) => v.vote === "DESIRED");
+                          const avoid = cubeVotes.votes.filter((v) => v.vote === "AVOID");
+                          if (desired.length === 0 && avoid.length === 0) return "Alle neutral";
+                          return (
+                            <Stack gap={4}>
+                              {desired.length > 0 && (<>
+                                <Text size="xs" fw={700} c="green.7">Desired ({desired.length})</Text>
+                                <Group gap={4} wrap="wrap">
+                                  {desired.map((v, j) => (
+                                    <Text key={j} size="xs" fw={podPlayerNames.has(v.username) ? 700 : 400}
+                                      c={podPlayerNames.has(v.username) ? "green.7" : "dimmed"}>
+                                      {v.username}{podPlayerNames.has(v.username) ? " ●" : ""}
+                                    </Text>
+                                  ))}
+                                </Group>
+                              </>)}
+                              {avoid.length > 0 && (<>
+                                <Text size="xs" fw={700} c="red.7" mt={desired.length > 0 ? 4 : 0}>Avoid ({avoid.length})</Text>
+                                <Group gap={4} wrap="wrap">
+                                  {avoid.map((v, j) => (
+                                    <Text key={j} size="xs" fw={podPlayerNames.has(v.username) ? 700 : 400}
+                                      c={podPlayerNames.has(v.username) ? "red.7" : "dimmed"}>
+                                      {v.username}{podPlayerNames.has(v.username) ? " ●" : ""}
+                                    </Text>
+                                  ))}
+                                </Group>
+                              </>)}
+                            </Stack>
+                          );
+                        })()}>
+                          <Text fw={600} style={{ cursor: "pointer" }}>Pod {i + 1} · {pod.cube_name}</Text>
+                        </Tooltip>
+                        <Group gap="xs">
+                          <Badge size="xs" color="green" variant="light">{pod.desired}D</Badge>
+                          <Badge size="xs" color="gray" variant="light">{pod.neutral}N</Badge>
+                          <Badge size="xs" color="red" variant="light">{pod.avoid}A</Badge>
+                          {pod.standings_diff > 0 && <Badge size="xs" color="orange" variant="light">Δ{pod.standings_diff}</Badge>}
+                        </Group>
                       </Group>
-                    </Group>
-                    <Group gap={6} wrap="wrap">
-                      {pod.players.map((p) => (
-                        <Badge key={p.id} size="sm"
-                          variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
-                          color={p.vote === "DESIRED" ? "green" : p.vote === "AVOID" ? "red" : "gray"}>
-                          {p.username}{p.match_points > 0 ? ` (${p.match_points})` : ""}
-                        </Badge>
-                      ))}
-                    </Group>
-                  </Paper>
-                ))}
+                      <Group gap={6} wrap="wrap">
+                        {pod.players.map((p) => (
+                          <Tooltip key={p.id} multiline w={250} withArrow label={
+                            <Stack gap={2}>
+                              {playerAllVotes[p.username]?.length ? playerAllVotes[p.username].map((v, j) => (
+                                <Group key={j} justify="space-between" gap="xs">
+                                  <Text size="xs" fw={500} c={v.vote === "DESIRED" ? "green.7" : "red.7"}>{v.cube}</Text>
+                                  <Text size="xs" fw={700} c={v.vote === "DESIRED" ? "green.7" : "red.7"}>
+                                    {v.vote === "DESIRED" ? "✓" : "✗"}
+                                  </Text>
+                                </Group>
+                              )) : <Text size="xs">Alle neutral</Text>}
+                            </Stack>
+                          }>
+                            <Badge size="sm"
+                              variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
+                              color={p.vote === "DESIRED" ? "green" : p.vote === "AVOID" ? "red" : "gray"}
+                              style={{ cursor: "pointer" }}>
+                              {p.username}{p.match_points > 0 ? ` (${p.match_points})` : ""}
+                            </Badge>
+                          </Tooltip>
+                        ))}
+                      </Group>
+                    </Paper>
+                  );
+                })}
               </Stack>
             </Stack>
           )}
