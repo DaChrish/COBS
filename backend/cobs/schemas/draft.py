@@ -15,6 +15,7 @@ class DraftCreate(BaseModel):
     early_round_bonus: float = 3.0
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
+    avoid_penalty_scaling: float = 1.0
     skip_photo_check: bool = False
 
 

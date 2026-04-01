@@ -34,6 +34,7 @@ class OptimizerConfig:
     early_round_bonus: float = 3.0
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
+    avoid_penalty_scaling: float = 1.0  # 0=disabled, 1=linear, >1=aggressive
 
 
 @dataclass
@@ -103,6 +104,22 @@ def optimize_pods(
 
     objective_terms = []
 
+    # Compute per-player avoid weight based on voting balance
+    # Players who avoid many cubes relative to desired+neutral get weaker avoids
+    avoid_weights: dict[str, float] = {}
+    for player in active:
+        avoid_count = sum(1 for v in player.votes.values() if v == "AVOID")
+        non_avoid_count = sum(1 for v in player.votes.values() if v != "AVOID")
+        if avoid_count > 0 and config.avoid_penalty_scaling > 0:
+            ratio = non_avoid_count / avoid_count
+            weight = min(1.0, ratio ** config.avoid_penalty_scaling)
+            avoid_weights[player.id] = weight
+            if weight < 1.0:
+                logger.info("  Player %s: %d avoids, %d non-avoids → avoid weight %.2f",
+                            player.id, avoid_count, non_avoid_count, weight)
+        else:
+            avoid_weights[player.id] = 1.0
+
     sorted_mps = sorted(set(p.match_points for p in active))
     mp_to_rank = {mp: i for i, mp in enumerate(sorted_mps)}
     max_rank = max(len(sorted_mps) - 1, 1)
@@ -122,7 +139,7 @@ def optimize_pods(
                     score = int(config.score_want * pref_mult)
                 elif vote == "AVOID":
                     avoid_mult = config.repeat_avoid_multiplier ** player.prior_avoid_count
-                    score = int(config.score_avoid * avoid_mult)
+                    score = int(config.score_avoid * avoid_mult * avoid_weights[player.id])
 
                 if score != 0:
                     objective_terms.append(score * z[p, k, c])
