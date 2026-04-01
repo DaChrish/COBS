@@ -54,6 +54,7 @@ class TournamentCubeResponse(BaseModel):
     cube_name: str
     cube_description: str
     cube_image_url: str | None
+    cube_artist: str | None = None
     max_players: int | None
 
     model_config = {"from_attributes": True}

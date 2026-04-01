@@ -31,14 +31,17 @@ export interface TournamentCube {
   cube_name: string;
   cube_description: string;
   cube_image_url: string | null;
+  cube_artist: string | null;
   max_players: number | null;
 }
 
 export interface Cube {
   id: string;
+  cubecobra_id: string | null;
   name: string;
   description: string;
   image_url: string | null;
+  artist: string | null;
   max_players: number | null;
 }
 
