@@ -26,7 +26,7 @@ async def fetch_cubecobra_metadata(cubecobra_id: str) -> dict:
 
     cube = data["cube"]
     name = cube.get("name", "Unknown Cube")
-    short_id = cube.get("shortId", cubecobra_id)
+    short_id = cube.get("shortId") or cubecobra_id
     image = cube.get("image", {})
     image_url = image.get("uri")
     artist = image.get("artist")
