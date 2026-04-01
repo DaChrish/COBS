@@ -12,13 +12,15 @@ class Cube(TimestampMixin, Base):
     __tablename__ = "cubes"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    cubecobra_id: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str] = mapped_column(Text, default="")
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    artist: Mapped[str | None] = mapped_column(String(200), nullable=True)
     max_players: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     tournament_cubes: Mapped[list["TournamentCube"]] = relationship(
-        back_populates="cube"
+        back_populates="cube", passive_deletes=True
     )
 
 
