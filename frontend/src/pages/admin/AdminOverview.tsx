@@ -16,7 +16,7 @@ import {
   ActionIcon,
   Text,
 } from "@mantine/core";
-import { IconPlus, IconTestPipe, IconCube, IconX } from "@tabler/icons-react";
+import { IconPlus, IconTestPipe, IconCube, IconX, IconAdjustments } from "@tabler/icons-react";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import type { Tournament, Cube } from "../../api/types";
@@ -91,6 +91,13 @@ export function AdminOverview() {
       <Group justify="space-between" mb="lg">
         <Title order={2}>Turniere</Title>
         <Group>
+          <Button
+            variant="subtle"
+            leftSection={<IconAdjustments size={16} />}
+            onClick={() => navigate("/admin/optimizer")}
+          >
+            Optimizer
+          </Button>
           <Button
             variant="subtle"
             leftSection={<IconCube size={16} />}

@@ -14,6 +14,7 @@ import { StandingsPage } from "./pages/tournament/StandingsPage";
 import { AdminOverview } from "./pages/admin/AdminOverview";
 import { AdminTournament } from "./pages/admin/AdminTournament";
 import { AdminCubes } from "./pages/admin/AdminCubes";
+import { OptimizerPlayground } from "./pages/admin/OptimizerPlayground";
 
 export function App() {
   return (
@@ -31,6 +32,7 @@ export function App() {
           <Route path="/admin" element={<AdminGuard><AdminOverview /></AdminGuard>} />
           <Route path="/admin/tournament/:id" element={<AdminGuard><AdminTournament /></AdminGuard>} />
           <Route path="/admin/cubes" element={<AdminGuard><AdminCubes /></AdminGuard>} />
+          <Route path="/admin/optimizer" element={<AdminGuard><OptimizerPlayground /></AdminGuard>} />
         </Route>
       </Routes>
     </AuthProvider>

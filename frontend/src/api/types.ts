@@ -134,3 +134,37 @@ export interface DraftPhotoStatus {
   returned_ready: number;
   players: PlayerPhotoStatus[];
 }
+
+export interface SimulationPodPlayer {
+  id: string;
+  username: string;
+  vote: string;
+  match_points: number;
+}
+
+export interface SimulationPod {
+  cube_id: string;
+  cube_name: string;
+  players: SimulationPodPlayer[];
+  desired: number;
+  neutral: number;
+  avoid: number;
+  standings_diff: number;
+}
+
+export interface Simulation {
+  id: string;
+  tournament_id: string;
+  label: string;
+  config: Record<string, number>;
+  result: { pods: SimulationPod[] };
+  total_desired: number;
+  total_neutral: number;
+  total_avoid: number;
+  objective_score: number;
+  max_standings_diff: number;
+  player_count: number;
+  pod_count: number;
+  solver_time_ms: number;
+  created_at: string | null;
+}
