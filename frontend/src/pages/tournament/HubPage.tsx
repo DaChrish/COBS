@@ -58,57 +58,39 @@ export function HubPage() {
 
       {tournament.status === "DRAFTING" && drafts && drafts.length > 0 && (
         <Stack gap="md">
-          {/* Active draft - prominent card */}
-          {(() => {
-            const activeDraft = [...drafts].reverse().find((d) => d.status === "ACTIVE") || drafts[drafts.length - 1];
-            const pod = activeDraft.pods.find((p) => p.players.some((pp) => pp.tournament_player_id === myPlayer?.id));
-            return (
-              <>
-                {pod && (
-                  <Card withBorder padding="md" radius="md">
-                    <Badge color="orange" size="sm" mb="xs">AKTIV — Draft {activeDraft.round_number}</Badge>
-                    <Text fw={600} size="lg">{pod.cube_name}</Text>
+          <Stack gap="xs">
+            {[...drafts].reverse().map((d) => {
+              const isActive = d.status === "ACTIVE";
+              const pod = d.pods.find((p) => p.players.some((pp) => pp.tournament_player_id === myPlayer?.id));
+              return isActive ? (
+                <Card key={d.id} withBorder padding="md" radius="md"
+                  style={{ cursor: "pointer" }} onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
+                  <Badge color="orange" size="sm" mb="xs">AKTIV</Badge>
+                  <Text fw={600} size="lg">{pod ? pod.cube_name : `Draft ${d.round_number}`}</Text>
+                  {pod && (
                     <Text size="sm" c="dimmed">
                       Pod {pod.pod_number} · Seat {pod.players.find(p => p.tournament_player_id === myPlayer?.id)?.seat_number} · {pod.pod_size} Spieler
                     </Text>
-                    {pod.timer_ends_at && <Timer endsAt={pod.timer_ends_at} />}
-                    <Button fullWidth mt="sm" leftSection={<IconCards size={16} />}
-                      onClick={() => navigate(`/tournament/${id}/draft/${activeDraft.round_number}`)}>
-                      Zum Draft
-                    </Button>
-                  </Card>
-                )}
-                {!pod && (
-                  <Card withBorder padding="md" radius="md">
-                    <Badge color="orange" size="sm" mb="xs">AKTIV — Draft {activeDraft.round_number}</Badge>
-                    <Text size="sm" c="dimmed">Du bist in diesem Draft nicht zugeordnet.</Text>
-                  </Card>
-                )}
-              </>
-            );
-          })()}
-
-          {/* Past drafts - compact */}
-          {drafts.filter((d) => d.status !== "ACTIVE").length > 0 && (
-            <Stack gap="xs">
-              <Text size="sm" c="dimmed" tt="uppercase" fw={500}>Vergangene Drafts</Text>
-              {drafts.filter((d) => d.status !== "ACTIVE").map((d) => {
-                const pod = d.pods.find((p) => p.players.some((pp) => pp.tournament_player_id === myPlayer?.id));
-                return (
-                  <Card key={d.id} withBorder padding="xs" radius="md"
-                    style={{ cursor: "pointer" }} onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <Text size="sm" fw={500}>Draft {d.round_number}</Text>
-                        {pod && <Text size="sm" c="dimmed">· {pod.cube_name}</Text>}
-                      </Group>
-                      <Badge size="xs" color="green" variant="light">{d.status}</Badge>
+                  )}
+                  {pod?.timer_ends_at && <Timer endsAt={pod.timer_ends_at} />}
+                  <Button fullWidth mt="sm" leftSection={<IconCards size={16} />}>
+                    Zum Draft
+                  </Button>
+                </Card>
+              ) : (
+                <Card key={d.id} withBorder padding="xs" radius="md"
+                  style={{ cursor: "pointer" }} onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
+                  <Group justify="space-between">
+                    <Group gap="xs">
+                      <Text size="sm" fw={500}>Draft {d.round_number}</Text>
+                      {pod && <Text size="sm" c="dimmed">· {pod.cube_name}</Text>}
                     </Group>
-                  </Card>
-                );
-              })}
-            </Stack>
-          )}
+                    <Badge size="xs" color="green" variant="light">{d.status}</Badge>
+                  </Group>
+                </Card>
+              );
+            })}
+          </Stack>
 
           <Group grow>
             <Button variant="light" leftSection={<IconTrophy size={16} />}
