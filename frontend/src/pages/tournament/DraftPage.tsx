@@ -47,6 +47,7 @@ export function DraftPage() {
   const myPod = draft.pods.find((pod) =>
     pod.players.some((pp) => pp.tournament_player_id === myPlayer?.id)
   );
+  const isDraftActive = draft.status === "ACTIVE";
   const myMatches = matches?.filter(
     (m) => m.player1_id === myPlayer?.id || m.player2_id === myPlayer?.id
   ) ?? [];
@@ -148,10 +149,21 @@ export function DraftPage() {
 
       <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Matches</Text>
       {myMatches.length > 0 ? (
-        <Stack gap="xs" mb="md">
-          {myMatches.map((m) => (
-            <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} tableNumber={tableNumbers[m.id]} />
-          ))}
+        <Stack gap="sm" mb="md">
+          {(() => {
+            const rounds = [...new Set(myMatches.map((m) => m.swiss_round))].sort();
+            return rounds.map((round) => {
+              const roundMatches = myMatches.filter((m) => m.swiss_round === round);
+              return (
+                <Stack key={round} gap="xs">
+                  {rounds.length > 1 && <Text size="xs" c="dimmed" fw={600}>Swiss {round}</Text>}
+                  {roundMatches.map((m) => (
+                    <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} tableNumber={tableNumbers[m.id]} />
+                  ))}
+                </Stack>
+              );
+            });
+          })()}
         </Stack>
       ) : (
         <Card withBorder mb="md" padding="md" radius="md" bg="var(--mantine-color-blue-light)">
@@ -178,15 +190,17 @@ export function DraftPage() {
                   <Badge color="gray" size="xs" variant="light">Fehlt</Badge>
                 )}
               </Group>
-              <FileInput
-                size="xs"
-                w={200}
-                placeholder={myPhotos[type] ? "Ersetzen..." : "Hochladen..."}
-                accept="image/*"
-                leftSection={<IconUpload size={14} />}
-                onChange={(f) => handlePhotoUpload(f, type)}
-                disabled={uploading}
-              />
+              {isDraftActive && (
+                <FileInput
+                  size="xs"
+                  w={200}
+                  placeholder={myPhotos[type] ? "Ersetzen..." : "Hochladen..."}
+                  accept="image/*"
+                  leftSection={<IconUpload size={14} />}
+                  onChange={(f) => handlePhotoUpload(f, type)}
+                  disabled={uploading}
+                />
+              )}
             </Group>
             {myPhotos[type] && (
               <Image

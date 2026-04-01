@@ -27,10 +27,6 @@ export function HubPage() {
   if (loading || !tournament) return <Center h="50vh"><Loader /></Center>;
 
   const myPlayer = tournament.players.find((p) => p.user_id === user?.id);
-  const latestDraft = drafts?.length ? drafts[drafts.length - 1] : null;
-  const myPod = latestDraft?.pods.find((pod) =>
-    pod.players.some((pp) => pp.tournament_player_id === myPlayer?.id)
-  );
 
   return (
     <Container size="sm">
@@ -60,27 +56,60 @@ export function HubPage() {
         </Stack>
       )}
 
-      {tournament.status === "DRAFTING" && latestDraft && (
+      {tournament.status === "DRAFTING" && drafts && drafts.length > 0 && (
         <Stack gap="md">
-          {myPod && (
-            <Card withBorder padding="md" radius="md">
-              <Text size="sm" c="dimmed" tt="uppercase">Dein Pod — Draft {latestDraft.round_number}</Text>
-              <Text fw={600} size="lg" mt={4}>{myPod.cube_name}</Text>
-              <Text size="sm" c="dimmed">
-                Pod {myPod.pod_number} · Seat {myPod.players.find(p => p.tournament_player_id === myPlayer?.id)?.seat_number}
-              </Text>
-            </Card>
+          {/* Active draft - prominent card */}
+          {(() => {
+            const activeDraft = [...drafts].reverse().find((d) => d.status === "ACTIVE") || drafts[drafts.length - 1];
+            const pod = activeDraft.pods.find((p) => p.players.some((pp) => pp.tournament_player_id === myPlayer?.id));
+            return (
+              <>
+                {pod && (
+                  <Card withBorder padding="md" radius="md">
+                    <Badge color="orange" size="sm" mb="xs">AKTIV — Draft {activeDraft.round_number}</Badge>
+                    <Text fw={600} size="lg">{pod.cube_name}</Text>
+                    <Text size="sm" c="dimmed">
+                      Pod {pod.pod_number} · Seat {pod.players.find(p => p.tournament_player_id === myPlayer?.id)?.seat_number} · {pod.pod_size} Spieler
+                    </Text>
+                    {pod.timer_ends_at && <Timer endsAt={pod.timer_ends_at} />}
+                    <Button fullWidth mt="sm" leftSection={<IconCards size={16} />}
+                      onClick={() => navigate(`/tournament/${id}/draft/${activeDraft.round_number}`)}>
+                      Zum Draft
+                    </Button>
+                  </Card>
+                )}
+                {!pod && (
+                  <Card withBorder padding="md" radius="md">
+                    <Badge color="orange" size="sm" mb="xs">AKTIV — Draft {activeDraft.round_number}</Badge>
+                    <Text size="sm" c="dimmed">Du bist in diesem Draft nicht zugeordnet.</Text>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
+
+          {/* Past drafts - compact */}
+          {drafts.filter((d) => d.status !== "ACTIVE").length > 0 && (
+            <Stack gap="xs">
+              <Text size="sm" c="dimmed" tt="uppercase" fw={500}>Vergangene Drafts</Text>
+              {drafts.filter((d) => d.status !== "ACTIVE").map((d) => {
+                const pod = d.pods.find((p) => p.players.some((pp) => pp.tournament_player_id === myPlayer?.id));
+                return (
+                  <Card key={d.id} withBorder padding="xs" radius="md"
+                    style={{ cursor: "pointer" }} onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
+                    <Group justify="space-between">
+                      <Group gap="xs">
+                        <Text size="sm" fw={500}>Draft {d.round_number}</Text>
+                        {pod && <Text size="sm" c="dimmed">· {pod.cube_name}</Text>}
+                      </Group>
+                      <Badge size="xs" color="green" variant="light">{d.status}</Badge>
+                    </Group>
+                  </Card>
+                );
+              })}
+            </Stack>
           )}
-          {myPod?.timer_ends_at && <Timer endsAt={myPod.timer_ends_at} />}
-          <Stack gap="xs">
-            {drafts?.map((d) => (
-              <Button key={d.id} fullWidth variant={d.id === latestDraft?.id ? "filled" : "light"}
-                leftSection={<IconCards size={16} />}
-                onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
-                Draft {d.round_number} {d.status === "ACTIVE" ? "" : `(${d.status})`}
-              </Button>
-            ))}
-          </Stack>
+
           <Group grow>
             <Button variant="light" leftSection={<IconTrophy size={16} />}
               onClick={() => navigate(`/tournament/${id}/standings`)}>
@@ -112,12 +141,21 @@ export function HubPage() {
           {drafts && drafts.length > 0 && (
             <Stack gap="xs">
               <Text size="sm" c="dimmed" tt="uppercase" fw={500}>Drafts</Text>
-              {drafts.map((d) => (
-                <Button key={d.id} fullWidth variant="light" leftSection={<IconCards size={16} />}
-                  onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
-                  Draft {d.round_number}
-                </Button>
-              ))}
+              {drafts.map((d) => {
+                const pod = d.pods.find((p) => p.players.some((pp) => pp.tournament_player_id === myPlayer?.id));
+                return (
+                  <Card key={d.id} withBorder padding="xs" radius="md"
+                    style={{ cursor: "pointer" }} onClick={() => navigate(`/tournament/${id}/draft/${d.round_number}`)}>
+                    <Group justify="space-between">
+                      <Group gap="xs">
+                        <Text size="sm" fw={500}>Draft {d.round_number}</Text>
+                        {pod && <Text size="sm" c="dimmed">· {pod.cube_name}</Text>}
+                      </Group>
+                      <Badge size="xs" color="green" variant="light">{d.status}</Badge>
+                    </Group>
+                  </Card>
+                );
+              })}
             </Stack>
           )}
         </Stack>
