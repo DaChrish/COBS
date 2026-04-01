@@ -301,6 +301,10 @@ async def create_draft(
         seed=tournament_seed + round_number,
     )
 
+    # Mark previous draft as finished
+    if last_draft:
+        last_draft.status = DraftStatus.FINISHED
+
     # Create draft + pods + pod_players
     draft = Draft(
         tournament_id=tournament_id,
