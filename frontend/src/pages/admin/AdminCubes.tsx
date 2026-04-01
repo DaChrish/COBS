@@ -103,8 +103,12 @@ export function AdminCubes() {
     }
   };
 
-  const deleteCube = async (id: string) => {
-    await apiFetch(`/cubes/${id}`, { method: "DELETE" });
+  const [confirmDelete, setConfirmDelete] = useState<Cube | null>(null);
+
+  const deleteCube = async () => {
+    if (!confirmDelete) return;
+    await apiFetch(`/cubes/${confirmDelete.id}`, { method: "DELETE" });
+    setConfirmDelete(null);
     refetch();
   };
 
@@ -231,7 +235,7 @@ export function AdminCubes() {
                       <ActionIcon
                         variant="subtle"
                         color="red"
-                        onClick={() => deleteCube(cube.id)}
+                        onClick={() => setConfirmDelete(cube)}
                       >
                         <IconTrash size={16} />
                       </ActionIcon>
@@ -315,6 +319,20 @@ export function AdminCubes() {
             <Button color="blue" size="xs" loading={loading} onClick={confirmRefreshCube}>Aktualisieren</Button>
           </Group>
         </Stack>
+      </Modal>
+
+      <Modal opened={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title="Cube löschen?" size="sm">
+        {confirmDelete && (
+          <Stack>
+            <Text size="sm">
+              <strong>{confirmDelete.name}</strong> wirklich löschen? Der Cube wird auch aus allen Turnieren entfernt.
+            </Text>
+            <Group justify="flex-end" gap="xs">
+              <Button variant="light" size="xs" onClick={() => setConfirmDelete(null)}>Abbrechen</Button>
+              <Button color="red" size="xs" onClick={deleteCube}>Löschen</Button>
+            </Group>
+          </Stack>
+        )}
       </Modal>
     </Container>
   );
