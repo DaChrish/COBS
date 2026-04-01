@@ -1514,6 +1514,7 @@ export function AdminTournament() {
   const { data: tournament, loading, refetch } = useApi<TournamentDetail>(
     id ? `/tournaments/${id}` : null
   );
+  const [activeTab, setActiveTab] = useState<string | null>("overview");
 
   if (loading) {
     return (
@@ -1540,7 +1541,7 @@ export function AdminTournament() {
         <Badge color={STATUS_COLORS[tournament.status]}>{tournament.status}</Badge>
       </Group>
 
-      <Tabs defaultValue="overview" keepMounted={false}>
+      <Tabs value={activeTab} onChange={setActiveTab} keepMounted={false}>
         <Tabs.List mb="md">
           <Tabs.Tab value="overview" leftSection={<IconInfoCircle size={16} />}>
             Übersicht
