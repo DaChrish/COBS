@@ -6,6 +6,7 @@ from cobs.models.vote import CubeVote, VoteType
 from cobs.models.draft import Draft, DraftStatus, Pod, PodPlayer
 from cobs.models.match import Match
 from cobs.models.photo import DraftPhoto, PhotoType
+from cobs.models.simulation import Simulation
 
 __all__ = [
     "Base",
@@ -24,4 +25,5 @@ __all__ = [
     "Match",
     "DraftPhoto",
     "PhotoType",
+    "Simulation",
 ]
