@@ -89,6 +89,8 @@ export function OptimizerPlayground() {
   const [batchAnalyses, setBatchAnalyses] = useState<BatchAnalysis[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<BatchAnalysis | null>(null);
   const [expandedSimIdx, setExpandedSimIdx] = useState<number | null>(null);
+  const [simSortKey, setSimSortKey] = useState<string>("#");
+  const [simSortAsc, setSimSortAsc] = useState(true);
   const [batchRunning, setBatchRunning] = useState(false);
 
   useEffect(() => {
@@ -848,17 +850,38 @@ export function OptimizerPlayground() {
                   <Table striped highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th ta="right">#</Table.Th>
-                        <Table.Th ta="right">D%</Table.Th>
-                        <Table.Th ta="right">N%</Table.Th>
-                        <Table.Th ta="right">A%</Table.Th>
-                        <Table.Th ta="right">Total D</Table.Th>
-                        <Table.Th ta="right">Total N</Table.Th>
-                        <Table.Th ta="right">Total A</Table.Th>
+                        {[
+                          { key: "#", label: "#" },
+                          { key: "desired_pct", label: "D%" },
+                          { key: "neutral_pct", label: "N%" },
+                          { key: "avoid_pct", label: "A%" },
+                          { key: "total_desired", label: "Total D" },
+                          { key: "total_neutral", label: "Total N" },
+                          { key: "total_avoid", label: "Total A" },
+                        ].map((col) => (
+                          <Table.Th key={col.key} ta="right" style={{ cursor: "pointer", userSelect: "none" }}
+                            onClick={() => {
+                              if (simSortKey === col.key) setSimSortAsc(!simSortAsc);
+                              else { setSimSortKey(col.key); setSimSortAsc(col.key === "#"); }
+                            }}>
+                            {col.label}{simSortKey === col.key ? (simSortAsc ? " ↑" : " ↓") : ""}
+                          </Table.Th>
+                        ))}
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {selectedBatch.simulations.map((sim, idx) => (
+                      {(() => {
+                        const indexed = selectedBatch.simulations.map((sim, idx) => ({ sim, idx }));
+                        indexed.sort((a, b) => {
+                          const getVal = (s: any, i: number) => {
+                            if (simSortKey === "#") return i;
+                            return s[simSortKey] ?? 0;
+                          };
+                          const va = getVal(a.sim, a.idx);
+                          const vb = getVal(b.sim, b.idx);
+                          return simSortAsc ? va - vb : vb - va;
+                        });
+                        return indexed.map(({ sim, idx }) => (
                         <React.Fragment key={idx}>
                           <Table.Tr style={{ cursor: "pointer" }} onClick={() => setExpandedSimIdx(expandedSimIdx === idx ? null : idx)}>
                             <Table.Td ta="right">{idx + 1}</Table.Td>
@@ -966,7 +989,8 @@ export function OptimizerPlayground() {
                             </Table.Tr>
                           )}
                         </React.Fragment>
-                      ))}
+                      ));
+                      })()}
                     </Table.Tbody>
                   </Table>
                 </ScrollArea>
