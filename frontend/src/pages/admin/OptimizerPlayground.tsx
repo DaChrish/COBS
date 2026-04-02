@@ -745,10 +745,10 @@ export function OptimizerPlayground() {
                             <Table.Td ta="right">{b.num_cubes}</Table.Td>
                             <Table.Td ta="right">{b.max_rounds}</Table.Td>
                             <Table.Td ta="right">{b.num_simulations}</Table.Td>
-                            <Table.Td ta="right"><Text c="green" size="sm">{(b.avg_desired_pct * 100).toFixed(1)}</Text></Table.Td>
-                            <Table.Td ta="right"><Text c="red" size="sm">{(b.avg_avoid_pct * 100).toFixed(1)}</Text></Table.Td>
-                            <Table.Td ta="right"><Text c="green" size="sm">{(b.min_desired_pct * 100).toFixed(1)}</Text></Table.Td>
-                            <Table.Td ta="right"><Text c="red" size="sm">{(b.max_avoid_pct * 100).toFixed(1)}</Text></Table.Td>
+                            <Table.Td ta="right"><Text c="green" size="sm">{b.avg_desired_pct.toFixed(1)}</Text></Table.Td>
+                            <Table.Td ta="right"><Text c="red" size="sm">{b.avg_avoid_pct.toFixed(1)}</Text></Table.Td>
+                            <Table.Td ta="right"><Text c="green" size="sm">{b.min_desired_pct.toFixed(1)}</Text></Table.Td>
+                            <Table.Td ta="right"><Text c="red" size="sm">{b.max_avoid_pct.toFixed(1)}</Text></Table.Td>
                             <Table.Td ta="right">{b.total_time_ms}</Table.Td>
                             <Table.Td>
                               <ActionIcon variant="subtle" color="blue" size="sm"
@@ -782,19 +782,19 @@ export function OptimizerPlayground() {
 
                 {/* Summary badges */}
                 <Group gap="md">
-                  <Badge color="green" variant="light" size="lg">D: {(selectedBatch.avg_desired_pct * 100).toFixed(1)}%</Badge>
-                  <Badge color="gray" variant="light" size="lg">N: {(selectedBatch.avg_neutral_pct * 100).toFixed(1)}%</Badge>
-                  <Badge color="red" variant="light" size="lg">A: {(selectedBatch.avg_avoid_pct * 100).toFixed(1)}%</Badge>
+                  <Badge color="green" variant="light" size="lg">D: {selectedBatch.avg_desired_pct.toFixed(1)}%</Badge>
+                  <Badge color="gray" variant="light" size="lg">N: {selectedBatch.avg_neutral_pct.toFixed(1)}%</Badge>
+                  <Badge color="red" variant="light" size="lg">A: {selectedBatch.avg_avoid_pct.toFixed(1)}%</Badge>
                   <Text size="sm" c="dimmed">{selectedBatch.total_time_ms}ms</Text>
                 </Group>
 
                 {/* Range info */}
                 <Group gap="lg">
                   <Text size="sm">
-                    Desired: {(selectedBatch.min_desired_pct * 100).toFixed(1)}% - {(selectedBatch.max_desired_pct * 100).toFixed(1)}%
+                    Desired: {selectedBatch.min_desired_pct.toFixed(1)}% - {selectedBatch.max_desired_pct.toFixed(1)}%
                   </Text>
                   <Text size="sm">
-                    Avoid: {(selectedBatch.min_avoid_pct * 100).toFixed(1)}% - {(selectedBatch.max_avoid_pct * 100).toFixed(1)}%
+                    Avoid: {selectedBatch.min_avoid_pct.toFixed(1)}% - {selectedBatch.max_avoid_pct.toFixed(1)}%
                   </Text>
                 </Group>
 
@@ -860,9 +860,9 @@ export function OptimizerPlayground() {
                       {selectedBatch.simulations.map((sim, idx) => (
                         <Table.Tr key={idx}>
                           <Table.Td ta="right">{idx + 1}</Table.Td>
-                          <Table.Td ta="right"><Text c="green" size="sm">{(sim.desired_pct * 100).toFixed(1)}</Text></Table.Td>
-                          <Table.Td ta="right"><Text c="dimmed" size="sm">{(sim.neutral_pct * 100).toFixed(1)}</Text></Table.Td>
-                          <Table.Td ta="right"><Text c="red" size="sm">{(sim.avoid_pct * 100).toFixed(1)}</Text></Table.Td>
+                          <Table.Td ta="right"><Text c="green" size="sm">{sim.desired_pct.toFixed(1)}</Text></Table.Td>
+                          <Table.Td ta="right"><Text c="dimmed" size="sm">{sim.neutral_pct.toFixed(1)}</Text></Table.Td>
+                          <Table.Td ta="right"><Text c="red" size="sm">{sim.avoid_pct.toFixed(1)}</Text></Table.Td>
                           <Table.Td ta="right">{sim.total_desired}</Table.Td>
                           <Table.Td ta="right">{sim.total_neutral}</Table.Td>
                           <Table.Td ta="right">{sim.total_avoid}</Table.Td>
