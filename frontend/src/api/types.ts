@@ -152,6 +152,33 @@ export interface SimulationPod {
   standings_diff: number;
 }
 
+export interface BatchAnalysis {
+  id: string;
+  label: string;
+  num_players: number;
+  num_cubes: number;
+  max_rounds: number;
+  swiss_rounds_per_draft: number;
+  num_simulations: number;
+  vote_distribution: { desired: number; neutral: number; avoid: number };
+  player_profiles: { count: number; desired_pct: number; neutral_pct: number; avoid_pct: number }[];
+  optimizer_config: Record<string, number>;
+  avg_desired_pct: number;
+  avg_neutral_pct: number;
+  avg_avoid_pct: number;
+  min_desired_pct: number;
+  max_desired_pct: number;
+  min_avoid_pct: number;
+  max_avoid_pct: number;
+  simulations: {
+    desired_pct: number; neutral_pct: number; avoid_pct: number;
+    total_desired: number; total_neutral: number; total_avoid: number;
+    drafts?: { round: number; desired_pct: number; neutral_pct: number; avoid_pct: number }[];
+  }[];
+  total_time_ms: number;
+  created_at: string | null;
+}
+
 export interface Simulation {
   id: string;
   tournament_id: string;
