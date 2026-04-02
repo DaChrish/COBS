@@ -302,6 +302,56 @@ async def join_tournament(
     return TokenResponse(access_token=token, user_id=user.id, is_admin=False)
 
 
+class JoinByCodeRequest(PydanticBaseModel):
+    join_code: str
+
+
+@router.post("/join-by-code", status_code=200)
+async def join_tournament_authenticated(
+    body: JoinByCodeRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Join a tournament by code as an already authenticated user."""
+    result = await db.execute(
+        select(Tournament).where(Tournament.join_code == body.join_code.upper())
+    )
+    tournament = result.scalar_one_or_none()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Ungültiger Join-Code")
+
+    if tournament.status == TournamentStatus.FINISHED:
+        raise HTTPException(status_code=400, detail="Turnier ist beendet")
+
+    # Check if already joined
+    existing = await db.execute(
+        select(TournamentPlayer).where(
+            TournamentPlayer.tournament_id == tournament.id,
+            TournamentPlayer.user_id == user.id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        return {"ok": True, "tournament_id": str(tournament.id)}
+
+    tp = TournamentPlayer(tournament_id=tournament.id, user_id=user.id)
+    db.add(tp)
+    await db.flush()
+
+    tc_result = await db.execute(
+        select(TournamentCube).where(TournamentCube.tournament_id == tournament.id)
+    )
+    for tc in tc_result.scalars().all():
+        vote = CubeVote(
+            tournament_player_id=tp.id,
+            tournament_cube_id=tc.id,
+            vote=VoteType.NEUTRAL,
+        )
+        db.add(vote)
+
+    await db.commit()
+    return {"ok": True, "tournament_id": str(tournament.id)}
+
+
 @router.patch("/{tournament_id}/players/{tp_id}/drop")
 async def drop_player(
     tournament_id: uuid.UUID,

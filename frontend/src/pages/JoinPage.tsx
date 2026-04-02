@@ -11,10 +11,27 @@ export function JoinPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setToken } = useAuth();
+  const { user, setToken } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleJoinAuthenticated = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await apiFetch<{ ok: boolean; tournament_id: string }>("/tournaments/join-by-code", {
+        method: "POST",
+        body: JSON.stringify({ join_code: joinCode }),
+      });
+      navigate(`/tournament/${res.tournament_id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Beitreten fehlgeschlagen");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinAnonymous = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -26,12 +43,38 @@ export function JoinPage() {
       await setToken(res.access_token);
       navigate("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Join failed");
+      setError(err instanceof Error ? err.message : "Beitreten fehlgeschlagen");
     } finally {
       setLoading(false);
     }
   };
 
+  // Logged-in user: only join code needed
+  if (user) {
+    return (
+      <Center h="100vh" bg="var(--mantine-color-body)">
+        <Container size={420} w="100%">
+          <Stack align="center" mb="xl">
+            <IconCube size={48} color="var(--mantine-color-blue-6)" />
+            <Title order={1}>Turnier beitreten</Title>
+            <Text size="sm" c="dimmed">Angemeldet als <strong>{user.username}</strong></Text>
+          </Stack>
+          <Paper withBorder shadow="md" p="xl" radius="md">
+            <form onSubmit={handleJoinAuthenticated}>
+              <Stack>
+                {error && <Alert color="red" icon={<IconAlertCircle size={16} />}>{error}</Alert>}
+                <TextInput label="Join-Code" placeholder="z.B. A1B2C3D4" required value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={8} />
+                <Button type="submit" fullWidth loading={loading}>Beitreten</Button>
+              </Stack>
+            </form>
+          </Paper>
+        </Container>
+      </Center>
+    );
+  }
+
+  // Not logged in: full form
   return (
     <Center h="100vh" bg="var(--mantine-color-body)">
       <Container size={420} w="100%">
@@ -40,7 +83,7 @@ export function JoinPage() {
           <Title order={1}>Turnier beitreten</Title>
         </Stack>
         <Paper withBorder shadow="md" p="xl" radius="md">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleJoinAnonymous}>
             <Stack>
               {error && <Alert color="red" icon={<IconAlertCircle size={16} />}>{error}</Alert>}
               <TextInput label="Join-Code" placeholder="z.B. A1B2C3D4" required value={joinCode}
