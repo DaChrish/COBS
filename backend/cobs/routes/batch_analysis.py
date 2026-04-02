@@ -60,7 +60,7 @@ async def run_batch_analysis(
     sim_results: list[dict] = []
 
     for i in range(body.num_simulations):
-        seed = i * 1000 + 1
+        seed = body.base_seed + i * 1000
         result = simulate_tournament(config, seed=seed)
         summary = result["summary"]
         desired_pcts.append(summary["desired_pct"])

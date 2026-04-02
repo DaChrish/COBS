@@ -75,6 +75,7 @@ export function OptimizerPlayground() {
   const [batchRounds, setBatchRounds] = useState(3);
   const [batchSwissRounds, setBatchSwissRounds] = useState(3);
   const [batchNumSims, setBatchNumSims] = useState(10);
+  const [batchSeed, setBatchSeed] = useState(1);
   const [batchVoteDist, setBatchVoteDist] = useState({ desired: 0.4, neutral: 0.3, avoid: 0.3 });
   const [batchProfiles, setBatchProfiles] = useState<{ count: number; desired_pct: number; neutral_pct: number; avoid_pct: number }[]>([]);
   const [bScoreWant, setBScoreWant] = useState(5.0);
@@ -223,6 +224,7 @@ export function OptimizerPlayground() {
           max_rounds: batchRounds,
           swiss_rounds_per_draft: batchSwissRounds,
           num_simulations: batchNumSims,
+          base_seed: batchSeed,
           vote_distribution: batchVoteDist,
           player_profiles: batchProfiles,
           optimizer_config: {
@@ -602,6 +604,7 @@ export function OptimizerPlayground() {
               <NumberInput label="Max Rounds" value={batchRounds} onChange={(v) => setBatchRounds(Number(v))} min={1} />
               <NumberInput label="Swiss Rounds / Draft" value={batchSwissRounds} onChange={(v) => setBatchSwissRounds(Number(v))} min={1} />
               <NumberInput label="Simulationen" value={batchNumSims} onChange={(v) => setBatchNumSims(Number(v))} min={1} />
+              <NumberInput label="Base Seed" description="Gleicher Seed = gleiche Ergebnisse" value={batchSeed} onChange={(v) => setBatchSeed(Number(v))} min={0} />
             </SimpleGrid>
 
             <Divider my="sm" />
