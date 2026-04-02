@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Container,
   Title,
@@ -88,6 +88,7 @@ export function OptimizerPlayground() {
 
   const [batchAnalyses, setBatchAnalyses] = useState<BatchAnalysis[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<BatchAnalysis | null>(null);
+  const [expandedSimIdx, setExpandedSimIdx] = useState<number | null>(null);
   const [batchRunning, setBatchRunning] = useState(false);
 
   useEffect(() => {
@@ -858,15 +859,58 @@ export function OptimizerPlayground() {
                     </Table.Thead>
                     <Table.Tbody>
                       {selectedBatch.simulations.map((sim, idx) => (
-                        <Table.Tr key={idx}>
-                          <Table.Td ta="right">{idx + 1}</Table.Td>
-                          <Table.Td ta="right"><Text c="green" size="sm">{sim.desired_pct.toFixed(1)}</Text></Table.Td>
-                          <Table.Td ta="right"><Text c="dimmed" size="sm">{sim.neutral_pct.toFixed(1)}</Text></Table.Td>
-                          <Table.Td ta="right"><Text c="red" size="sm">{sim.avoid_pct.toFixed(1)}</Text></Table.Td>
-                          <Table.Td ta="right">{sim.total_desired}</Table.Td>
-                          <Table.Td ta="right">{sim.total_neutral}</Table.Td>
-                          <Table.Td ta="right">{sim.total_avoid}</Table.Td>
-                        </Table.Tr>
+                        <React.Fragment key={idx}>
+                          <Table.Tr style={{ cursor: "pointer" }} onClick={() => setExpandedSimIdx(expandedSimIdx === idx ? null : idx)}>
+                            <Table.Td ta="right">{idx + 1}</Table.Td>
+                            <Table.Td ta="right"><Text c="green" size="sm">{sim.desired_pct.toFixed(1)}</Text></Table.Td>
+                            <Table.Td ta="right"><Text c="dimmed" size="sm">{sim.neutral_pct.toFixed(1)}</Text></Table.Td>
+                            <Table.Td ta="right"><Text c="red" size="sm">{sim.avoid_pct.toFixed(1)}</Text></Table.Td>
+                            <Table.Td ta="right">{sim.total_desired}</Table.Td>
+                            <Table.Td ta="right">{sim.total_neutral}</Table.Td>
+                            <Table.Td ta="right">{sim.total_avoid}</Table.Td>
+                          </Table.Tr>
+                          {expandedSimIdx === idx && sim.drafts && (
+                            <Table.Tr>
+                              <Table.Td colSpan={7} p="md" bg="var(--mantine-color-default-hover)">
+                                <Stack gap="sm">
+                                  {sim.drafts.map((draft: any) => (
+                                    <div key={draft.round}>
+                                      <Group gap="xs" mb="xs">
+                                        <Text size="sm" fw={600}>Draft {draft.round}</Text>
+                                        <Badge size="xs" color="green" variant="light">{draft.desired_pct}% D</Badge>
+                                        <Badge size="xs" color="red" variant="light">{draft.avoid_pct}% A</Badge>
+                                      </Group>
+                                      {draft.pods && (
+                                        <Group gap="xs" wrap="wrap">
+                                          {draft.pods.map((pod: any, pi: number) => (
+                                            <Paper key={pi} withBorder p="xs" radius="sm" style={{ minWidth: 200 }}>
+                                              <Text size="xs" fw={600} mb={4}>Pod {pod.pod} · {pod.cube}</Text>
+                                              <Group gap={4} wrap="wrap">
+                                                {pod.players?.map((p: any) => (
+                                                  <Badge key={p.id} size="xs"
+                                                    variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
+                                                    color={p.vote === "DESIRED" ? "green" : p.vote === "AVOID" ? "red" : "gray"}>
+                                                    {p.id}{p.match_points > 0 ? ` (${p.match_points})` : ""}
+                                                  </Badge>
+                                                )) || (
+                                                  <Group gap={4}>
+                                                    <Badge size="xs" color="green" variant="light">{pod.desired}D</Badge>
+                                                    <Badge size="xs" color="gray" variant="light">{pod.neutral}N</Badge>
+                                                    <Badge size="xs" color="red" variant="light">{pod.avoid}A</Badge>
+                                                  </Group>
+                                                )}
+                                              </Group>
+                                            </Paper>
+                                          ))}
+                                        </Group>
+                                      )}
+                                    </div>
+                                  ))}
+                                </Stack>
+                              </Table.Td>
+                            </Table.Tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </Table.Tbody>
                   </Table>

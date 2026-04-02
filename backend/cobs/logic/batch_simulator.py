@@ -237,6 +237,10 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
                 "desired": pod_d,
                 "neutral": pod_n,
                 "avoid": pod_a,
+                "players": [
+                    {"id": pid, "vote": votes[pid].get(cube_id, "NEUTRAL") if cube_id else "NEUTRAL", "match_points": standings[pid]}
+                    for pid in pod_players
+                ],
             })
 
         total_players = round_desired + round_neutral + round_avoid
