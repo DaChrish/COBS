@@ -872,7 +872,27 @@ export function OptimizerPlayground() {
                           {expandedSimIdx === idx && sim.drafts && (
                             <Table.Tr>
                               <Table.Td colSpan={7} p="md" bg="var(--mantine-color-default-hover)">
-                                <Stack gap="sm">
+                                <Stack gap="md">
+                                  {/* Cube vote overview for this simulation */}
+                                  {sim.cube_votes && sim.cube_votes.length > 0 && (
+                                    <div>
+                                      <Text size="sm" fw={600} mb="xs">Cube Votes</Text>
+                                      <Group gap="sm" wrap="wrap">
+                                        {sim.cube_votes.map((cv: any) => (
+                                          <Paper key={cv.cube} withBorder p="xs" radius="sm">
+                                            <Text size="xs" fw={500} mb={2}>{cv.cube}</Text>
+                                            <Group gap={4}>
+                                              <Badge size="xs" color="green" variant="light">{cv.desired}D</Badge>
+                                              <Badge size="xs" color="gray" variant="light">{cv.neutral}N</Badge>
+                                              <Badge size="xs" color="red" variant="light">{cv.avoid}A</Badge>
+                                            </Group>
+                                          </Paper>
+                                        ))}
+                                      </Group>
+                                    </div>
+                                  )}
+
+                                  {/* Per-draft pod details */}
                                   {sim.drafts.map((draft: any) => (
                                     <div key={draft.round}>
                                       <Group gap="xs" mb="xs">
@@ -882,26 +902,61 @@ export function OptimizerPlayground() {
                                       </Group>
                                       {draft.pods && (
                                         <Group gap="xs" wrap="wrap">
-                                          {draft.pods.map((pod: any, pi: number) => (
-                                            <Paper key={pi} withBorder p="xs" radius="sm" style={{ minWidth: 200 }}>
-                                              <Text size="xs" fw={600} mb={4}>Pod {pod.pod} · {pod.cube}</Text>
-                                              <Group gap={4} wrap="wrap">
-                                                {pod.players?.map((p: any) => (
-                                                  <Badge key={p.id} size="xs"
-                                                    variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
-                                                    color={p.vote === "DESIRED" ? "green" : p.vote === "AVOID" ? "red" : "gray"}>
-                                                    {p.id}{p.match_points > 0 ? ` (${p.match_points})` : ""}
-                                                  </Badge>
-                                                )) || (
-                                                  <Group gap={4}>
-                                                    <Badge size="xs" color="green" variant="light">{pod.desired}D</Badge>
-                                                    <Badge size="xs" color="gray" variant="light">{pod.neutral}N</Badge>
-                                                    <Badge size="xs" color="red" variant="light">{pod.avoid}A</Badge>
-                                                  </Group>
-                                                )}
-                                              </Group>
-                                            </Paper>
-                                          ))}
+                                          {draft.pods.map((pod: any, pi: number) => {
+                                            const podPlayerIds = new Set((pod.players || []).map((p: any) => p.id));
+                                            return (
+                                              <Paper key={pi} withBorder p="xs" radius="sm" style={{ minWidth: 220 }}>
+                                                <Tooltip multiline w={250} withArrow label={(() => {
+                                                  if (!sim.cube_votes) return pod.cube;
+                                                  const cv = sim.cube_votes.find((c: any) => c.cube === pod.cube);
+                                                  if (!cv) return pod.cube;
+                                                  return (
+                                                    <Stack gap={2}>
+                                                      <Text size="xs" fw={700}>{pod.cube}</Text>
+                                                      <Text size="xs" c="green.7">{cv.desired} Desired</Text>
+                                                      <Text size="xs" c="red.7">{cv.avoid} Avoid</Text>
+                                                    </Stack>
+                                                  );
+                                                })()}>
+                                                  <Text size="xs" fw={600} mb={4} style={{ cursor: "pointer" }}>Pod {pod.pod} · {pod.cube}</Text>
+                                                </Tooltip>
+                                                <Group gap={4} wrap="wrap">
+                                                  {pod.players?.map((p: any) => {
+                                                    const pVotes = sim.player_votes?.[p.id] || {};
+                                                    const voteEntries = Object.entries(pVotes).filter(([, v]) => v !== "NEUTRAL");
+                                                    return (
+                                                      <Tooltip key={p.id} multiline w={200} withArrow label={
+                                                        voteEntries.length > 0 ? (
+                                                          <Stack gap={2}>
+                                                            {voteEntries.map(([cid, v]: [string, any]) => (
+                                                              <Group key={cid} justify="space-between" gap="xs">
+                                                                <Text size="xs" c={v === "DESIRED" ? "green.7" : "red.7"}>{cid}</Text>
+                                                                <Text size="xs" fw={700} c={v === "DESIRED" ? "green.7" : "red.7"}>
+                                                                  {v === "DESIRED" ? "✓" : "✗"}
+                                                                </Text>
+                                                              </Group>
+                                                            ))}
+                                                          </Stack>
+                                                        ) : "Alle neutral"
+                                                      }>
+                                                        <Badge size="xs" style={{ cursor: "pointer" }}
+                                                          variant={p.vote === "DESIRED" ? "light" : p.vote === "AVOID" ? "light" : "outline"}
+                                                          color={p.vote === "DESIRED" ? "green" : p.vote === "AVOID" ? "red" : "gray"}>
+                                                          {p.id}{p.match_points > 0 ? ` (${p.match_points})` : ""}
+                                                        </Badge>
+                                                      </Tooltip>
+                                                    );
+                                                  }) || (
+                                                    <Group gap={4}>
+                                                      <Badge size="xs" color="green" variant="light">{pod.desired}D</Badge>
+                                                      <Badge size="xs" color="gray" variant="light">{pod.neutral}N</Badge>
+                                                      <Badge size="xs" color="red" variant="light">{pod.avoid}A</Badge>
+                                                    </Group>
+                                                  )}
+                                                </Group>
+                                              </Paper>
+                                            );
+                                          })}
                                         </Group>
                                       )}
                                     </div>

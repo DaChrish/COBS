@@ -75,6 +75,8 @@ async def run_batch_analysis(
             "total_neutral": summary["total_neutral"],
             "total_avoid": summary["total_avoid"],
             "drafts": result["drafts"],
+            "cube_votes": result.get("cube_votes", []),
+            "player_votes": result.get("player_votes", {}),
         })
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)

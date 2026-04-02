@@ -276,6 +276,19 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
         "total_avoid": total_avoid,
     }
 
+    # Build vote summary per cube
+    cube_vote_summary = []
+    for cid in cube_ids:
+        d = sum(1 for pid in player_ids if votes[pid].get(cid) == "DESIRED")
+        n = sum(1 for pid in player_ids if votes[pid].get(cid) == "NEUTRAL")
+        a = sum(1 for pid in player_ids if votes[pid].get(cid) == "AVOID")
+        cube_vote_summary.append({"cube": cid, "desired": d, "neutral": n, "avoid": a})
+
+    # Build per-player vote map (only D/A for compactness)
+    player_votes = {}
+    for pid in player_ids:
+        player_votes[pid] = {cid: v for cid, v in votes[pid].items() if v != "NEUTRAL"}
+
     return {
         "player_count": config.num_players,
         "cube_count": config.num_cubes,
@@ -283,4 +296,6 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
         "config": opt_config_dict,
         "drafts": drafts,
         "summary": summary,
+        "cube_votes": cube_vote_summary,
+        "player_votes": player_votes,
     }
