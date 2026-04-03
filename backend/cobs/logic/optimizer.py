@@ -89,6 +89,7 @@ def optimize_pods(
     round_number: int,
     config: OptimizerConfig | None = None,
     seed: int = 0,
+    deterministic: bool = False,
 ) -> OptimizerResult:
     if config is None:
         config = OptimizerConfig()
@@ -233,7 +234,7 @@ def optimize_pods(
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 300
     solver.parameters.random_seed = seed % (2**31)  # CP-SAT expects int32
-    solver.parameters.num_workers = 0 
+    solver.parameters.num_workers = 1 if deterministic else 0 
     solver.parameters.log_search_progress = True
     solver.parameters.log_to_stdout = False
     solver.log_callback = lambda msg: logger.debug("[CP-SAT] %s", msg)

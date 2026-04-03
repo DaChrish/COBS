@@ -206,6 +206,7 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
             round_number=round_num,
             config=opt_cfg,
             seed=rng.randint(0, 2**31 - 1),
+            deterministic=True,
         )
 
         # Analyze assignments
