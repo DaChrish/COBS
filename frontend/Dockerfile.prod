@@ -1,0 +1,15 @@
+FROM node:22-slim AS builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npx vite build
+
+# Copy built files to output volume
+FROM alpine:3.20
+COPY --from=builder /app/dist /output-stage
+
+CMD ["cp", "-r", "/output-stage/.", "/output"]

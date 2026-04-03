@@ -87,8 +87,49 @@ npm run dev
 | `COBS_JWT_SECRET` | `change-me-in-production` | JWT Signing Secret |
 | `COBS_JWT_EXPIRE_MINUTES` | `10080` (7 Tage) | Token-Ablaufzeit |
 
+## Production Deployment
+
+### Voraussetzungen
+
+- VPS mit Docker + Docker Compose (z.B. Hetzner CX22: 2 vCPU, 4GB RAM, ~4 EUR/Monat)
+- Domain mit DNS A-Record auf den Server
+
+### Setup
+
+```bash
+# Auf dem Server
+git clone <repo-url> cobs && cd cobs
+
+# Konfiguration
+cp .env.example .env
+nano .env  # DOMAIN, DB_PASSWORD, JWT_SECRET setzen
+
+# Starten
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Caddy kuemmert sich automatisch um HTTPS (Let's Encrypt).
+
+### Admin erstellen
+
+```bash
+curl -X POST https://deine-domain.de/api/auth/admin/setup \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "dein-passwort"}'
+```
+
+### Backup
+
+```bash
+# Datenbank
+docker compose -f docker-compose.prod.yml exec db pg_dump -U drafttool drafttool > backup.sql
+
+# Fotos
+docker cp cobs-backend:/app/uploads ./uploads-backup
+```
+
 ## Tech Stack
 
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy (async), PostgreSQL, Alembic, OR-Tools (Pod-Optimizer), Pillow, fpdf2
 - **Frontend:** React, Vite, Mantine UI, React Router
-- **Infrastruktur:** Docker Compose
+- **Infrastruktur:** Docker Compose, Caddy (Production)

@@ -59,3 +59,6 @@ backend/uploads/
 # python cache
 __pycache__/
 *.pyc
+
+# environment secrets
+.env

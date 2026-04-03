@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cobs-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-drafttool}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_NAME:-drafttool}
+    volumes:
+      - cobs-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-drafttool} -d ${DB_NAME:-drafttool}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: backend
+      dockerfile: Dockerfile.prod
+    container_name: cobs-backend
+    environment:
+      COBS_DATABASE_URL: "postgresql+asyncpg://${DB_USER:-drafttool}:${DB_PASSWORD}@db:5432/${DB_NAME:-drafttool}"
+      COBS_JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      COBS_LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - cobs-uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: cobs-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+      - frontend-build:/srv
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  frontend-builder:
+    build:
+      context: frontend
+      dockerfile: Dockerfile.prod
+    volumes:
+      - frontend-build:/output
+
+volumes:
+  cobs-db-data:
+  cobs-uploads:
+  caddy-data:
+  caddy-config:
+  frontend-build:

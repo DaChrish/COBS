@@ -1,0 +1,20 @@
+{$DOMAIN:localhost} {
+    # Frontend static files
+    root * /srv
+    file_server
+
+    # API proxy
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy backend:8000
+    }
+
+    # WebSocket proxy
+    handle /api/ws/* {
+        uri strip_prefix /api
+        reverse_proxy backend:8000
+    }
+
+    # SPA fallback — serve index.html for all non-file routes
+    try_files {path} /index.html
+}
