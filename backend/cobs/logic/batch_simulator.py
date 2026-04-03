@@ -36,7 +36,6 @@ class TournamentConfig:
     vote_distribution: VoteDistribution = field(default_factory=VoteDistribution)
     player_profiles: list[PlayerProfile] = field(default_factory=list)
     optimizer_config: dict = field(default_factory=dict)
-    deterministic: bool = False
 
 
 def _generate_votes(
@@ -159,11 +158,11 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
         "score_want": opt_cfg.score_want,
         "score_avoid": opt_cfg.score_avoid,
         "score_neutral": opt_cfg.score_neutral,
-        "match_point_penalty_weight": opt_cfg.match_point_penalty_weight,
         "early_round_bonus": opt_cfg.early_round_bonus,
         "lower_standing_bonus": opt_cfg.lower_standing_bonus,
         "repeat_avoid_multiplier": opt_cfg.repeat_avoid_multiplier,
         "avoid_penalty_scaling": opt_cfg.avoid_penalty_scaling,
+        "avoid_penalty_formula": opt_cfg.avoid_penalty_formula,
     }
 
     # Generate votes
@@ -207,7 +206,6 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
             round_number=round_num,
             config=opt_cfg,
             seed=rng.randint(0, 2**31 - 1),
-            deterministic=config.deterministic,
         )
 
         # Analyze assignments

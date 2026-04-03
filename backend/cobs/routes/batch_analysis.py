@@ -50,7 +50,6 @@ async def run_batch_analysis(
             for p in body.player_profiles
         ],
         optimizer_config=body.optimizer_config,
-        deterministic=body.deterministic,
     )
 
     start = time.perf_counter()

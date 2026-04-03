@@ -31,9 +31,6 @@ class OptimizerConfig:
     score_want: float = 5.0
     score_avoid: float = -200.0
     score_neutral: float = 0.0
-    match_point_penalty_weight: float = 100000.0
-    max_standings_spread: int = 6  # hard constraint: max point diff in a pod (0=disabled, uses penalty weight)
-    spread_violation_penalty: float = 10000.0  # penalty per pod that violates the spread
     early_round_bonus: float = 3.0
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
@@ -93,7 +90,6 @@ def optimize_pods(
     round_number: int,
     config: OptimizerConfig | None = None,
     seed: int = 0,
-    deterministic: bool = False,
 ) -> OptimizerResult:
     if config is None:
         config = OptimizerConfig()
@@ -261,11 +257,8 @@ def optimize_pods(
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 300
     solver.parameters.random_seed = seed % (2**31)  # CP-SAT expects int32
-    if deterministic:
-        solver.parameters.num_workers = 0  # use all cores
-        solver.parameters.interleave_search = True  # deterministic parallel search
-    else:
-        solver.parameters.num_workers = 0
+    solver.parameters.num_workers = 0  # use all cores
+    solver.parameters.interleave_search = True  # deterministic parallel search
     solver.parameters.log_search_progress = True
     solver.parameters.log_to_stdout = False
     solver.log_callback = lambda msg: logger.debug("[CP-SAT] %s", msg)

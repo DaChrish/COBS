@@ -22,7 +22,6 @@ import {
   Tooltip,
   ScrollArea,
   Tabs,
-  Checkbox,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -53,9 +52,6 @@ export function OptimizerPlayground() {
   const [scoreWant, setScoreWant] = useState(5.0);
   const [scoreAvoid, setScoreAvoid] = useState(-200.0);
   const [scoreNeutral, setScoreNeutral] = useState(0.0);
-  const [matchPointPenalty, setMatchPointPenalty] = useState(100000.0);
-  const [maxStandingsSpread, setMaxStandingsSpread] = useState(6);
-  const [spreadViolationPenalty, setSpreadViolationPenalty] = useState(10000.0);
   const [earlyRoundBonus, setEarlyRoundBonus] = useState(3.0);
   const [lowerStandingBonus, setLowerStandingBonus] = useState(0.3);
   const [repeatAvoidMult, setRepeatAvoidMult] = useState(4.0);
@@ -80,15 +76,11 @@ export function OptimizerPlayground() {
   const [batchSwissRounds, setBatchSwissRounds] = useState(3);
   const [batchNumSims, setBatchNumSims] = useState(10);
   const [batchSeed, setBatchSeed] = useState(1);
-  const [batchDeterministic, setBatchDeterministic] = useState(false);
   const [batchVoteDist, setBatchVoteDist] = useState({ desired: 0.4, neutral: 0.3, avoid: 0.3 });
   const [batchProfiles, setBatchProfiles] = useState<{ count: number; desired_pct: number; neutral_pct: number; avoid_pct: number }[]>([]);
   const [bScoreWant, setBScoreWant] = useState(5.0);
   const [bScoreAvoid, setBScoreAvoid] = useState(-200.0);
   const [bScoreNeutral, setBScoreNeutral] = useState(0.0);
-  const [bMatchPenalty, setBMatchPenalty] = useState(100000.0);
-  const [bMaxSpread, setBMaxSpread] = useState(6);
-  const [bSpreadPenalty, setBSpreadPenalty] = useState(10000.0);
   const [bEarlyBonus, setBEarlyBonus] = useState(3.0);
   const [bLowerBonus, setBLowerBonus] = useState(0.3);
   const [bRepeatMult, setBRepeatMult] = useState(4.0);
@@ -131,9 +123,6 @@ export function OptimizerPlayground() {
     setScoreWant(5.0);
     setScoreAvoid(-200.0);
     setScoreNeutral(0.0);
-    setMatchPointPenalty(100000.0);
-    setMaxStandingsSpread(6);
-    setSpreadViolationPenalty(10000.0);
     setEarlyRoundBonus(3.0);
     setLowerStandingBonus(0.3);
     setRepeatAvoidMult(4.0);
@@ -171,9 +160,6 @@ export function OptimizerPlayground() {
           score_want: scoreWant,
           score_avoid: scoreAvoid,
           score_neutral: scoreNeutral,
-          match_point_penalty_weight: matchPointPenalty,
-          max_standings_spread: maxStandingsSpread,
-          spread_violation_penalty: spreadViolationPenalty,
           early_round_bonus: earlyRoundBonus,
           lower_standing_bonus: lowerStandingBonus,
           repeat_avoid_multiplier: repeatAvoidMult,
@@ -239,16 +225,12 @@ export function OptimizerPlayground() {
           swiss_rounds_per_draft: batchSwissRounds,
           num_simulations: batchNumSims,
           base_seed: batchSeed,
-          deterministic: batchDeterministic,
           vote_distribution: batchVoteDist,
           player_profiles: batchProfiles,
           optimizer_config: {
             score_want: bScoreWant,
             score_avoid: bScoreAvoid,
             score_neutral: bScoreNeutral,
-            match_point_penalty_weight: bMatchPenalty,
-            max_standings_spread: bMaxSpread,
-            spread_violation_penalty: bSpreadPenalty,
             early_round_bonus: bEarlyBonus,
             lower_standing_bonus: bLowerBonus,
             repeat_avoid_multiplier: bRepeatMult,
@@ -374,12 +356,6 @@ export function OptimizerPlayground() {
                   onChange={(v) => setScoreAvoid(Number(v))} step={10} decimalScale={1} />
                 <NumberInput label="score_neutral" description="Default: 0.0" value={scoreNeutral}
                   onChange={(v) => setScoreNeutral(Number(v))} step={0.5} decimalScale={1} />
-                <NumberInput label="match_point_penalty_weight" description="Default: 100000.0 (nur bei spread=0)" value={matchPointPenalty}
-                  onChange={(v) => setMatchPointPenalty(Number(v))} step={1000} />
-                <NumberInput label="max_standings_spread" description="Default: 6 (0=aus, nutzt penalty)" value={maxStandingsSpread}
-                  onChange={(v) => setMaxStandingsSpread(Number(v))} min={0} max={30} />
-                <NumberInput label="spread_violation_penalty" description="Default: 10000" value={spreadViolationPenalty}
-                  onChange={(v) => setSpreadViolationPenalty(Number(v))} step={1000} />
                 <NumberInput label="early_round_bonus" description="Default: 3.0" value={earlyRoundBonus}
                   onChange={(v) => setEarlyRoundBonus(Number(v))} step={0.5} decimalScale={1} />
                 <NumberInput label="lower_standing_bonus" description="Default: 0.3" value={lowerStandingBonus}
@@ -636,8 +612,6 @@ export function OptimizerPlayground() {
               <NumberInput label="Simulationen" value={batchNumSims} onChange={(v) => setBatchNumSims(Number(v))} min={1} />
               <NumberInput label="Base Seed" description="Gleicher Seed = gleiche Ergebnisse" value={batchSeed} onChange={(v) => setBatchSeed(Number(v))} min={0} />
             </SimpleGrid>
-            <Checkbox mt="xs" label="Deterministisch (langsamer, aber exakt reproduzierbar)" checked={batchDeterministic}
-              onChange={(e) => setBatchDeterministic(e.currentTarget.checked)} />
 
             <Divider my="sm" />
 
@@ -717,12 +691,6 @@ export function OptimizerPlayground() {
                       onChange={(v) => setBScoreAvoid(Number(v))} step={10} decimalScale={1} />
                     <NumberInput label="score_neutral" description="Default: 0.0" value={bScoreNeutral}
                       onChange={(v) => setBScoreNeutral(Number(v))} step={0.5} decimalScale={1} />
-                    <NumberInput label="match_point_penalty_weight" description="Default: 100000.0 (nur bei spread=0)" value={bMatchPenalty}
-                      onChange={(v) => setBMatchPenalty(Number(v))} step={1000} />
-                    <NumberInput label="max_standings_spread" description="Default: 6 (0=aus)" value={bMaxSpread}
-                      onChange={(v) => setBMaxSpread(Number(v))} min={0} max={30} />
-                    <NumberInput label="spread_violation_penalty" description="Default: 10000" value={bSpreadPenalty}
-                      onChange={(v) => setBSpreadPenalty(Number(v))} step={1000} />
                     <NumberInput label="early_round_bonus" description="Default: 3.0" value={bEarlyBonus}
                       onChange={(v) => setBEarlyBonus(Number(v))} step={0.5} decimalScale={1} />
                     <NumberInput label="lower_standing_bonus" description="Default: 0.3" value={bLowerBonus}

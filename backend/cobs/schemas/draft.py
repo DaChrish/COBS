@@ -11,9 +11,6 @@ class DraftCreate(BaseModel):
     score_want: float = 5.0
     score_avoid: float = -200.0
     score_neutral: float = 0.0
-    match_point_penalty_weight: float = 100000.0
-    max_standings_spread: int = 6
-    spread_violation_penalty: float = 10000.0
     early_round_bonus: float = 3.0
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
