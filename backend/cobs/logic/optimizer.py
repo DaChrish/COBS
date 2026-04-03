@@ -106,12 +106,52 @@ def optimize_pods(
     if P == 0 or K == 0 or C == 0:
         return OptimizerResult(pods=[[] for _ in range(K)], cube_ids=[None] * K)
 
+    # Pre-assign players to allowed pods based on standings
+    # Sort by match_points descending, slice into pod-sized groups
+    # Players can only go into pods where their point group appears in the slice
+    sorted_by_mp = sorted(range(P), key=lambda i: -active[i].match_points)
+    allowed_pods: dict[int, set[int]] = {p: set() for p in range(P)}
+
+    # Compute which pods each slot maps to
+    slot_to_pod: list[int] = []
+    slot = 0
+    for k in range(K):
+        for _ in range(pod_sizes[k]):
+            slot_to_pod.append(k)
+            slot += 1
+
+    # Assign slots to sorted players
+    player_base_pod: dict[int, int] = {}
+    for slot_idx, p_idx in enumerate(sorted_by_mp):
+        if slot_idx < len(slot_to_pod):
+            player_base_pod[p_idx] = slot_to_pod[slot_idx]
+
+    # For each player: find all pods that contain any player with the same match_points
+    mp_to_pods: dict[int, set[int]] = {}
+    for p_idx in range(P):
+        mp = active[p_idx].match_points
+        pod_k = player_base_pod.get(p_idx, 0)
+        if mp not in mp_to_pods:
+            mp_to_pods[mp] = set()
+        mp_to_pods[mp].add(pod_k)
+
+    for p_idx in range(P):
+        mp = active[p_idx].match_points
+        allowed_pods[p_idx] = mp_to_pods[mp]
+
+    if K > 0:
+        logger.info("  Standings pre-assignment: %s",
+                     {f"Pod {k}": [active[p].match_points for p in range(P) if k in allowed_pods[p]] for k in range(K)})
+
     model = cp_model.CpModel()
 
     x = {}
     for p in range(P):
         for k in range(K):
-            x[p, k] = model.NewBoolVar(f"x_{p}_{k}")
+            if k in allowed_pods[p]:
+                x[p, k] = model.NewBoolVar(f"x_{p}_{k}")
+            else:
+                x[p, k] = model.NewIntVar(0, 0, f"x_{p}_{k}")  # fixed to 0
 
     y = {}
     for k in range(K):
@@ -198,53 +238,21 @@ def optimize_pods(
                 for k in range(K):
                     objective_terms.append(bonus * y[k, c])
 
+    # Small tiebreaker: within allowed pods, still prefer tighter standings
     max_mp_val = max((p.match_points for p in active), default=0)
     min_mp_val = min((p.match_points for p in active), default=0)
-
-    max_mp = {}
-    min_mp = {}
-    for k in range(K):
-        max_mp[k] = model.NewIntVar(min_mp_val, max_mp_val, f"max_mp_{k}")
-        min_mp[k] = model.NewIntVar(min_mp_val, max_mp_val, f"min_mp_{k}")
-        for p in range(P):
-            model.Add(max_mp[k] >= active[p].match_points).OnlyEnforceIf(x[p, k])
-            model.Add(min_mp[k] <= active[p].match_points).OnlyEnforceIf(x[p, k])
-
-    if config.max_standings_spread > 0:
-        # Hard constraint with soft violation: pods should have spread <= max_standings_spread
+    if max_mp_val > min_mp_val:
+        max_mp = {}
+        min_mp = {}
         for k in range(K):
-            violation = model.NewBoolVar(f"spread_violation_{k}")
-            spread = model.NewIntVar(0, max_mp_val - min_mp_val, f"spread_{k}")
-            model.Add(spread == max_mp[k] - min_mp[k])
-            model.Add(spread <= config.max_standings_spread).OnlyEnforceIf(violation.Not())
-            objective_terms.append(-int(config.spread_violation_penalty) * violation)
-        # Still add a small linear penalty to prefer tighter pods among valid solutions
-        for k in range(K):
+            max_mp[k] = model.NewIntVar(min_mp_val, max_mp_val, f"max_mp_{k}")
+            min_mp[k] = model.NewIntVar(min_mp_val, max_mp_val, f"min_mp_{k}")
+            for p in range(P):
+                if k in allowed_pods[p]:
+                    model.Add(max_mp[k] >= active[p].match_points).OnlyEnforceIf(x[p, k])
+                    model.Add(min_mp[k] <= active[p].match_points).OnlyEnforceIf(x[p, k])
+            # Small penalty to prefer tighter pods (weight=1, much less than vote scores)
             objective_terms.append(min_mp[k] - max_mp[k])
-    else:
-        # Fallback: original linear penalty
-        for k in range(K):
-            objective_terms.append(int(config.match_point_penalty_weight) * (min_mp[k] - max_mp[k]))
-
-    standard = [k for k in range(K) if pod_sizes[k] == 8]
-    even_ns = [k for k in range(K) if pod_sizes[k] != 8 and pod_sizes[k] % 2 == 0]
-    odd_ns = [k for k in range(K) if pod_sizes[k] != 8 and pod_sizes[k] % 2 == 1]
-
-    tier_pairs = []
-    if odd_ns and even_ns:
-        tier_pairs.append((odd_ns, even_ns))
-    if odd_ns and standard:
-        tier_pairs.append((odd_ns, standard))
-    if even_ns and standard:
-        tier_pairs.append((even_ns, standard))
-
-    for lower_tier, higher_tier in tier_pairs:
-        for p_a in range(P):
-            for p_b in range(P):
-                if active[p_a].match_points > active[p_b].match_points:
-                    for k_low in lower_tier:
-                        for k_high in higher_tier:
-                            model.AddBoolOr([x[p_a, k_low].Not(), x[p_b, k_high].Not()])
 
     model.Maximize(sum(objective_terms))
 
