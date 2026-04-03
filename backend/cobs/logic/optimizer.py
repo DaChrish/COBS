@@ -236,7 +236,11 @@ def optimize_pods(
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 300
     solver.parameters.random_seed = seed % (2**31)  # CP-SAT expects int32
-    solver.parameters.num_workers = 1 if deterministic else 0 
+    if deterministic:
+        solver.parameters.num_workers = 0  # use all cores
+        solver.parameters.interleave_search = True  # deterministic parallel search
+    else:
+        solver.parameters.num_workers = 0
     solver.parameters.log_search_progress = True
     solver.parameters.log_to_stdout = False
     solver.log_callback = lambda msg: logger.debug("[CP-SAT] %s", msg)
