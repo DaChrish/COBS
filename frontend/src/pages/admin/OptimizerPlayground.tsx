@@ -57,6 +57,7 @@ export function OptimizerPlayground() {
   const [lowerStandingBonus, setLowerStandingBonus] = useState(0.3);
   const [repeatAvoidMult, setRepeatAvoidMult] = useState(4.0);
   const [avoidPenaltyScaling, setAvoidPenaltyScaling] = useState(1.0);
+  const [avoidPenaltyFormula, setAvoidPenaltyFormula] = useState("linear");
 
   // Test tournament modal
   const [testModalOpen, setTestModalOpen] = useState(false);
@@ -86,6 +87,7 @@ export function OptimizerPlayground() {
   const [bLowerBonus, setBLowerBonus] = useState(0.3);
   const [bRepeatMult, setBRepeatMult] = useState(4.0);
   const [bAvoidScaling, setBAvoidScaling] = useState(1.0);
+  const [bAvoidFormula, setBAvoidFormula] = useState("linear");
 
   const [batchAnalyses, setBatchAnalyses] = useState<BatchAnalysis[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<BatchAnalysis | null>(null);
@@ -128,6 +130,7 @@ export function OptimizerPlayground() {
     setLowerStandingBonus(0.3);
     setRepeatAvoidMult(4.0);
     setAvoidPenaltyScaling(1.0);
+    setAvoidPenaltyFormula("linear");
   };
 
   const loadSimulations = async () => {
@@ -165,6 +168,7 @@ export function OptimizerPlayground() {
           lower_standing_bonus: lowerStandingBonus,
           repeat_avoid_multiplier: repeatAvoidMult,
           avoid_penalty_scaling: avoidPenaltyScaling,
+          avoid_penalty_formula: avoidPenaltyFormula,
         }),
       });
       setSimulations((prev) => [sim, ...prev]);
@@ -236,6 +240,7 @@ export function OptimizerPlayground() {
             lower_standing_bonus: bLowerBonus,
             repeat_avoid_multiplier: bRepeatMult,
             avoid_penalty_scaling: bAvoidScaling,
+            avoid_penalty_formula: bAvoidFormula,
           },
         }),
       });
@@ -366,6 +371,14 @@ export function OptimizerPlayground() {
                   onChange={(v) => setRepeatAvoidMult(Number(v))} step={0.5} decimalScale={1} />
                 <NumberInput label="avoid_penalty_scaling" description="Default: 1.0 (0=aus)" value={avoidPenaltyScaling}
                   onChange={(v) => setAvoidPenaltyScaling(Number(v))} step={0.1} decimalScale={2} />
+                <Select label="avoid_penalty_formula" description="Penalty-Formel" value={avoidPenaltyFormula}
+                  onChange={(v) => setAvoidPenaltyFormula(v || "linear")}
+                  data={[
+                    { value: "none", label: "none (deaktiviert)" },
+                    { value: "linear", label: "linear (Default)" },
+                    { value: "arccot", label: "arccot" },
+                    { value: "cosine", label: "cosine" },
+                  ]} />
               </SimpleGrid>
               <Divider my="sm" />
               <Group>
@@ -693,6 +706,14 @@ export function OptimizerPlayground() {
                       onChange={(v) => setBLowerBonus(Number(v))} step={0.1} decimalScale={2} />
                     <NumberInput label="repeat_avoid_multiplier" description="Default: 4.0" value={bRepeatMult}
                       onChange={(v) => setBRepeatMult(Number(v))} step={0.5} decimalScale={1} />
+                    <Select label="avoid_penalty_formula" description="Penalty-Formel" value={bAvoidFormula}
+                      onChange={(v) => setBAvoidFormula(v || "linear")}
+                      data={[
+                        { value: "none", label: "none (deaktiviert)" },
+                        { value: "linear", label: "linear (Default)" },
+                        { value: "arccot", label: "arccot" },
+                        { value: "cosine", label: "cosine" },
+                      ]} />
                     <NumberInput label="avoid_penalty_scaling" description="Default: 1.0 (0=aus)" value={bAvoidScaling}
                       onChange={(v) => setBAvoidScaling(Number(v))} step={0.1} decimalScale={2} />
                   </SimpleGrid>

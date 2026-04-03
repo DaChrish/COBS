@@ -4,6 +4,7 @@ Port of optimizer/optimizer_service.py — runs as a direct function call.
 """
 
 import logging
+import math
 from dataclasses import dataclass, field
 from ortools.sat.python import cp_model
 
@@ -35,6 +36,7 @@ class OptimizerConfig:
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
     avoid_penalty_scaling: float = 1.0  # 0=disabled, 1=linear, >1=aggressive
+    avoid_penalty_formula: str = "linear"  # "linear", "arccot", "cosine", "none"
 
 
 @dataclass
@@ -42,6 +44,42 @@ class OptimizerResult:
     pods: list[list[str]]
     cube_ids: list[str | None]
     objective: float = 0.0
+
+
+def _compute_avoid_weight(
+    formula: str, avoid_count: int, num_cubes: int, non_avoid_count: int, scaling: float
+) -> float:
+    """Compute avoid penalty weight (0-1) based on the chosen formula.
+
+    - "none": always 1.0 (no penalty reduction)
+    - "linear": min(1, (non_avoid/avoid) ^ scaling)
+    - "arccot": 1 - arccot(((cubes/2 - avoids) / 3)) / pi
+    - "cosine": (cos(avoids/cubes * pi) + 1) / 2
+    """
+    if formula == "none" or avoid_count == 0:
+        return 1.0
+
+    if formula == "arccot":
+        # arccot(x) = atan(1/x) for x != 0, pi/2 for x = 0
+        x = (num_cubes / 2 - avoid_count) / 3
+        if x == 0:
+            arccot_val = math.pi / 2
+        else:
+            arccot_val = math.atan(1 / x)
+            if arccot_val < 0:
+                arccot_val += math.pi
+        return max(0.0, min(1.0, 1 - arccot_val / math.pi))
+
+    if formula == "cosine":
+        if num_cubes == 0:
+            return 1.0
+        return max(0.0, min(1.0, (math.cos(avoid_count / num_cubes * math.pi) + 1) / 2))
+
+    # Default: "linear"
+    if avoid_count == 0 or scaling == 0:
+        return 1.0
+    ratio = non_avoid_count / avoid_count
+    return min(1.0, ratio ** scaling)
 
 
 def optimize_pods(
@@ -105,20 +143,18 @@ def optimize_pods(
     objective_terms = []
 
     # Compute per-player avoid weight based on voting balance
-    # Players who avoid many cubes relative to desired+neutral get weaker avoids
     avoid_weights: dict[str, float] = {}
     for player in active:
         avoid_count = sum(1 for v in player.votes.values() if v == "AVOID")
-        non_avoid_count = sum(1 for v in player.votes.values() if v != "AVOID")
-        if avoid_count > 0 and config.avoid_penalty_scaling > 0:
-            ratio = non_avoid_count / avoid_count
-            weight = min(1.0, ratio ** config.avoid_penalty_scaling)
-            avoid_weights[player.id] = weight
-            if weight < 1.0:
-                logger.info("  Player %s: %d avoids, %d non-avoids → avoid weight %.2f",
-                            player.id, avoid_count, non_avoid_count, weight)
-        else:
-            avoid_weights[player.id] = 1.0
+        num_cubes = len(player.votes)
+        non_avoid_count = num_cubes - avoid_count
+        weight = _compute_avoid_weight(
+            config.avoid_penalty_formula, avoid_count, num_cubes, non_avoid_count, config.avoid_penalty_scaling
+        )
+        avoid_weights[player.id] = weight
+        if weight < 1.0:
+            logger.info("  Player %s: %d avoids/%d cubes → weight %.2f (%s)",
+                        player.id, avoid_count, num_cubes, weight, config.avoid_penalty_formula)
 
     sorted_mps = sorted(set(p.match_points for p in active))
     mp_to_rank = {mp: i for i, mp in enumerate(sorted_mps)}

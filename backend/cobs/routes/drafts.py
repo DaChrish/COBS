@@ -293,6 +293,7 @@ async def create_draft(
         lower_standing_bonus=body.lower_standing_bonus,
         repeat_avoid_multiplier=body.repeat_avoid_multiplier,
         avoid_penalty_scaling=body.avoid_penalty_scaling,
+        avoid_penalty_formula=body.avoid_penalty_formula,
     )
 
     # Run optimizer (use tournament seed for reproducibility)

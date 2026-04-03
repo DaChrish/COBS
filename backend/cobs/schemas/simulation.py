@@ -14,6 +14,7 @@ class SimulateDraftRequest(BaseModel):
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
     avoid_penalty_scaling: float = 1.0
+    avoid_penalty_formula: str = "linear"
 
 
 class SimulationResponse(BaseModel):
