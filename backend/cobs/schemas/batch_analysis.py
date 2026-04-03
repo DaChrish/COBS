@@ -24,6 +24,7 @@ class BatchAnalysisRequest(BaseModel):
     swiss_rounds_per_draft: int = 3
     num_simulations: int = 10
     base_seed: int = 1
+    deterministic: bool = False
     vote_distribution: VoteDistributionConfig = VoteDistributionConfig()
     player_profiles: list[PlayerProfileConfig] = []
     optimizer_config: dict = {}

@@ -50,6 +50,7 @@ async def run_batch_analysis(
             for p in body.player_profiles
         ],
         optimizer_config=body.optimizer_config,
+        deterministic=body.deterministic,
     )
 
     start = time.perf_counter()
@@ -74,6 +75,7 @@ async def run_batch_analysis(
             "total_desired": summary["total_desired"],
             "total_neutral": summary["total_neutral"],
             "total_avoid": summary["total_avoid"],
+            "objective": summary.get("objective", 0),
             "drafts": result["drafts"],
             "cube_votes": result.get("cube_votes", []),
             "player_votes": result.get("player_votes", {}),

@@ -36,6 +36,7 @@ class TournamentConfig:
     vote_distribution: VoteDistribution = field(default_factory=VoteDistribution)
     player_profiles: list[PlayerProfile] = field(default_factory=list)
     optimizer_config: dict = field(default_factory=dict)
+    deterministic: bool = False
 
 
 def _generate_votes(
@@ -206,7 +207,7 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
             round_number=round_num,
             config=opt_cfg,
             seed=rng.randint(0, 2**31 - 1),
-            deterministic=True,
+            deterministic=config.deterministic,
         )
 
         # Analyze assignments
@@ -268,6 +269,7 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
 
     # Summary
     grand_total = total_desired + total_neutral + total_avoid
+    total_objective = sum(d["objective"] for d in drafts)
     summary = {
         "desired_pct": round(total_desired / grand_total * 100, 1) if grand_total else 0,
         "neutral_pct": round(total_neutral / grand_total * 100, 1) if grand_total else 0,
@@ -275,6 +277,7 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
         "total_desired": total_desired,
         "total_neutral": total_neutral,
         "total_avoid": total_avoid,
+        "objective": total_objective,
     }
 
     # Build vote summary per cube

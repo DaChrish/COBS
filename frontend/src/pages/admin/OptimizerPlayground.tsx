@@ -22,6 +22,7 @@ import {
   Tooltip,
   ScrollArea,
   Tabs,
+  Checkbox,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -77,6 +78,7 @@ export function OptimizerPlayground() {
   const [batchSwissRounds, setBatchSwissRounds] = useState(3);
   const [batchNumSims, setBatchNumSims] = useState(10);
   const [batchSeed, setBatchSeed] = useState(1);
+  const [batchDeterministic, setBatchDeterministic] = useState(false);
   const [batchVoteDist, setBatchVoteDist] = useState({ desired: 0.4, neutral: 0.3, avoid: 0.3 });
   const [batchProfiles, setBatchProfiles] = useState<{ count: number; desired_pct: number; neutral_pct: number; avoid_pct: number }[]>([]);
   const [bScoreWant, setBScoreWant] = useState(5.0);
@@ -229,6 +231,7 @@ export function OptimizerPlayground() {
           swiss_rounds_per_draft: batchSwissRounds,
           num_simulations: batchNumSims,
           base_seed: batchSeed,
+          deterministic: batchDeterministic,
           vote_distribution: batchVoteDist,
           player_profiles: batchProfiles,
           optimizer_config: {
@@ -619,6 +622,8 @@ export function OptimizerPlayground() {
               <NumberInput label="Simulationen" value={batchNumSims} onChange={(v) => setBatchNumSims(Number(v))} min={1} />
               <NumberInput label="Base Seed" description="Gleicher Seed = gleiche Ergebnisse" value={batchSeed} onChange={(v) => setBatchSeed(Number(v))} min={0} />
             </SimpleGrid>
+            <Checkbox mt="xs" label="Deterministisch (langsamer, aber exakt reproduzierbar)" checked={batchDeterministic}
+              onChange={(e) => setBatchDeterministic(e.currentTarget.checked)} />
 
             <Divider my="sm" />
 
@@ -882,6 +887,7 @@ export function OptimizerPlayground() {
                           { key: "total_desired", label: "Total D" },
                           { key: "total_neutral", label: "Total N" },
                           { key: "total_avoid", label: "Total A" },
+                          { key: "objective", label: "Objective" },
                         ].map((col) => (
                           <Table.Th key={col.key} ta="right" style={{ cursor: "pointer", userSelect: "none" }}
                             onClick={() => {
@@ -915,10 +921,11 @@ export function OptimizerPlayground() {
                             <Table.Td ta="right">{sim.total_desired}</Table.Td>
                             <Table.Td ta="right">{sim.total_neutral}</Table.Td>
                             <Table.Td ta="right">{sim.total_avoid}</Table.Td>
+                            <Table.Td ta="right">{(sim.objective ?? 0).toFixed(0)}</Table.Td>
                           </Table.Tr>
                           {expandedSimIdx === idx && sim.drafts && (
                             <Table.Tr>
-                              <Table.Td colSpan={7} p="md" bg="var(--mantine-color-default-hover)">
+                              <Table.Td colSpan={8} p="md" bg="var(--mantine-color-default-hover)">
                                 <Stack gap="md">
                                   {/* Cube vote overview for this simulation */}
                                   {sim.cube_votes && sim.cube_votes.length > 0 && (
