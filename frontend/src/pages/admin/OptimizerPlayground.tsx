@@ -953,6 +953,14 @@ export function OptimizerPlayground() {
                                         <Text size="sm" fw={600}>Draft {draft.round}</Text>
                                         <Badge size="xs" color="green" variant="light">{draft.desired_pct}% D</Badge>
                                         <Badge size="xs" color="red" variant="light">{draft.avoid_pct}% A</Badge>
+                                        {draft.objective != null && <Text size="xs" c="dimmed">Obj: {draft.objective.toFixed(0)}</Text>}
+                                        {draft.solver_status && (
+                                          <Badge size="xs" variant="light"
+                                            color={draft.solver_status === "OPTIMAL" ? "green" : "orange"}>
+                                            {draft.solver_status}
+                                          </Badge>
+                                        )}
+                                        {draft.solver_time != null && <Text size="xs" c="dimmed">{draft.solver_time}s</Text>}
                                       </Group>
                                       {draft.pods && (
                                         <Group gap="xs" wrap="wrap">

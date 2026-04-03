@@ -44,6 +44,8 @@ class OptimizerResult:
     pods: list[list[str]]
     cube_ids: list[str | None]
     objective: float = 0.0
+    status: str = ""
+    wall_time: float = 0.0
 
 
 def _compute_avoid_weight(
@@ -281,4 +283,7 @@ def optimize_pods(
     else:
         logger.info("  No AVOID assignments")
 
-    return OptimizerResult(pods=pods, cube_ids=cube_assignments, objective=solver.ObjectiveValue())
+    return OptimizerResult(
+        pods=pods, cube_ids=cube_assignments, objective=solver.ObjectiveValue(),
+        status=status_name, wall_time=solver.WallTime(),
+    )

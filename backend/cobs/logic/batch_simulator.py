@@ -252,6 +252,8 @@ def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
             "neutral_pct": round(round_neutral / total_players * 100) if total_players else 0,
             "avoid_pct": round(round_avoid / total_players * 100) if total_players else 0,
             "objective": result.objective,
+            "solver_status": result.status,
+            "solver_time": round(result.wall_time, 3),
             "pods": pod_details,
         })
 
