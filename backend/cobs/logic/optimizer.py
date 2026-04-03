@@ -32,6 +32,8 @@ class OptimizerConfig:
     score_avoid: float = -200.0
     score_neutral: float = 0.0
     match_point_penalty_weight: float = 100000.0
+    max_standings_spread: int = 6  # hard constraint: max point diff in a pod (0=disabled, uses penalty weight)
+    spread_violation_penalty: float = 10000.0  # penalty per pod that violates the spread
     early_round_bonus: float = 3.0
     lower_standing_bonus: float = 0.3
     repeat_avoid_multiplier: float = 4.0
@@ -207,7 +209,22 @@ def optimize_pods(
         for p in range(P):
             model.Add(max_mp[k] >= active[p].match_points).OnlyEnforceIf(x[p, k])
             model.Add(min_mp[k] <= active[p].match_points).OnlyEnforceIf(x[p, k])
-        objective_terms.append(int(config.match_point_penalty_weight) * (min_mp[k] - max_mp[k]))
+
+    if config.max_standings_spread > 0:
+        # Hard constraint with soft violation: pods should have spread <= max_standings_spread
+        for k in range(K):
+            violation = model.NewBoolVar(f"spread_violation_{k}")
+            spread = model.NewIntVar(0, max_mp_val - min_mp_val, f"spread_{k}")
+            model.Add(spread == max_mp[k] - min_mp[k])
+            model.Add(spread <= config.max_standings_spread).OnlyEnforceIf(violation.Not())
+            objective_terms.append(-int(config.spread_violation_penalty) * violation)
+        # Still add a small linear penalty to prefer tighter pods among valid solutions
+        for k in range(K):
+            objective_terms.append(min_mp[k] - max_mp[k])
+    else:
+        # Fallback: original linear penalty
+        for k in range(K):
+            objective_terms.append(int(config.match_point_penalty_weight) * (min_mp[k] - max_mp[k]))
 
     standard = [k for k in range(K) if pod_sizes[k] == 8]
     even_ns = [k for k in range(K) if pod_sizes[k] != 8 and pod_sizes[k] % 2 == 0]
