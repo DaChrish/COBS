@@ -215,6 +215,10 @@ function OverviewTab({
           </Table.Tr>
         </Table.Tbody>
       </Table>
+      <Button variant="light" leftSection={<IconDownload size={14} />}
+        onClick={() => downloadPdf(`/tournaments/${tournament.id}/export`, `${tournament.name}.zip`)}>
+        Turnier exportieren
+      </Button>
     </Stack>
   );
 }
@@ -1242,6 +1246,10 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                       Pairings PDF
                     </Button>
                   )}
+                  <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
+                    onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/export`, `Draft${draft.round_number}.zip`)}>
+                    Export ZIP
+                  </Button>
                   {hasMatches && !allReported && draft.status !== "FINISHED" && (
                     <Group gap={4}>
                       <NumberInput w={70} size="xs" variant="filled"
