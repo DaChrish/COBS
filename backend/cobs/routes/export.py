@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 from cobs.auth.dependencies import require_admin
 from cobs.config import settings
 from cobs.database import get_db
-from cobs.logic.pdf import generate_pairings_pdf, generate_pods_pdf, generate_standings_pdf
+from cobs.logic.pdf import generate_pods_pdf, generate_results_pdf, generate_standings_pdf
 from cobs.logic.standings import calculate_standings
 from cobs.logic.swiss import MatchResult
 from cobs.models.cube import TournamentCube
@@ -139,7 +139,7 @@ async def _build_draft_zip_content(
     pods_pdf = generate_pods_pdf(tournament.name, round_label, pods_data)
     entries.append((f"{prefix}Pods.pdf", pods_pdf))
 
-    # --- Pairings PDFs per swiss round ---
+    # --- Results PDFs per swiss round ---
     matches_result = await db.execute(
         select(Match)
         .join(Pod)
@@ -156,9 +156,9 @@ async def _build_draft_zip_content(
         swiss_rounds = sorted({m.swiss_round for m in all_matches})
         for sr in swiss_rounds:
             round_matches = [m for m in all_matches if m.swiss_round == sr]
-            round_label_p = f"Draft {draft.round_number} - Runde {sr} Pairings"
+            round_label_r = f"Draft {draft.round_number} - Swiss {sr} Ergebnisse"
 
-            pairings_pods_data = []
+            results_pods_data = []
             table_number = 1
             for pod in sorted(draft.pods, key=lambda p: p.pod_number):
                 pod_matches = [m for m in round_matches if m.pod_id == pod.id and not m.is_bye]
@@ -166,25 +166,32 @@ async def _build_draft_zip_content(
                 cube_name = pod.tournament_cube.cube.name
                 matches_data = []
                 for m in pod_matches:
-                    matches_data.append(
-                        {
-                            "table": table_number,
-                            "player1": m.player1.user.username,
-                            "player2": m.player2.user.username if m.player2 else "\u2014",
-                        }
-                    )
+                    if m.reported:
+                        result_str = f"{m.player1_wins}-{m.player2_wins}"
+                        status = "Fertig"
+                    elif m.has_conflict:
+                        result_str = "?"
+                        status = "Konflikt"
+                    else:
+                        result_str = "-"
+                        status = "Offen"
+                    matches_data.append({
+                        "table": table_number,
+                        "player1": m.player1.user.username,
+                        "result": result_str,
+                        "player2": m.player2.user.username if m.player2 else "-",
+                        "status": status,
+                    })
                     table_number += 1
                 byes_data = [m.player1.user.username for m in pod_byes]
-                pairings_pods_data.append(
-                    {
-                        "pod_name": f"Pod {pod.pod_number} \u00b7 {cube_name}",
-                        "matches": matches_data,
-                        "byes": byes_data,
-                    }
-                )
+                results_pods_data.append({
+                    "pod_name": f"Pod {pod.pod_number} - {cube_name}",
+                    "matches": matches_data,
+                    "byes": byes_data,
+                })
 
-            pairings_pdf = generate_pairings_pdf(tournament.name, round_label_p, pairings_pods_data)
-            entries.append((f"{prefix}Pairings_Swiss{sr}.pdf", pairings_pdf))
+            results_pdf = generate_results_pdf(tournament.name, round_label_r, results_pods_data)
+            entries.append((f"{prefix}Ergebnisse_Swiss{sr}.pdf", results_pdf))
 
     # --- Photos ---
     # Build pod mapping: tournament_player_id -> pod_number

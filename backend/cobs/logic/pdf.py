@@ -106,6 +106,58 @@ def generate_pairings_pdf(
     return bytes(pdf.output())
 
 
+def generate_results_pdf(
+    tournament_name: str, round_label: str, pods: list[dict]
+) -> bytes:
+    """Generate a match results PDF.
+
+    pods: list of dicts with keys:
+        pod_name, matches (list of {table, player1, result, player2, status}), byes (list of player names)
+    """
+    pdf = FPDF()
+    pdf.add_page()
+
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, _latin1_safe(f"COBS - {tournament_name}"), new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(0, 8, _latin1_safe(round_label), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    col_widths = [15, 55, 20, 55, 20]
+
+    for pod in pods:
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 8, _latin1_safe(pod["pod_name"]), new_x="LMARGIN", new_y="NEXT")
+
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_fill_color(230, 230, 230)
+        for w, h in zip(col_widths, ["T", "Spieler 1", "Ergebnis", "Spieler 2", "Status"]):
+            pdf.cell(w, 7, h, border=1, fill=True)
+        pdf.ln()
+
+        pdf.set_font("Helvetica", "", 9)
+        for m in pod["matches"]:
+            pdf.cell(col_widths[0], 7, str(m.get("table", "")), border=1)
+            pdf.cell(col_widths[1], 7, _latin1_safe(m["player1"]), border=1)
+            pdf.cell(col_widths[2], 7, m.get("result", "-"), border=1, align="C")
+            pdf.cell(col_widths[3], 7, _latin1_safe(m.get("player2", "-")), border=1)
+            pdf.cell(col_widths[4], 7, m.get("status", ""), border=1, align="C")
+            pdf.ln()
+
+        for player in pod.get("byes", []):
+            pdf.cell(col_widths[0], 7, "", border=1)
+            pdf.cell(col_widths[1], 7, _latin1_safe(player), border=1)
+            pdf.cell(col_widths[2], 7, "BYE", border=1, align="C")
+            pdf.cell(col_widths[3], 7, "-", border=1)
+            pdf.cell(col_widths[4], 7, "3 Pkt", border=1, align="C")
+            pdf.ln()
+
+        pdf.ln(4)
+
+    return bytes(pdf.output())
+
+
 def generate_pods_pdf(
     tournament_name: str, round_label: str, pods: list[dict]
 ) -> bytes:
