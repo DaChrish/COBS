@@ -425,6 +425,21 @@ async def report_match(
     if not tp:
         raise HTTPException(status_code=403, detail="Not a participant")
 
+    # Check RETURNED photo requirement on swiss round 3
+    if match.swiss_round >= 3:
+        returned_check = await db.execute(
+            select(DraftPhoto).where(
+                DraftPhoto.draft_id == pod.draft_id,
+                DraftPhoto.tournament_player_id == tp.id,
+                DraftPhoto.photo_type == PhotoType.RETURNED,
+            )
+        )
+        if not returned_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400,
+                detail="Bitte lade zuerst dein RETURNED Foto hoch bevor du das Ergebnis meldest.",
+            )
+
     if tp.id == match.player1_id:
         match.p1_reported_p1_wins = body.player1_wins
         match.p1_reported_p2_wins = body.player2_wins
