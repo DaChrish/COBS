@@ -1149,9 +1149,40 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                               })}>Lösen</Button>
                                           ) : m.reported ? (
                                             <Badge color="green" size="xs">✓</Badge>
-                                          ) : (
-                                            <Badge color="gray" size="xs">⏳</Badge>
-                                          )}
+                                          ) : (() => {
+                                            const p1done = m.p1_reported_p1_wins !== null;
+                                            const p2done = m.p2_reported_p1_wins !== null;
+                                            const anyReported = p1done || p2done;
+                                            return anyReported ? (
+                                              <Popover width={200} position="bottom" withArrow>
+                                                <Popover.Target>
+                                                  <Badge color="yellow" size="xs" style={{ cursor: "pointer" }}>1/2</Badge>
+                                                </Popover.Target>
+                                                <Popover.Dropdown>
+                                                  <Stack gap={2}>
+                                                    <Group justify="space-between">
+                                                      <Text size="xs">{m.player1_username}</Text>
+                                                      {p1done ? (
+                                                        <Badge size="xs" color="green" variant="light">{m.p1_reported_p1_wins}–{m.p1_reported_p2_wins}</Badge>
+                                                      ) : (
+                                                        <Badge size="xs" color="gray" variant="light">ausstehend</Badge>
+                                                      )}
+                                                    </Group>
+                                                    <Group justify="space-between">
+                                                      <Text size="xs">{m.player2_username}</Text>
+                                                      {p2done ? (
+                                                        <Badge size="xs" color="green" variant="light">{m.p2_reported_p1_wins}–{m.p2_reported_p2_wins}</Badge>
+                                                      ) : (
+                                                        <Badge size="xs" color="gray" variant="light">ausstehend</Badge>
+                                                      )}
+                                                    </Group>
+                                                  </Stack>
+                                                </Popover.Dropdown>
+                                              </Popover>
+                                            ) : (
+                                              <Badge color="gray" size="xs">⏳</Badge>
+                                            );
+                                          })()}
                                         </div>
                                       </Group>
                                     ))}
