@@ -22,6 +22,7 @@ import {
   IconRefresh,
   IconArrowLeft,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import type { Cube } from "../../api/types";
@@ -34,6 +35,7 @@ interface CubeCobraPreview {
 }
 
 export function AdminCubes() {
+  const { t } = useTranslation();
   const { data: cubes, refetch } = useApi<Cube[]>("/cubes");
   const navigate = useNavigate();
 
@@ -71,7 +73,7 @@ export function AdminCubes() {
       setCubeName(meta.name);
       setMaxPlayers(meta.max_players ?? undefined);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Fehler beim Laden");
+      alert(e instanceof Error ? e.message : t("adminCubes.loadError"));
     } finally {
       setLoading(false);
     }
@@ -140,12 +142,12 @@ export function AdminCubes() {
             leftSection={<IconArrowLeft size={16} />}
             onClick={() => navigate("/admin")}
           >
-            Zurück
+            {t("common.back")}
           </Button>
-          <Title order={2}>Cubes</Title>
+          <Title order={2}>{t("adminCubes.title")}</Title>
         </Group>
         <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          Neuer Cube
+          {t("adminCubes.newCube")}
         </Button>
       </Group>
 
@@ -153,9 +155,9 @@ export function AdminCubes() {
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th w={70}>Bild</Table.Th>
-              <Table.Th>Name</Table.Th>
-              <Table.Th ta="right">Max Spieler</Table.Th>
+              <Table.Th w={70}>{t("adminCubes.image")}</Table.Th>
+              <Table.Th>{t("common.name")}</Table.Th>
+              <Table.Th ta="right">{t("adminCubes.maxPlayers")}</Table.Th>
               <Table.Th w={120} />
             </Table.Tr>
           </Table.Thead>
@@ -221,7 +223,7 @@ export function AdminCubes() {
                         <ActionIcon
                           variant="subtle"
                           onClick={() => refreshCube(cube)}
-                          title="Von CubeCobra aktualisieren"
+                          title={t("adminCubes.refreshFromCubeCobra")}
                         >
                           <IconRefresh size={16} />
                         </ActionIcon>
@@ -251,21 +253,21 @@ export function AdminCubes() {
       <Modal
         opened={modalOpen}
         onClose={() => { setModalOpen(false); setPreview(null); }}
-        title={editingCube ? "Cube bearbeiten" : "Neuer Cube"}
+        title={editingCube ? t("adminCubes.editCube") : t("adminCubes.newCube")}
         size="md"
       >
         <Stack>
           {!editingCube && !preview && (
             <>
               <TextInput
-                label="CubeCobra ID"
+                label={t("adminTournament.cubeCobraId")}
                 required
-                placeholder="z.B. 5d8d292a884bf534916603d7"
+                placeholder={t("adminTournament.cubeCobraPlaceholder")}
                 value={cobraId}
                 onChange={(e) => setCobraId(e.target.value)}
               />
               <Button onClick={loadPreview} loading={loading} disabled={!cobraId}>
-                Laden
+                {t("common.load")}
               </Button>
             </>
           )}
@@ -282,9 +284,9 @@ export function AdminCubes() {
                   )}
                 </div>
               )}
-              <TextInput label="Name" value={cubeName} onChange={(e) => setCubeName(e.target.value)} />
-              <NumberInput label="Max Spieler" value={maxPlayers} onChange={(v) => setMaxPlayers(v ? Number(v) : undefined)} min={1} />
-              <Button onClick={saveCube} loading={loading} disabled={!cubeName}>Erstellen</Button>
+              <TextInput label={t("common.name")} value={cubeName} onChange={(e) => setCubeName(e.target.value)} />
+              <NumberInput label={t("adminCubes.maxPlayers")} value={maxPlayers} onChange={(v) => setMaxPlayers(v ? Number(v) : undefined)} min={1} />
+              <Button onClick={saveCube} loading={loading} disabled={!cubeName}>{t("common.create")}</Button>
             </>
           )}
 
@@ -301,35 +303,33 @@ export function AdminCubes() {
                 </div>
               )}
               {editingCube.cubecobra_id && (
-                <TextInput label="CubeCobra ID" value={editingCube.cubecobra_id} disabled />
+                <TextInput label={t("adminTournament.cubeCobraId")} value={editingCube.cubecobra_id} disabled />
               )}
-              <TextInput label="Name" value={cubeName} onChange={(e) => setCubeName(e.target.value)} />
-              <NumberInput label="Max Spieler" value={maxPlayers} onChange={(v) => setMaxPlayers(v ? Number(v) : undefined)} min={1} />
-              <Button onClick={saveCube} loading={loading} disabled={!cubeName}>Speichern</Button>
+              <TextInput label={t("common.name")} value={cubeName} onChange={(e) => setCubeName(e.target.value)} />
+              <NumberInput label={t("adminCubes.maxPlayers")} value={maxPlayers} onChange={(v) => setMaxPlayers(v ? Number(v) : undefined)} min={1} />
+              <Button onClick={saveCube} loading={loading} disabled={!cubeName}>{t("common.save")}</Button>
             </>
           )}
         </Stack>
       </Modal>
 
-      <Modal opened={confirmRefresh !== null} onClose={() => setConfirmRefresh(null)} title="Von CubeCobra aktualisieren?" size="sm">
+      <Modal opened={confirmRefresh !== null} onClose={() => setConfirmRefresh(null)} title={t("adminCubes.refreshTitle")} size="sm">
         <Stack>
-          <Text size="sm">Daten von CubeCobra neu laden? Manuelle Änderungen an Name und Max Spieler werden überschrieben.</Text>
+          <Text size="sm">{t("adminCubes.refreshConfirm")}</Text>
           <Group justify="flex-end" gap="xs">
-            <Button variant="light" size="xs" onClick={() => setConfirmRefresh(null)}>Abbrechen</Button>
-            <Button color="blue" size="xs" loading={loading} onClick={confirmRefreshCube}>Aktualisieren</Button>
+            <Button variant="light" size="xs" onClick={() => setConfirmRefresh(null)}>{t("common.cancel")}</Button>
+            <Button color="blue" size="xs" loading={loading} onClick={confirmRefreshCube}>{t("adminCubes.update")}</Button>
           </Group>
         </Stack>
       </Modal>
 
-      <Modal opened={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title="Cube löschen?" size="sm">
+      <Modal opened={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t("adminCubes.deleteTitle")} size="sm">
         {confirmDelete && (
           <Stack>
-            <Text size="sm">
-              <strong>{confirmDelete.name}</strong> wirklich löschen? Der Cube wird auch aus allen Turnieren entfernt.
-            </Text>
+            <Text size="sm" dangerouslySetInnerHTML={{ __html: t("adminCubes.deleteConfirm", { name: confirmDelete.name }) }} />
             <Group justify="flex-end" gap="xs">
-              <Button variant="light" size="xs" onClick={() => setConfirmDelete(null)}>Abbrechen</Button>
-              <Button color="red" size="xs" onClick={deleteCube}>Löschen</Button>
+              <Button variant="light" size="xs" onClick={() => setConfirmDelete(null)}>{t("common.cancel")}</Button>
+              <Button color="red" size="xs" onClick={deleteCube}>{t("common.delete")}</Button>
             </Group>
           </Stack>
         )}

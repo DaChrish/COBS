@@ -33,11 +33,13 @@ import {
   IconDownload,
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import type { Tournament, Simulation, CubeVoteSummary, BatchAnalysis } from "../../api/types";
 
 export function OptimizerPlayground() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: tournaments } = useApi<Tournament[]>("/tournaments");
 
@@ -136,7 +138,7 @@ export function OptimizerPlayground() {
       const sims = await apiFetch<Simulation[]>(`/tournaments/${selectedTournament}/simulations`);
       setSimulations(sims);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Laden");
+      setError(e instanceof Error ? e.message : t("optimizerPlayground.loadError"));
     }
   };
 
@@ -170,7 +172,7 @@ export function OptimizerPlayground() {
       setSimulations((prev) => [sim, ...prev]);
       setSelectedSim(sim);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Simulation fehlgeschlagen");
+      setError(e instanceof Error ? e.message : t("optimizerPlayground.simulationFailed"));
     } finally {
       setSimulating(false);
     }
@@ -185,7 +187,7 @@ export function OptimizerPlayground() {
       setSimulations((prev) => prev.filter((s) => s.id !== simId));
       if (selectedSim?.id === simId) setSelectedSim(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Löschen fehlgeschlagen");
+      setError(e instanceof Error ? e.message : t("optimizerPlayground.deleteFailed"));
     }
   };
 
@@ -204,7 +206,7 @@ export function OptimizerPlayground() {
       setTestModalOpen(false);
       setSelectedTournament(t.tournament_id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Test-Turnier fehlgeschlagen");
+      setError(e instanceof Error ? e.message : t("optimizerPlayground.testTournamentFailed"));
     } finally {
       setTestLoading(false);
     }
@@ -242,7 +244,7 @@ export function OptimizerPlayground() {
       setBatchAnalyses((prev) => [result, ...prev]);
       setSelectedBatch(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Batch-Analyse fehlgeschlagen");
+      setError(e instanceof Error ? e.message : t("optimizerPlayground.batchAnalysisFailed"));
     } finally {
       setBatchRunning(false);
     }
@@ -254,7 +256,7 @@ export function OptimizerPlayground() {
       setBatchAnalyses((prev) => prev.filter((b) => b.id !== id));
       if (selectedBatch?.id === id) setSelectedBatch(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Löschen fehlgeschlagen");
+      setError(e instanceof Error ? e.message : t("optimizerPlayground.deleteFailed"));
     }
   };
 
@@ -302,9 +304,9 @@ export function OptimizerPlayground() {
   return (
     <Container size="lg">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Optimizer Playground</Title>
+        <Title order={2}>{t("optimizerPlayground.title")}</Title>
         <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={() => navigate("/admin")}>
-          Zurück
+          {t("common.back")}
         </Button>
       </Group>
 
@@ -316,8 +318,8 @@ export function OptimizerPlayground() {
 
       <Tabs defaultValue="single">
         <Tabs.List mb="md">
-          <Tabs.Tab value="single">Einzelsimulation</Tabs.Tab>
-          <Tabs.Tab value="batch">Batch-Analyse</Tabs.Tab>
+          <Tabs.Tab value="single">{t("optimizerPlayground.singleSimulation")}</Tabs.Tab>
+          <Tabs.Tab value="batch">{t("optimizerPlayground.batchAnalysis")}</Tabs.Tab>
         </Tabs.List>
 
         {/* ===== Tab 1: Einzelsimulation ===== */}
@@ -326,8 +328,8 @@ export function OptimizerPlayground() {
           <Paper withBorder p="md" mb="md" radius="md">
             <Group>
               <Select
-                label="Turnier"
-                placeholder="Turnier auswählen..."
+                label={t("optimizerPlayground.tournament")}
+                placeholder={t("optimizerPlayground.selectTournament")}
                 data={tournaments?.map((t) => ({ value: t.id, label: t.name })) ?? []}
                 value={selectedTournament}
                 onChange={setSelectedTournament}
@@ -340,7 +342,7 @@ export function OptimizerPlayground() {
                 mt={24}
                 onClick={() => setTestModalOpen(true)}
               >
-                Test-Turnier erstellen
+                {t("optimizerPlayground.createTestTournament")}
               </Button>
             </Group>
           </Paper>
@@ -348,7 +350,7 @@ export function OptimizerPlayground() {
           {/* Parameter Controls */}
           {selectedTournament && (
             <Paper withBorder p="md" mb="md" radius="md">
-              <Title order={4} mb="sm">Parameter</Title>
+              <Title order={4} mb="sm">{t("optimizerPlayground.parameters")}</Title>
               <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                 <NumberInput label="score_want" description="Default: 5.0" value={scoreWant}
                   onChange={(v) => setScoreWant(Number(v))} step={0.5} decimalScale={1} />
@@ -364,7 +366,7 @@ export function OptimizerPlayground() {
                   onChange={(v) => setRepeatAvoidMult(Number(v))} step={0.5} decimalScale={1} />
                 <NumberInput label="avoid_penalty_scaling" description="Default: 1.0 (0=aus)" value={avoidPenaltyScaling}
                   onChange={(v) => setAvoidPenaltyScaling(Number(v))} step={0.1} decimalScale={2} />
-                <Select label="avoid_penalty_formula" description="Penalty-Formel" value={avoidPenaltyFormula}
+                <Select label="avoid_penalty_formula" description={t("optimizerPlayground.penaltyFormula")} value={avoidPenaltyFormula}
                   onChange={(v) => setAvoidPenaltyFormula(v || "linear")}
                   data={[
                     { value: "none", label: "none (deaktiviert)" },
@@ -377,7 +379,7 @@ export function OptimizerPlayground() {
               <Group>
                 <TextInput
                   label="Label"
-                  placeholder="Simulation benennen..."
+                  placeholder={t("optimizerPlayground.labelPlaceholder")}
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   style={{ flex: 1 }}
@@ -385,10 +387,10 @@ export function OptimizerPlayground() {
               </Group>
               <Group mt="sm">
                 <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={resetDefaults}>
-                  Zurücksetzen
+                  {t("optimizerPlayground.reset")}
                 </Button>
                 <Button leftSection={<IconPlayerPlay size={16} />} onClick={simulate} loading={simulating}>
-                  Simulieren
+                  {t("optimizerPlayground.simulate")}
                 </Button>
               </Group>
             </Paper>
@@ -397,12 +399,12 @@ export function OptimizerPlayground() {
           {/* Vote Overview */}
           {selectedTournament && voteSummary.length > 0 && !selectedSim && (
             <Paper withBorder p="md" mb="md" radius="md">
-              <Title order={4} mb="sm">Vote-Übersicht</Title>
+              <Title order={4} mb="sm">{t("optimizerPlayground.voteOverview")}</Title>
               <ScrollArea>
                 <Table striped highlightOnHover>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Cube</Table.Th>
+                      <Table.Th>{t("optimizerPlayground.cube")}</Table.Th>
                       <Table.Th ta="right">Desired</Table.Th>
                       <Table.Th ta="right">Neutral</Table.Th>
                       <Table.Th ta="right">Avoid</Table.Th>
@@ -429,21 +431,21 @@ export function OptimizerPlayground() {
               {simulating && !selectedSim && (
                 <Group justify="center" py="xl">
                   <Loader size="sm" />
-                  <Text size="sm" c="dimmed">Simuliere...</Text>
+                  <Text size="sm" c="dimmed">{t("optimizerPlayground.simulating")}</Text>
                 </Group>
               )}
 
               {!selectedSim ? (
                 <>
-                  <Title order={4} mb="sm">Simulationen</Title>
+                  <Title order={4} mb="sm">{t("optimizerPlayground.simulations")}</Title>
                   {simulations.length === 0 ? (
-                    <Text size="sm" c="dimmed">Noch keine Simulationen vorhanden.</Text>
+                    <Text size="sm" c="dimmed">{t("optimizerPlayground.noSimulations")}</Text>
                   ) : (
                     <Table striped highlightOnHover>
                       <Table.Thead>
                         <Table.Tr>
                           <Table.Th>Label</Table.Th>
-                          <Table.Th ta="right">Spieler</Table.Th>
+                          <Table.Th ta="right">{t("common.players")}</Table.Th>
                           <Table.Th ta="right">Pods</Table.Th>
                           <Table.Th ta="right">D</Table.Th>
                           <Table.Th ta="right">N</Table.Th>
@@ -482,7 +484,7 @@ export function OptimizerPlayground() {
                 <Stack gap="md">
                   <Group justify="space-between">
                     <Title order={4}>{selectedSim.label || "Simulation"}</Title>
-                    <Button variant="light" size="xs" onClick={() => setSelectedSim(null)}>Zurück zur Liste</Button>
+                    <Button variant="light" size="xs" onClick={() => setSelectedSim(null)}>{t("optimizerPlayground.backToList")}</Button>
                   </Group>
                   <Group gap="md">
                     <Badge color="green" variant="light">D: {selectedSim.total_desired}</Badge>
@@ -495,7 +497,7 @@ export function OptimizerPlayground() {
 
                   <Accordion variant="separated">
                     <Accordion.Item value="config">
-                      <Accordion.Control><Text size="sm" fw={500}>Konfiguration</Text></Accordion.Control>
+                      <Accordion.Control><Text size="sm" fw={500}>{t("optimizerPlayground.configuration")}</Text></Accordion.Control>
                       <Accordion.Panel>
                         <SimpleGrid cols={2} spacing="xs">
                           {Object.entries(selectedSim.config).map(([k, v]) => (
@@ -517,10 +519,10 @@ export function OptimizerPlayground() {
                         <Paper key={i} withBorder p="md" radius="md">
                           <Group justify="space-between" mb="xs">
                             <Tooltip events={{ hover: true, touch: true, focus: true }} multiline w={250} withArrow label={(() => {
-                              if (!cubeVotes) return "Keine Votes";
+                              if (!cubeVotes) return t("optimizerPlayground.noVotes");
                               const desired = cubeVotes.votes.filter((v) => v.vote === "DESIRED");
                               const avoid = cubeVotes.votes.filter((v) => v.vote === "AVOID");
-                              if (desired.length === 0 && avoid.length === 0) return "Alle neutral";
+                              if (desired.length === 0 && avoid.length === 0) return t("optimizerPlayground.allNeutral");
                               return (
                                 <Stack gap={4}>
                                   {desired.length > 0 && (<>
@@ -568,7 +570,7 @@ export function OptimizerPlayground() {
                                         {v.vote === "DESIRED" ? "\u2713" : "\u2717"}
                                       </Text>
                                     </Group>
-                                  )) : <Text size="xs">Alle neutral</Text>}
+                                  )) : <Text size="xs">{t("optimizerPlayground.allNeutral")}</Text>}
                                 </Stack>
                               }>
                                 <Badge size="sm"
@@ -594,28 +596,28 @@ export function OptimizerPlayground() {
         <Tabs.Panel value="batch">
           {/* Config Section */}
           <Paper withBorder p="md" mb="md" radius="md">
-            <Title order={4} mb="sm">Batch-Konfiguration</Title>
+            <Title order={4} mb="sm">{t("optimizerPlayground.batchConfig")}</Title>
 
             <TextInput
               label="Label"
-              placeholder="Analyse benennen..."
+              placeholder={t("optimizerPlayground.analysisLabel")}
               value={batchLabel}
               onChange={(e) => setBatchLabel(e.target.value)}
               mb="sm"
             />
 
             <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm" mb="sm">
-              <NumberInput label="Spieler" value={batchPlayers} onChange={(v) => setBatchPlayers(Number(v))} min={2} />
-              <NumberInput label="Cubes" value={batchCubes} onChange={(v) => setBatchCubes(Number(v))} min={1} />
-              <NumberInput label="Max Rounds" value={batchRounds} onChange={(v) => setBatchRounds(Number(v))} min={1} />
-              <NumberInput label="Swiss Rounds / Draft" value={batchSwissRounds} onChange={(v) => setBatchSwissRounds(Number(v))} min={1} />
-              <NumberInput label="Simulationen" value={batchNumSims} onChange={(v) => setBatchNumSims(Number(v))} min={1} />
-              <NumberInput label="Base Seed" description="Gleicher Seed = gleiche Ergebnisse" value={batchSeed} onChange={(v) => setBatchSeed(Number(v))} min={0} />
+              <NumberInput label={t("common.players")} value={batchPlayers} onChange={(v) => setBatchPlayers(Number(v))} min={2} />
+              <NumberInput label={t("common.cubes")} value={batchCubes} onChange={(v) => setBatchCubes(Number(v))} min={1} />
+              <NumberInput label={t("optimizerPlayground.maxRounds")} value={batchRounds} onChange={(v) => setBatchRounds(Number(v))} min={1} />
+              <NumberInput label={t("optimizerPlayground.swissRoundsPerDraft")} value={batchSwissRounds} onChange={(v) => setBatchSwissRounds(Number(v))} min={1} />
+              <NumberInput label={t("optimizerPlayground.simulationsCount")} value={batchNumSims} onChange={(v) => setBatchNumSims(Number(v))} min={1} />
+              <NumberInput label={t("optimizerPlayground.baseSeed")} description={t("optimizerPlayground.baseSeedDesc")} value={batchSeed} onChange={(v) => setBatchSeed(Number(v))} min={0} />
             </SimpleGrid>
 
             <Divider my="sm" />
 
-            <Title order={5} mb="xs">Vote-Verteilung</Title>
+            <Title order={5} mb="xs">{t("optimizerPlayground.voteDistribution")}</Title>
             <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm" mb="xs">
               <NumberInput label="Desired" value={batchVoteDist.desired}
                 onChange={(v) => setBatchVoteDist((d) => ({ ...d, desired: Number(v) }))}
@@ -628,17 +630,17 @@ export function OptimizerPlayground() {
                 step={0.05} decimalScale={2} min={0} max={1} />
             </SimpleGrid>
             <Text size="xs" c={Math.abs(voteDistSum - 1.0) < 0.01 ? "dimmed" : "red"}>
-              Summe: {voteDistSum.toFixed(2)} {Math.abs(voteDistSum - 1.0) >= 0.01 && "(sollte 1.0 sein)"}
+              {t("optimizerPlayground.sum")}: {voteDistSum.toFixed(2)} {Math.abs(voteDistSum - 1.0) >= 0.01 && t("optimizerPlayground.shouldBeOne")}
             </Text>
 
             <Divider my="sm" />
 
-            <Title order={5} mb="xs">Spieler-Profile</Title>
+            <Title order={5} mb="xs">{t("optimizerPlayground.playerProfiles")}</Title>
             {batchProfiles.length > 0 && (
               <Table mb="xs">
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Anzahl</Table.Th>
+                    <Table.Th>{t("optimizerPlayground.count")}</Table.Th>
                     <Table.Th>Desired %</Table.Th>
                     <Table.Th>Neutral %</Table.Th>
                     <Table.Th>Avoid %</Table.Th>
@@ -675,14 +677,14 @@ export function OptimizerPlayground() {
               </Table>
             )}
             <Button variant="light" size="xs" leftSection={<IconPlus size={14} />} onClick={addProfile}>
-              Profil hinzufügen
+              {t("optimizerPlayground.addProfile")}
             </Button>
 
             <Divider my="sm" />
 
             <Accordion variant="separated" mb="sm">
               <Accordion.Item value="optimizer-config">
-                <Accordion.Control><Text size="sm" fw={500}>Optimizer-Konfiguration</Text></Accordion.Control>
+                <Accordion.Control><Text size="sm" fw={500}>{t("optimizerPlayground.optimizerConfig")}</Text></Accordion.Control>
                 <Accordion.Panel>
                   <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                     <NumberInput label="score_want" description="Default: 5.0" value={bScoreWant}
@@ -697,7 +699,7 @@ export function OptimizerPlayground() {
                       onChange={(v) => setBLowerBonus(Number(v))} step={0.1} decimalScale={2} />
                     <NumberInput label="repeat_avoid_multiplier" description="Default: 4.0" value={bRepeatMult}
                       onChange={(v) => setBRepeatMult(Number(v))} step={0.5} decimalScale={1} />
-                    <Select label="avoid_penalty_formula" description="Penalty-Formel" value={bAvoidFormula}
+                    <Select label="avoid_penalty_formula" description={t("optimizerPlayground.penaltyFormula")} value={bAvoidFormula}
                       onChange={(v) => setBAvoidFormula(v || "linear")}
                       data={[
                         { value: "none", label: "none (deaktiviert)" },
@@ -710,7 +712,7 @@ export function OptimizerPlayground() {
                   </SimpleGrid>
                   <Group mt="sm">
                     <Button leftSection={<IconRefresh size={16} />} variant="light" size="xs" onClick={resetBatchDefaults}>
-                      Zurücksetzen
+                      {t("optimizerPlayground.reset")}
                     </Button>
                   </Group>
                 </Accordion.Panel>
@@ -718,7 +720,7 @@ export function OptimizerPlayground() {
             </Accordion>
 
             <Button leftSection={<IconPlayerPlay size={16} />} onClick={runBatch} loading={batchRunning}>
-              Analyse starten
+              {t("optimizerPlayground.startAnalysis")}
             </Button>
           </Paper>
 
@@ -727,24 +729,24 @@ export function OptimizerPlayground() {
             {batchRunning && !selectedBatch && (
               <Group justify="center" py="xl">
                 <Loader size="sm" />
-                <Text size="sm" c="dimmed">Batch-Analyse läuft...</Text>
+                <Text size="sm" c="dimmed">{t("optimizerPlayground.batchRunning")}</Text>
               </Group>
             )}
 
             {!selectedBatch ? (
               <>
-                <Title order={4} mb="sm">Gespeicherte Analysen</Title>
+                <Title order={4} mb="sm">{t("optimizerPlayground.savedAnalyses")}</Title>
                 {batchAnalyses.length === 0 ? (
-                  <Text size="sm" c="dimmed">Noch keine Batch-Analysen vorhanden.</Text>
+                  <Text size="sm" c="dimmed">{t("optimizerPlayground.noAnalyses")}</Text>
                 ) : (
                   <ScrollArea>
                     <Table striped highlightOnHover>
                       <Table.Thead>
                         <Table.Tr>
                           <Table.Th>Label</Table.Th>
-                          <Table.Th ta="right">Spieler</Table.Th>
-                          <Table.Th ta="right">Cubes</Table.Th>
-                          <Table.Th ta="right">Drafts</Table.Th>
+                          <Table.Th ta="right">{t("common.players")}</Table.Th>
+                          <Table.Th ta="right">{t("common.cubes")}</Table.Th>
+                          <Table.Th ta="right">{t("hub.drafts")}</Table.Th>
                           <Table.Th ta="right">Sims</Table.Th>
                           <Table.Th ta="right">D%</Table.Th>
                           <Table.Th ta="right">A%</Table.Th>
@@ -794,7 +796,7 @@ export function OptimizerPlayground() {
                   <Group gap="xs">
                     <Button variant="light" size="xs" leftSection={<IconDownload size={14} />}
                       onClick={() => downloadCsv(selectedBatch.id)}>CSV</Button>
-                    <Button variant="light" size="xs" onClick={() => setSelectedBatch(null)}>Zurück</Button>
+                    <Button variant="light" size="xs" onClick={() => setSelectedBatch(null)}>{t("common.back")}</Button>
                   </Group>
                 </Group>
 
@@ -819,17 +821,17 @@ export function OptimizerPlayground() {
                 {/* Config accordion */}
                 <Accordion variant="separated">
                   <Accordion.Item value="config">
-                    <Accordion.Control><Text size="sm" fw={500}>Konfiguration</Text></Accordion.Control>
+                    <Accordion.Control><Text size="sm" fw={500}>{t("optimizerPlayground.configuration")}</Text></Accordion.Control>
                     <Accordion.Panel>
                       <SimpleGrid cols={2} spacing="xs" mb="sm">
-                        <Group justify="space-between"><Text size="xs" c="dimmed">Spieler</Text><Text size="xs" fw={500}>{selectedBatch.num_players}</Text></Group>
-                        <Group justify="space-between"><Text size="xs" c="dimmed">Cubes</Text><Text size="xs" fw={500}>{selectedBatch.num_cubes}</Text></Group>
-                        <Group justify="space-between"><Text size="xs" c="dimmed">Max Rounds</Text><Text size="xs" fw={500}>{selectedBatch.max_rounds}</Text></Group>
+                        <Group justify="space-between"><Text size="xs" c="dimmed">{t("common.players")}</Text><Text size="xs" fw={500}>{selectedBatch.num_players}</Text></Group>
+                        <Group justify="space-between"><Text size="xs" c="dimmed">{t("common.cubes")}</Text><Text size="xs" fw={500}>{selectedBatch.num_cubes}</Text></Group>
+                        <Group justify="space-between"><Text size="xs" c="dimmed">{t("optimizerPlayground.maxRounds")}</Text><Text size="xs" fw={500}>{selectedBatch.max_rounds}</Text></Group>
                         <Group justify="space-between"><Text size="xs" c="dimmed">Swiss Rounds</Text><Text size="xs" fw={500}>{selectedBatch.swiss_rounds_per_draft}</Text></Group>
-                        <Group justify="space-between"><Text size="xs" c="dimmed">Simulationen</Text><Text size="xs" fw={500}>{selectedBatch.num_simulations}</Text></Group>
+                        <Group justify="space-between"><Text size="xs" c="dimmed">{t("optimizerPlayground.simulationsCount")}</Text><Text size="xs" fw={500}>{selectedBatch.num_simulations}</Text></Group>
                       </SimpleGrid>
                       <Divider my="xs" />
-                      <Text size="xs" fw={500} mb="xs">Vote-Verteilung</Text>
+                      <Text size="xs" fw={500} mb="xs">{t("optimizerPlayground.voteDistribution")}</Text>
                       <SimpleGrid cols={3} spacing="xs" mb="sm">
                         <Group justify="space-between"><Text size="xs" c="dimmed">Desired</Text><Text size="xs" fw={500}>{selectedBatch.vote_distribution.desired}</Text></Group>
                         <Group justify="space-between"><Text size="xs" c="dimmed">Neutral</Text><Text size="xs" fw={500}>{selectedBatch.vote_distribution.neutral}</Text></Group>
@@ -837,7 +839,7 @@ export function OptimizerPlayground() {
                       </SimpleGrid>
                       {selectedBatch.player_profiles.length > 0 && (
                         <>
-                          <Text size="xs" fw={500} mb="xs">Spieler-Profile</Text>
+                          <Text size="xs" fw={500} mb="xs">{t("optimizerPlayground.playerProfiles")}</Text>
                           {selectedBatch.player_profiles.map((p, idx) => (
                             <Text key={idx} size="xs" c="dimmed">
                               {p.count}x: D={p.desired_pct} N={p.neutral_pct} A={p.avoid_pct}
@@ -860,7 +862,7 @@ export function OptimizerPlayground() {
                 </Accordion>
 
                 {/* Per-simulation table */}
-                <Title order={5}>Einzelne Simulationen</Title>
+                <Title order={5}>{t("optimizerPlayground.individualSimulations")}</Title>
                 <ScrollArea>
                   <Table striped highlightOnHover>
                     <Table.Thead>
@@ -1026,12 +1028,12 @@ export function OptimizerPlayground() {
       </Tabs>
 
       {/* Test Tournament Modal */}
-      <Modal opened={testModalOpen} onClose={() => setTestModalOpen(false)} title="Test-Turnier erstellen">
+      <Modal opened={testModalOpen} onClose={() => setTestModalOpen(false)} title={t("optimizerPlayground.createTestTournament")}>
         <Stack>
-          <NumberInput label="Spieler" value={testPlayers} onChange={(v) => setTestPlayers(Number(v))} min={2} max={500} />
-          <NumberInput label="Cubes" value={testCubes} onChange={(v) => setTestCubes(Number(v))} min={1} max={200} />
-          <NumberInput label="Seed (optional)" value={testSeed} onChange={(v) => setTestSeed(v ? Number(v) : undefined)} />
-          <Button onClick={createTestTournament} loading={testLoading}>Erstellen</Button>
+          <NumberInput label={t("common.players")} value={testPlayers} onChange={(v) => setTestPlayers(Number(v))} min={2} max={500} />
+          <NumberInput label={t("common.cubes")} value={testCubes} onChange={(v) => setTestCubes(Number(v))} min={1} max={200} />
+          <NumberInput label={t("admin.seed")} value={testSeed} onChange={(v) => setTestSeed(v ? Number(v) : undefined)} />
+          <Button onClick={createTestTournament} loading={testLoading}>{t("common.create")}</Button>
         </Stack>
       </Modal>
     </Container>

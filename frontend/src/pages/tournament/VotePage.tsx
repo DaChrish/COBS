@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Alert, Badge, Container, Title, Text, Button, Card, Group, Stack, Center, Loader, ActionIcon, Image, SegmentedControl, Paper } from "@mantine/core";
 import { IconThumbUp, IconThumbDown, IconMinus, IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../api/client";
 import { useApi } from "../../hooks/useApi";
 import type { Vote, TournamentDetail } from "../../api/types";
@@ -11,6 +12,7 @@ type VoteValue = "DESIRED" | "NEUTRAL" | "AVOID";
 export function VotePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { data: tournament } = useApi<TournamentDetail>(`/tournaments/${id}`);
   const { data: initialVotes, loading } = useApi<Vote[]>(`/tournaments/${id}/votes`);
   const [votes, setVotes] = useState<Record<string, VoteValue>>({});
@@ -63,16 +65,16 @@ export function VotePage() {
   return (
     <Container size="sm">
       <Group justify="space-between" mb="md">
-        <Title order={3}>{readonly ? "Meine Votes" : "Cube Voting"}</Title>
+        <Title order={3}>{readonly ? t("vote.myVotes") : t("vote.cubeVoting")}</Title>
         <SegmentedControl size="xs" value={viewMode} onChange={(v) => setViewMode(v as "card" | "list")}
-          data={[{ label: "Cards", value: "card" }, { label: "Liste", value: "list" }]} />
+          data={[{ label: t("vote.cards"), value: "card" }, { label: t("vote.list"), value: "list" }]} />
       </Group>
       {readonly && (
         <Alert color="blue" variant="light" mb="md">
-          Das Voting ist beendet. Hier siehst du deine abgegebenen Stimmen.
+          {t("vote.votingClosed")}
         </Alert>
       )}
-      {!readonly && <Text size="sm" c="dimmed" mb="md">{votedCount}/{cubes.length} bewertet</Text>}
+      {!readonly && <Text size="sm" c="dimmed" mb="md">{t("vote.voted", { count: votedCount, total: cubes.length })}</Text>}
 
       {viewMode === "card" && currentCube && (
         <Stack>
@@ -89,7 +91,7 @@ export function VotePage() {
             )}
             {!currentCube.cube_image_url && (
               <Center h={200} bg="var(--mantine-color-dark-6)">
-                <Text size="xl" c="dimmed">No Image</Text>
+                <Text size="xl" c="dimmed">{t("common.noImage")}</Text>
               </Center>
             )}
             <Stack p="md" gap="xs">
@@ -103,11 +105,11 @@ export function VotePage() {
               )}
             </Stack>
             <Group grow p="md" pt={0}>
-              <VoteButton icon={<IconThumbDown />} color="red" label="Avoid"
+              <VoteButton icon={<IconThumbDown />} color="red" label={t("vote.avoid")}
                 active={votes[currentCube.id] === "AVOID"} onClick={() => setVote(currentCube.id, "AVOID")} />
-              <VoteButton icon={<IconMinus />} color="gray" label="Neutral"
+              <VoteButton icon={<IconMinus />} color="gray" label={t("vote.neutral")}
                 active={votes[currentCube.id] === "NEUTRAL"} onClick={() => setVote(currentCube.id, "NEUTRAL")} />
-              <VoteButton icon={<IconThumbUp />} color="green" label="Desired"
+              <VoteButton icon={<IconThumbUp />} color="green" label={t("vote.desired")}
                 active={votes[currentCube.id] === "DESIRED"} onClick={() => setVote(currentCube.id, "DESIRED")} />
             </Group>
           </Card>
@@ -157,8 +159,8 @@ export function VotePage() {
         </Stack>
       )}
 
-      {!readonly && <Button fullWidth mt="lg" loading={saving} onClick={save}>Votes speichern</Button>}
-      {readonly && <Button fullWidth mt="lg" variant="light" onClick={() => navigate(`/tournament/${id}`)}>Zurück</Button>}
+      {!readonly && <Button fullWidth mt="lg" loading={saving} onClick={save}>{t("vote.saveVotes")}</Button>}
+      {readonly && <Button fullWidth mt="lg" variant="light" onClick={() => navigate(`/tournament/${id}`)}>{t("common.back")}</Button>}
     </Container>
   );
 }

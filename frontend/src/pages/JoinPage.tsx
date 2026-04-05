@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Paper, Title, TextInput, PasswordInput, Button, Text, Stack, Center, Alert } from "@mantine/core";
 import { IconCube, IconAlertCircle } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../hooks/useAuth";
 
 export function JoinPage() {
+  const { t } = useTranslation();
   const [joinCode, setJoinCode] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +27,7 @@ export function JoinPage() {
       });
       navigate(`/tournament/${res.tournament_id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Beitreten fehlgeschlagen");
+      setError(err instanceof Error ? err.message : t("join.joinFailed"));
     } finally {
       setLoading(false);
     }
@@ -43,7 +45,7 @@ export function JoinPage() {
       await setToken(res.access_token);
       navigate("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Beitreten fehlgeschlagen");
+      setError(err instanceof Error ? err.message : t("join.joinFailed"));
     } finally {
       setLoading(false);
     }
@@ -56,16 +58,16 @@ export function JoinPage() {
         <Container size={420} w="100%">
           <Stack align="center" mb="xl">
             <IconCube size={48} color="var(--mantine-color-blue-6)" />
-            <Title order={1}>Turnier beitreten</Title>
-            <Text size="sm" c="dimmed">Angemeldet als <strong>{user.username}</strong></Text>
+            <Title order={1}>{t("join.title")}</Title>
+            <Text size="sm" c="dimmed" dangerouslySetInnerHTML={{ __html: t("join.loggedInAs", { username: user.username }) }} />
           </Stack>
           <Paper withBorder shadow="md" p="xl" radius="md">
             <form onSubmit={handleJoinAuthenticated}>
               <Stack>
                 {error && <Alert color="red" icon={<IconAlertCircle size={16} />}>{error}</Alert>}
-                <TextInput label="Join-Code" placeholder="z.B. A1B2C3D4" required value={joinCode}
+                <TextInput label={t("join.joinCode")} placeholder={t("join.joinCodePlaceholder")} required value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={8} />
-                <Button type="submit" fullWidth loading={loading}>Beitreten</Button>
+                <Button type="submit" fullWidth loading={loading}>{t("join.joinButton")}</Button>
               </Stack>
             </form>
           </Paper>
@@ -80,22 +82,22 @@ export function JoinPage() {
       <Container size={420} w="100%">
         <Stack align="center" mb="xl">
           <IconCube size={48} color="var(--mantine-color-blue-6)" />
-          <Title order={1}>Turnier beitreten</Title>
+          <Title order={1}>{t("join.title")}</Title>
         </Stack>
         <Paper withBorder shadow="md" p="xl" radius="md">
           <form onSubmit={handleJoinAnonymous}>
             <Stack>
               {error && <Alert color="red" icon={<IconAlertCircle size={16} />}>{error}</Alert>}
-              <TextInput label="Join-Code" placeholder="z.B. A1B2C3D4" required value={joinCode}
+              <TextInput label={t("join.joinCode")} placeholder={t("join.joinCodePlaceholder")} required value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={8} />
-              <TextInput label="Username" required value={username} onChange={(e) => setUsername(e.target.value)} />
-              <PasswordInput label="Password" description="Neuer Account wird erstellt falls nötig"
+              <TextInput label={t("join.username")} required value={username} onChange={(e) => setUsername(e.target.value)} />
+              <PasswordInput label={t("join.password")} description={t("join.passwordDescription")}
                 required value={password} onChange={(e) => setPassword(e.target.value)} />
-              <Button type="submit" fullWidth loading={loading}>Beitreten</Button>
+              <Button type="submit" fullWidth loading={loading}>{t("join.joinButton")}</Button>
             </Stack>
           </form>
           <Text size="sm" c="dimmed" ta="center" mt="md">
-            Schon einen Account? <Text component="a" href="/login" c="blue" inherit>Login</Text>
+            {t("join.alreadyHaveAccount")} <Text component="a" href="/login" c="blue" inherit>{t("join.loginLink")}</Text>
           </Text>
         </Paper>
       </Container>

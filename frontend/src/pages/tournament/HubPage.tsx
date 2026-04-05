@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Title, Text, Button, Card, Group, Badge, Stack, Center, Loader, Alert, Image } from "@mantine/core";
 import { IconHandFinger, IconCards, IconTrophy } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -15,6 +16,7 @@ export function HubPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { data: tournament, loading } = useApi<TournamentDetail>(`/tournaments/${id}`);
   const { data: drafts, refetch: refetchDrafts } = useApi<Draft[]>(`/tournaments/${id}/drafts`);
 
@@ -34,15 +36,15 @@ export function HubPage() {
         <div>
           <Title order={2}>{tournament.name}</Title>
           <Text size="sm" c="dimmed">
-            {tournament.player_count} Spieler · {tournament.cube_count} Cubes · {drafts?.length ?? 0}/{tournament.max_rounds} Drafts
+            {t("dashboard.playerCount", { count: tournament.player_count })} · {t("dashboard.cubeCount", { count: tournament.cube_count })} · {drafts?.length ?? 0}/{tournament.max_rounds} {t("hub.drafts")}
           </Text>
         </div>
         <Badge color={STATUS_COLORS[tournament.status]} size="lg">{tournament.status}</Badge>
       </Group>
 
       {tournament.status === "SETUP" && (
-        <Alert color="gray" title="Warte auf Admin" mb="md">
-          Das Turnier wurde noch nicht gestartet. Voting beginnt bald.
+        <Alert color="gray" title={t("hub.waitingForAdmin")} mb="md">
+          {t("hub.waitingForAdminDesc")}
         </Alert>
       )}
 
@@ -50,7 +52,7 @@ export function HubPage() {
         <Stack gap="md">
           <Button size="lg" fullWidth leftSection={<IconHandFinger size={20} />}
             onClick={() => navigate(`/tournament/${id}/vote`)}>
-            Jetzt abstimmen
+            {t("hub.voteNow")}
           </Button>
           <InfoCards tournament={tournament} />
         </Stack>
@@ -77,16 +79,16 @@ export function HubPage() {
                     </div>
                   )}
                   <Stack p="md" gap="xs">
-                    <Badge color="orange" size="sm" w="fit-content">AKTIV</Badge>
+                    <Badge color="orange" size="sm" w="fit-content">{t("common.active").toUpperCase()}</Badge>
                     <Text fw={600} size="lg">{pod ? pod.cube_name : `Draft ${d.round_number}`}</Text>
                     {pod && (
                       <Text size="sm" c="dimmed">
-                        Pod {pod.pod_number} · Seat {pod.players.find(p => p.tournament_player_id === myPlayer?.id)?.seat_number} · {pod.pod_size} Spieler
+                        Pod {pod.pod_number} · Seat {pod.players.find(p => p.tournament_player_id === myPlayer?.id)?.seat_number} · {t("dashboard.playerCount", { count: pod.pod_size })}
                       </Text>
                     )}
                     {pod?.timer_ends_at && <Timer endsAt={pod.timer_ends_at} />}
                     <Button fullWidth mt="xs" leftSection={<IconCards size={16} />}>
-                      Zum Draft
+                      {t("hub.goToDraft")}
                     </Button>
                   </Stack>
                 </Card>
@@ -113,11 +115,11 @@ export function HubPage() {
           <Group grow>
             <Button variant="light" leftSection={<IconTrophy size={16} />}
               onClick={() => navigate(`/tournament/${id}/standings`)}>
-              Standings
+              {t("hub.standings")}
             </Button>
             <Button variant="light" leftSection={<IconHandFinger size={16} />}
               onClick={() => navigate(`/tournament/${id}/vote`)}>
-              Meine Votes
+              {t("hub.myVotes")}
             </Button>
           </Group>
         </Stack>
@@ -125,22 +127,22 @@ export function HubPage() {
 
       {tournament.status === "FINISHED" && (
         <Stack gap="md">
-          <Alert color="green" title="Turnier beendet">
-            Das Turnier ist abgeschlossen.
+          <Alert color="green" title={t("hub.tournamentFinished")}>
+            {t("hub.tournamentFinishedDesc")}
           </Alert>
           <Group grow>
             <Button variant="light" leftSection={<IconTrophy size={20} />}
               onClick={() => navigate(`/tournament/${id}/standings`)}>
-              Endergebnis
+              {t("hub.finalResults")}
             </Button>
             <Button variant="light" leftSection={<IconHandFinger size={16} />}
               onClick={() => navigate(`/tournament/${id}/vote`)}>
-              Meine Votes
+              {t("hub.myVotes")}
             </Button>
           </Group>
           {drafts && drafts.length > 0 && (
             <Stack gap="xs">
-              <Text size="sm" c="dimmed" tt="uppercase" fw={500}>Drafts</Text>
+              <Text size="sm" c="dimmed" tt="uppercase" fw={500}>{t("hub.drafts")}</Text>
               {drafts.map((d) => {
                 const pod = d.pods.find((p) => p.players.some((pp) => pp.tournament_player_id === myPlayer?.id));
                 return (
@@ -165,11 +167,12 @@ export function HubPage() {
 }
 
 function InfoCards({ tournament }: { tournament: TournamentDetail }) {
+  const { t } = useTranslation();
   return (
     <Stack gap="xs">
-      <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">Spieler</Text><Text fw={600}>{tournament.player_count}</Text></Group></Card>
-      <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">Cubes</Text><Text fw={600}>{tournament.cube_count}</Text></Group></Card>
-      <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">Max Drafts</Text><Text fw={600}>{tournament.max_rounds}</Text></Group></Card>
+      <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">{t("common.players")}</Text><Text fw={600}>{tournament.player_count}</Text></Group></Card>
+      <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">{t("common.cubes")}</Text><Text fw={600}>{tournament.cube_count}</Text></Group></Card>
+      <Card withBorder p="sm"><Group justify="space-between"><Text c="dimmed" size="sm">{t("hub.maxDrafts")}</Text><Text fw={600}>{tournament.max_rounds}</Text></Group></Card>
     </Stack>
   );
 }

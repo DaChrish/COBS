@@ -17,6 +17,7 @@ import {
   Text,
 } from "@mantine/core";
 import { IconPlus, IconTestPipe, IconCube, IconX, IconAdjustments } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import type { Tournament, Cube } from "../../api/types";
@@ -29,6 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function AdminOverview() {
+  const { t } = useTranslation();
   const { data: tournaments, refetch } = useApi<Tournament[]>("/tournaments");
   const { data: allCubes } = useApi<Cube[]>("/cubes");
   const navigate = useNavigate();
@@ -89,34 +91,34 @@ export function AdminOverview() {
   return (
     <Container size="lg">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Turniere</Title>
+        <Title order={2}>{t("admin.tournaments")}</Title>
         <Group>
           <Button
             variant="subtle"
             leftSection={<IconAdjustments size={16} />}
             onClick={() => navigate("/admin/optimizer")}
           >
-            Optimizer
+            {t("admin.optimizer")}
           </Button>
           <Button
             variant="subtle"
             leftSection={<IconCube size={16} />}
             onClick={() => navigate("/admin/cubes")}
           >
-            Cubes
+            {t("common.cubes")}
           </Button>
           <Button
             leftSection={<IconTestPipe size={16} />}
             variant="light"
             onClick={() => setTestOpen(true)}
           >
-            Test-Turnier
+            {t("admin.testTournament")}
           </Button>
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={() => setCreateOpen(true)}
           >
-            Neues Turnier
+            {t("admin.newTournament")}
           </Button>
         </Group>
       </Group>
@@ -125,27 +127,27 @@ export function AdminOverview() {
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Name</Table.Th>
+              <Table.Th>{t("common.name")}</Table.Th>
               <Table.Th>Status</Table.Th>
-              <Table.Th ta="right">Spieler</Table.Th>
-              <Table.Th ta="right">Cubes</Table.Th>
-              <Table.Th>Join-Code</Table.Th>
+              <Table.Th ta="right">{t("common.players")}</Table.Th>
+              <Table.Th ta="right">{t("common.cubes")}</Table.Th>
+              <Table.Th>{t("admin.joinCode")}</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {tournaments?.map((t) => (
+            {tournaments?.map((tr) => (
               <Table.Tr
-                key={t.id}
+                key={tr.id}
                 style={{ cursor: "pointer" }}
-                onClick={() => navigate(`/admin/tournament/${t.id}`)}
+                onClick={() => navigate(`/admin/tournament/${tr.id}`)}
               >
-                <Table.Td fw={500}>{t.name}</Table.Td>
+                <Table.Td fw={500}>{tr.name}</Table.Td>
                 <Table.Td>
-                  <Badge color={STATUS_COLORS[t.status]}>{t.status}</Badge>
+                  <Badge color={STATUS_COLORS[tr.status]}>{tr.status}</Badge>
                 </Table.Td>
-                <Table.Td ta="right">{t.player_count}</Table.Td>
-                <Table.Td ta="right">{t.cube_count}</Table.Td>
-                <Table.Td ff="monospace">{t.join_code}</Table.Td>
+                <Table.Td ta="right">{tr.player_count}</Table.Td>
+                <Table.Td ta="right">{tr.cube_count}</Table.Td>
+                <Table.Td ff="monospace">{tr.join_code}</Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
@@ -156,17 +158,17 @@ export function AdminOverview() {
       <Modal
         opened={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Neues Turnier"
+        title={t("admin.newTournament")}
         size="md"
       >
         <Stack>
           <TextInput
-            label="Name"
+            label={t("common.name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <NumberInput
-            label="Max Drafts"
+            label={t("admin.maxDrafts")}
             value={maxRounds}
             onChange={(v) => setMaxRounds(Number(v))}
             min={1}
@@ -174,11 +176,11 @@ export function AdminOverview() {
           />
           <div>
             <Text size="sm" fw={500} mb={4}>
-              Cubes
+              {t("common.cubes")}
             </Text>
             {selectedCubeIds.length === 0 && (
               <Text size="sm" c="dimmed" mb="xs">
-                Keine Cubes ausgewählt. Du kannst sie später hinzufügen.
+                {t("admin.noCubesSelected")}
               </Text>
             )}
             <Stack gap={4} mb="xs">
@@ -213,7 +215,7 @@ export function AdminOverview() {
               })}
             </Stack>
             <Select
-              placeholder="Cube hinzufügen..."
+              placeholder={t("admin.addCube")}
               data={
                 allCubes
                   ?.filter((c) => !selectedCubeIds.includes(c.id))
@@ -227,7 +229,7 @@ export function AdminOverview() {
             />
           </div>
           <Button onClick={createTournament} loading={loading}>
-            Erstellen
+            {t("common.create")}
           </Button>
         </Stack>
       </Modal>
@@ -236,36 +238,36 @@ export function AdminOverview() {
       <Modal
         opened={testOpen}
         onClose={() => setTestOpen(false)}
-        title="Test-Turnier erstellen"
+        title={t("admin.createTestTournament")}
       >
         <Stack>
           <TextInput
-            label="Name"
+            label={t("common.name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Test Tournament"
           />
           <NumberInput
-            label="Spieler"
+            label={t("common.players")}
             value={numPlayers}
             onChange={(v) => setNumPlayers(Number(v))}
             min={2}
             max={500}
           />
           <NumberInput
-            label="Cubes"
+            label={t("common.cubes")}
             value={numCubes}
             onChange={(v) => setNumCubes(Number(v))}
             min={1}
             max={200}
           />
           <NumberInput
-            label="Seed (optional)"
+            label={t("admin.seed")}
             value={seed}
             onChange={(v) => setSeed(v ? Number(v) : undefined)}
           />
           <Button onClick={createTestTournament} loading={loading}>
-            Erstellen
+            {t("common.create")}
           </Button>
         </Stack>
       </Modal>

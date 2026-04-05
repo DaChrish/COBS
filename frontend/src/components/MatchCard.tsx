@@ -1,4 +1,5 @@
 import { Paper, Group, Text, Badge, Button } from "@mantine/core";
+import { useTranslation } from "react-i18next";
 import type { Match } from "../api/types";
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function MatchCard({ match, myPlayerId, onReport, tableNumber }: Props) {
+  const { t } = useTranslation();
   const isP1 = match.player1_id === myPlayerId;
   const isP2 = match.player2_id === myPlayerId;
   const isMyMatch = isP1 || isP2;
@@ -25,7 +27,7 @@ export function MatchCard({ match, myPlayerId, onReport, tableNumber }: Props) {
       <Paper withBorder p="sm" radius="md">
         <Group justify="space-between">
           <Text size="sm">{match.player1_username}</Text>
-          <Badge color="gray">Bye — 3 Punkte</Badge>
+          <Badge color="gray">{t("match.bye")}</Badge>
         </Group>
       </Paper>
     );
@@ -45,18 +47,18 @@ export function MatchCard({ match, myPlayerId, onReport, tableNumber }: Props) {
         )}
         {match.has_conflict && (
           <>
-            <Badge color="red">Konflikt</Badge>
-            <Text size="xs" c="dimmed">Ergebnisse stimmen nicht überein — Admin wird es klären</Text>
+            <Badge color="red">{t("match.conflict")}</Badge>
+            <Text size="xs" c="dimmed">{t("match.conflictHint")}</Text>
           </>
         )}
         {!match.reported && !match.has_conflict && isMyMatch && !iReported && (
-          <Button size="compact-xs" onClick={() => onReport(match)}>Melden</Button>
+          <Button size="compact-xs" onClick={() => onReport(match)}>{t("match.report")}</Button>
         )}
         {!match.reported && !match.has_conflict && isMyMatch && iReported && (
-          <Badge color="yellow">Warte auf Gegner...</Badge>
+          <Badge color="yellow">{t("match.waitingForOpponent")}</Badge>
         )}
         {!match.reported && !match.has_conflict && !isMyMatch && (
-          <Badge color="gray">Ausstehend</Badge>
+          <Badge color="gray">{t("match.pending")}</Badge>
         )}
       </Group>
     </Paper>

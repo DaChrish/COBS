@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Modal, Stack, Text, Group, ActionIcon, Button } from "@mantine/core";
 import { IconPlus, IconMinus } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   opened: boolean;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function MatchReportModal({ opened, onClose, opponentName, onSubmit }: Props) {
+  const { t } = useTranslation();
   const [myWins, setMyWins] = useState(0);
   const [oppWins, setOppWins] = useState(0);
   const [confirming, setConfirming] = useState(false);
@@ -19,26 +21,26 @@ export function MatchReportModal({ opened, onClose, opponentName, onSubmit }: Pr
   const handleClose = () => { reset(); onClose(); };
 
   return (
-    <Modal opened={opened} onClose={handleClose} title="Ergebnis melden" centered>
+    <Modal opened={opened} onClose={handleClose} title={t("matchReport.title")} centered>
       {!confirming ? (
         <Stack>
           <Text size="sm" c="dimmed">vs. {opponentName}</Text>
-          <Counter label="Meine Wins" value={myWins} onChange={setMyWins} />
-          <Counter label="Gegner Wins" value={oppWins} onChange={setOppWins} />
+          <Counter label={t("matchReport.myWins")} value={myWins} onChange={setMyWins} />
+          <Counter label={t("matchReport.opponentWins")} value={oppWins} onChange={setOppWins} />
           <Button fullWidth onClick={() => setConfirming(true)}
             disabled={myWins === 0 && oppWins === 0}>
-            Weiter
+            {t("matchReport.next")}
           </Button>
         </Stack>
       ) : (
         <Stack>
           <Text ta="center" fw={600} size="lg">{myWins} - {oppWins}</Text>
           <Text ta="center" size="sm" c="dimmed">vs. {opponentName}</Text>
-          <Text ta="center" size="sm" c="dimmed">Bist du sicher?</Text>
+          <Text ta="center" size="sm" c="dimmed">{t("matchReport.areYouSure")}</Text>
           <Group grow>
-            <Button variant="light" onClick={() => setConfirming(false)}>Zurück</Button>
+            <Button variant="light" onClick={() => setConfirming(false)}>{t("matchReport.back")}</Button>
             <Button color="green" onClick={() => { onSubmit(myWins, oppWins); handleClose(); }}>
-              Bestätigen
+              {t("matchReport.confirm")}
             </Button>
           </Group>
         </Stack>

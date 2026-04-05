@@ -44,6 +44,7 @@ import {
   IconTrash,
   IconCopy,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
@@ -70,27 +71,30 @@ function downloadPdf(path: string, filename: string) {
     .catch((e) => alert(e.message));
 }
 
-function translateError(msg: string): string {
-  if (msg.toLowerCase().includes("missing pool/deck photo")) {
-    const match = msg.match(/(\d+) player/);
-    const count = match ? match[1] : "einigen";
-    return `POOL/DECK Fotos fehlen bei ${count} Spieler(n). Bitte Fotos hochladen lassen.`;
-  }
-  if (msg.toLowerCase().includes("missing returned photo")) {
-    const match = msg.match(/(\d+) player/);
-    const count = match ? match[1] : "einigen";
-    return `RETURNED Fotos fehlen bei ${count} Spieler(n) der vorherigen Runde.`;
-  }
-  if (msg.toLowerCase().includes("unreported match")) {
-    return "Es gibt noch offene Matches in diesem Pod.";
-  }
-  if (msg.toLowerCase().includes("unresolved match conflict")) {
-    return "Es gibt ungelöste Konflikte in diesem Pod.";
-  }
-  if (msg.toLowerCase().includes("max 3 swiss rounds")) {
-    return "Maximale Anzahl Swiss-Runden (3) erreicht.";
-  }
-  return msg;
+function useTranslateError() {
+  const { t } = useTranslation();
+  return (msg: string): string => {
+    if (msg.toLowerCase().includes("missing pool/deck photo")) {
+      const match = msg.match(/(\d+) player/);
+      const count = match ? match[1] : "?";
+      return t("translateError.missingPoolDeck", { count });
+    }
+    if (msg.toLowerCase().includes("missing returned photo")) {
+      const match = msg.match(/(\d+) player/);
+      const count = match ? match[1] : "?";
+      return t("translateError.missingReturned", { count });
+    }
+    if (msg.toLowerCase().includes("unreported match")) {
+      return t("translateError.unreportedMatch");
+    }
+    if (msg.toLowerCase().includes("unresolved match conflict")) {
+      return t("translateError.unresolvedConflict");
+    }
+    if (msg.toLowerCase().includes("max 3 swiss rounds")) {
+      return t("translateError.maxSwissRounds");
+    }
+    return msg;
+  };
 }
 
 function Countdown({ endsAt }: { endsAt: string }) {
@@ -131,6 +135,7 @@ function OverviewTab({
   tournament: TournamentDetail;
   onRefetch: () => void;
 }) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -162,7 +167,7 @@ function OverviewTab({
         <Table.Tbody>
           <Table.Tr>
             <Table.Td fw={500} w={160}>
-              Name
+              {t("common.name")}
             </Table.Td>
             <Table.Td>{tournament.name}</Table.Td>
           </Table.Tr>
@@ -190,7 +195,7 @@ function OverviewTab({
             </Table.Td>
           </Table.Tr>
           <Table.Tr>
-            <Table.Td fw={500}>Join-Code</Table.Td>
+            <Table.Td fw={500}>{t("admin.joinCode")}</Table.Td>
             <Table.Td>
               <Group gap="xs">
                 <Code style={{ fontSize: 16 }}>{tournament.join_code}</Code>
@@ -202,22 +207,22 @@ function OverviewTab({
             </Table.Td>
           </Table.Tr>
           <Table.Tr>
-            <Table.Td fw={500}>Max Rounds</Table.Td>
+            <Table.Td fw={500}>{t("adminTournament.maxRounds")}</Table.Td>
             <Table.Td>{tournament.max_rounds}</Table.Td>
           </Table.Tr>
           <Table.Tr>
-            <Table.Td fw={500}>Spieler</Table.Td>
+            <Table.Td fw={500}>{t("common.players")}</Table.Td>
             <Table.Td>{tournament.player_count}</Table.Td>
           </Table.Tr>
           <Table.Tr>
-            <Table.Td fw={500}>Cubes</Table.Td>
+            <Table.Td fw={500}>{t("common.cubes")}</Table.Td>
             <Table.Td>{tournament.cube_count}</Table.Td>
           </Table.Tr>
         </Table.Tbody>
       </Table>
       <Button variant="light" leftSection={<IconDownload size={14} />}
         onClick={() => downloadPdf(`/tournaments/${tournament.id}/export`, `${tournament.name}.zip`)}>
-        Turnier exportieren
+        {t("adminTournament.exportTournament")}
       </Button>
     </Stack>
   );
@@ -226,6 +231,7 @@ function OverviewTab({
 // ─── Cubes Tab ────────────────────────────────────────────────────────────────
 
 function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onRefetch: () => void }) {
+  const { t } = useTranslation();
   const { data: allCubes, refetch: refetchCubes } = useApi<Cube[]>("/cubes");
   const { data: voteSummary } = useApi<CubeVoteSummary[]>(`/tournaments/${tournament.id}/votes/summary`);
   const [adding, setAdding] = useState(false);
@@ -253,7 +259,7 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
       });
       onRefetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Hinzufügen");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setAdding(false);
     }
@@ -268,7 +274,7 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
       });
       onRefetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Entfernen");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setRemoving(null);
     }
@@ -283,7 +289,7 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
       setNewCubeName(meta.name);
       setNewMaxPlayers(meta.max_players ?? "");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Laden");
+      setError(e instanceof Error ? e.message : t("adminCubes.loadError"));
     } finally {
       setSaving(false);
     }
@@ -313,7 +319,7 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
       setNewCubeName("");
       setCobraPreview(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Fehler beim Erstellen");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -337,7 +343,7 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
 
       <Group>
         <Select
-          placeholder="Cube hinzufügen..."
+          placeholder={t("admin.addCube")}
           data={availableCubes.map((c) => ({ value: c.id, label: `${c.name}${c.max_players ? ` (max ${c.max_players})` : ""}` }))}
           searchable
           disabled={adding}
@@ -346,20 +352,20 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
           style={{ flex: 1 }}
         />
         <Button leftSection={<IconPlus size={16} />} variant="light" onClick={() => setCreateOpen(true)}>
-          Neuer Cube
+          {t("adminTournament.newCube")}
         </Button>
       </Group>
 
       {tournament.cubes.length === 0 ? (
-        <Text c="dimmed">Keine Cubes in diesem Turnier.</Text>
+        <Text c="dimmed">{t("adminTournament.noCubesInTournament")}</Text>
       ) : (
         <ScrollArea>
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Name</Table.Th>
-                <Table.Th ta="right">Max. Spieler</Table.Th>
-                <Table.Th>Votes</Table.Th>
+                <Table.Th>{t("common.name")}</Table.Th>
+                <Table.Th ta="right">{t("adminTournament.maxPlayers")}</Table.Th>
+                <Table.Th>{t("adminTournament.votes")}</Table.Th>
                 <Table.Th />
               </Table.Tr>
             </Table.Thead>
@@ -387,7 +393,7 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
                           </Popover.Target>
                           <Popover.Dropdown>
                             <Stack gap={2}>
-                              <Text size="xs" fw={600} c="dimmed">{vs.cube_name} — Votes</Text>
+                              <Text size="xs" fw={600} c="dimmed">{vs.cube_name} — {t("adminTournament.votes")}</Text>
                               {vs.votes.map((v, i) => (
                                 <Group key={i} justify="space-between">
                                   <Text size="xs">{v.username}</Text>
@@ -419,13 +425,13 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
         </ScrollArea>
       )}
 
-      <Modal opened={createOpen} onClose={resetCreateModal} title="Neuen Cube erstellen">
+      <Modal opened={createOpen} onClose={resetCreateModal} title={t("adminTournament.createNewCube")}>
         <Stack>
           {!cobraPreview && (
             <>
-              <TextInput label="CubeCobra ID" required placeholder="z.B. 5d8d292a884bf534916603d7" value={newCobraId} onChange={(e) => setNewCobraId(e.currentTarget.value)} />
+              <TextInput label={t("adminTournament.cubeCobraId")} required placeholder={t("adminTournament.cubeCobraPlaceholder")} value={newCobraId} onChange={(e) => setNewCobraId(e.currentTarget.value)} />
               <Button loading={saving} disabled={!newCobraId.trim()} onClick={loadCobraPreview}>
-                Laden
+                {t("common.load")}
               </Button>
             </>
           )}
@@ -441,10 +447,10 @@ function CubesTab({ tournament, onRefetch }: { tournament: TournamentDetail; onR
                   )}
                 </div>
               )}
-              <TextInput label="Name" value={newCubeName} onChange={(e) => setNewCubeName(e.currentTarget.value)} />
-              <NumberInput label="Max. Spieler" value={newMaxPlayers} onChange={setNewMaxPlayers} min={2} />
+              <TextInput label={t("common.name")} value={newCubeName} onChange={(e) => setNewCubeName(e.currentTarget.value)} />
+              <NumberInput label={t("adminTournament.maxPlayers")} value={newMaxPlayers} onChange={setNewMaxPlayers} min={2} />
               <Button loading={saving} disabled={!newCubeName.trim()} onClick={createAndAdd}>
-                Erstellen & hinzufügen
+                {t("adminTournament.createAndAdd")}
               </Button>
             </>
           )}
@@ -463,6 +469,7 @@ function PlayersTab({
   tournament: TournamentDetail;
   onRefetch: () => void;
 }) {
+  const { t } = useTranslation();
   const { token, setToken } = useAuth();
   const navigate = useNavigate();
   const [dropping, setDropping] = useState<string | null>(null);
@@ -526,12 +533,12 @@ function PlayersTab({
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Spieler</Table.Th>
-              <Table.Th ta="right">Punkte</Table.Th>
+              <Table.Th>{t("common.players")}</Table.Th>
+              <Table.Th ta="right">{t("common.points")}</Table.Th>
               <Table.Th ta="right">W</Table.Th>
               <Table.Th ta="right">L</Table.Th>
               <Table.Th>Status</Table.Th>
-              <Table.Th>Votes</Table.Th>
+              <Table.Th>{t("adminTournament.votes")}</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -549,7 +556,7 @@ function PlayersTab({
                     </Badge>
                   ) : (
                     <Badge color="green" size="xs">
-                      Aktiv
+                      {t("common.active")}
                     </Badge>
                   )}
                 </Table.Td>
@@ -574,7 +581,7 @@ function PlayersTab({
                       color="blue"
                       onClick={() => impersonate(p.user_id)}
                     >
-                      Impersonate
+                      {t("adminTournament.impersonate")}
                     </Button>
                     {!p.dropped && (
                       <Button
@@ -584,7 +591,7 @@ function PlayersTab({
                         loading={dropping === p.id}
                         onClick={() => dropPlayer(p.id)}
                       >
-                        Drop
+                        {t("adminTournament.drop")}
                       </Button>
                     )}
                   </Group>
@@ -612,6 +619,8 @@ const POD_ACCENT_COLORS = [
 ] as const;
 
 function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string; isTest: boolean; tournament: TournamentDetail }) {
+  const { t } = useTranslation();
+  const translateError = useTranslateError();
   const { token, setToken } = useAuth();
   const navigate = useNavigate();
   const { data: drafts, loading, refetch } = useApi<Draft[]>(
@@ -860,7 +869,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                   }
                 }}
               >
-                Trotzdem fortfahren
+                {t("adminTournament.forceOverride")}
               </Button>
             )}
           </Group>
@@ -869,12 +878,12 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
 
       <Group>
         <Button onClick={() => generateDraft()} loading={generating}>
-          Draft generieren
+          {t("adminTournament.generateDraft")}
         </Button>
       </Group>
 
       {drafts && drafts.length === 0 && (
-        <Text c="dimmed">Noch keine Drafts.</Text>
+        <Text c="dimmed">{t("adminTournament.noDrafts")}</Text>
       )}
 
       {drafts && drafts.length > 0 && (
@@ -886,7 +895,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
       {[...drafts].reverse().map((draft) => {
         const allDraftMatches = matchesByDraft[draft.id] ?? [];
         const currentSwiss = allDraftMatches.length > 0 ? Math.max(...allDraftMatches.map((m) => m.swiss_round)) : 0;
-        // Compute stable table numbers per pod based on pod sizes (not dependent on which pods have matches)
+        // Compute stable table numbers per pod based on pod sizes
         const podTableOffset: Record<string, number> = {};
         let tblOffset = 1;
         for (const p of draft.pods) {
@@ -897,7 +906,6 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
         const tableNumbers: Record<string, number> = {};
         for (const p of draft.pods) {
           let podTbl = podTableOffset[p.id];
-          // For each swiss round, assign table numbers to non-bye matches in this pod
           const podNonByes = allDraftMatches.filter((m) => m.pod_id === p.id && !m.is_bye);
           const rounds = [...new Set(podNonByes.map((m) => m.swiss_round))];
           for (const round of rounds) {
@@ -926,7 +934,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                   color={photoStatus[draft.id].pool_deck_ready === photoStatus[draft.id].total_players ? "green" : "yellow"}
                   leftSection={<IconCamera size={12} />}
                 >
-                  {photoStatus[draft.id].pool_deck_ready}/{photoStatus[draft.id].total_players} bereit
+                  {photoStatus[draft.id].pool_deck_ready}/{photoStatus[draft.id].total_players} {t("adminTournament.ready")}
                 </Badge>
               )}
             </Group>
@@ -960,11 +968,11 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           multiline w={250} withArrow
                           label={(() => {
                             const cubeVotes = voteSummary?.find((v) => v.cube_name === pod.cube_name);
-                            if (!cubeVotes) return "Keine Votes";
+                            if (!cubeVotes) return t("optimizerPlayground.noVotes");
                             const podPlayerIds = new Set(pod.players.map((p) => p.username));
                             const desired = cubeVotes.votes.filter((v) => v.vote === "DESIRED");
                             const avoid = cubeVotes.votes.filter((v) => v.vote === "AVOID");
-                            if (desired.length === 0 && avoid.length === 0) return "Alle neutral";
+                            if (desired.length === 0 && avoid.length === 0) return t("optimizerPlayground.allNeutral");
                             return (
                               <Stack gap={4}>
                                 {desired.length > 0 && (
@@ -1016,7 +1024,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           ) : null;
                         })()}
                         <Badge size="sm" variant="light" color={accent}>
-                          {pod.pod_size} Spieler
+                          {t("dashboard.playerCount", { count: pod.pod_size })}
                         </Badge>
                       </Group>
                     </Group>
@@ -1051,7 +1059,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                         {v.vote === "DESIRED" ? "✓" : "✗"}
                                       </Text>
                                     </Group>
-                                  )) || <Text size="xs">Alle neutral</Text>}
+                                  )) || <Text size="xs">{t("optimizerPlayground.allNeutral")}</Text>}
                                 </Stack>
                               }
                             >
@@ -1088,7 +1096,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                         <Button size="compact-xs" variant="subtle" color="red"
                           loading={settingTimer === pod.id}
                           onClick={() => setConfirmCancelTimer(pod)}>
-                          Abbrechen
+                          {t("common.cancel")}
                         </Button>
                       </Group>
                     )}
@@ -1146,7 +1154,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                               onClick={() => setResolveState({
                                                 match: m, draftId: draft.id,
                                                 p1Wins: m.p1_reported_p1_wins ?? 0, p2Wins: m.p1_reported_p2_wins ?? 0,
-                                              })}>Lösen</Button>
+                                              })}>{t("adminTournament.resolve")}</Button>
                                           ) : m.reported ? (
                                             <Badge color="green" size="xs">✓</Badge>
                                           ) : (() => {
@@ -1165,7 +1173,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                                       {p1done ? (
                                                         <Badge size="xs" color="green" variant="light">{m.p1_reported_p1_wins}–{m.p1_reported_p2_wins}</Badge>
                                                       ) : (
-                                                        <Badge size="xs" color="gray" variant="light">ausstehend</Badge>
+                                                        <Badge size="xs" color="gray" variant="light">{t("adminTournament.pendingReport")}</Badge>
                                                       )}
                                                     </Group>
                                                     <Group justify="space-between">
@@ -1173,7 +1181,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                                       {p2done ? (
                                                         <Badge size="xs" color="green" variant="light">{m.p2_reported_p1_wins}–{m.p2_reported_p2_wins}</Badge>
                                                       ) : (
-                                                        <Badge size="xs" color="gray" variant="light">ausstehend</Badge>
+                                                        <Badge size="xs" color="gray" variant="light">{t("adminTournament.pendingReport")}</Badge>
                                                       )}
                                                     </Group>
                                                   </Stack>
@@ -1207,9 +1215,9 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           {hasPodMatches ? (
                             <Group gap="xs">
                               <Text size="xs" c="dimmed">
-                                {podMatches.filter((m) => m.reported).length}/{podMatches.length} gemeldet
+                                {t("adminTournament.podReported", { reported: podMatches.filter((m) => m.reported).length, total: podMatches.length })}
                               </Text>
-                              {podConflicts.length > 0 && <Badge color="red" size="xs">{podConflicts.length} Konflikte</Badge>}
+                              {podConflicts.length > 0 && <Badge color="red" size="xs">{podConflicts.length} {t("adminTournament.conflicts")}</Badge>}
                             </Group>
                           ) : <div />}
                           <Group gap="xs">
@@ -1217,14 +1225,14 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                               <Button size="compact-xs" variant="light"
                                 loading={pairingFor === pod.id}
                                 onClick={() => generatePairings(draft.id, pod.id)}>
-                                Pairings
+                                {t("adminTournament.pairings")}
                               </Button>
                             )}
                             {podAllReported && podSwissRound < 3 && (
                               <Button size="compact-xs" variant="light"
                                 loading={pairingFor === pod.id}
                                 onClick={() => generatePairings(draft.id, pod.id)}>
-                                Nächste Runde
+                                {t("adminTournament.nextRound")}
                               </Button>
                             )}
                             {hasPodMatches && !podAllReported && !pod.timer_ends_at && (
@@ -1237,7 +1245,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                   loading={settingTimer === pod.id}
                                   leftSection={<IconClock size={12} />}
                                   onClick={() => setTimerForPod(pod, timerMinutes[pod.id] ?? 50)}>
-                                  Timer
+                                  {t("adminTournament.timer")}
                                 </Button>
                               </Group>
                             )}
@@ -1261,25 +1269,25 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                 {hasMatches && (
                   <Group gap="xs">
                     <Text size="sm" c="dimmed">
-                      {allMatches.filter((m) => m.reported).length}/{allMatches.length} Matches gemeldet
+                      {t("adminTournament.matchesReported", { reported: allMatches.filter((m) => m.reported).length, total: allMatches.length })}
                     </Text>
-                    {conflicts.length > 0 && <Badge color="red" size="xs">{conflicts.length} Konflikte</Badge>}
+                    {conflicts.length > 0 && <Badge color="red" size="xs">{conflicts.length} {t("adminTournament.conflicts")}</Badge>}
                   </Group>
                 )}
                 <Group gap="xs">
                   <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
                     onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pods/pdf`, `pods-runde${draft.round_number}.pdf`)}>
-                    Pods PDF
+                    {t("adminTournament.podsPdf")}
                   </Button>
                   {hasMatches && (
                     <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
                       onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pairings/pdf`, `pairings-runde${draft.round_number}.pdf`)}>
-                      Pairings PDF
+                      {t("adminTournament.pairingsPdf")}
                     </Button>
                   )}
                   <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
                     onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/export`, `Draft${draft.round_number}.zip`)}>
-                    Export ZIP
+                    {t("adminTournament.exportZip")}
                   </Button>
                   {hasMatches && !allReported && draft.status !== "FINISHED" && (
                     <Group gap={4}>
@@ -1291,7 +1299,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                         loading={settingTimer === "all"}
                         leftSection={<IconClock size={14} />}
                         onClick={() => setTimerForAllPods(draft.pods, timerMinutes["_bulk"] ?? 50)}>
-                        Timer
+                        {t("adminTournament.timer")}
                       </Button>
                     </Group>
                   )}
@@ -1309,14 +1317,14 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
               <Group gap="xs">
                 {hasOpenMatches && (
                   <>
-                    <Button size="xs" variant="light" color="green" loading={simulating === "results"} onClick={() => simulateResults(false)}>Ergebnisse simulieren</Button>
-                    <Button size="xs" variant="light" color="red" loading={simulating === "conflicts"} onClick={() => simulateResults(true)}>Ergebnisse + Konflikte</Button>
+                    <Button size="xs" variant="light" color="green" loading={simulating === "results"} onClick={() => simulateResults(false)}>{t("adminTournament.simulateResults")}</Button>
+                    <Button size="xs" variant="light" color="red" loading={simulating === "conflicts"} onClick={() => simulateResults(true)}>{t("adminTournament.simulateResultsConflicts")}</Button>
                   </>
                 )}
                 {(hasPhotoGaps || !hasMatches) && (
                   <>
-                    <Button size="xs" variant="light" color="blue" loading={simulating === "photos"} onClick={() => simulatePhotos(false)}>Fotos simulieren</Button>
-                    <Button size="xs" variant="light" color="orange" loading={simulating === "photos-incomplete"} onClick={() => simulatePhotos(true)}>Fotos (lückenhaft)</Button>
+                    <Button size="xs" variant="light" color="blue" loading={simulating === "photos"} onClick={() => simulatePhotos(false)}>{t("adminTournament.simulatePhotos")}</Button>
+                    <Button size="xs" variant="light" color="orange" loading={simulating === "photos-incomplete"} onClick={() => simulatePhotos(true)}>{t("adminTournament.simulatePhotosIncomplete")}</Button>
                   </>
                 )}
               </Group>
@@ -1370,7 +1378,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                       </div>
                     ) : (
                       <Paper withBorder p="xl" radius="md" style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
-                        <Text c="red" size="sm">Fehlt</Text>
+                        <Text c="red" size="sm">{t("common.missing")}</Text>
                       </Paper>
                     )}
                   </Stack>
@@ -1396,7 +1404,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                   }
                 }}
               >
-                Als {selectedPlayer.player.username} anmelden
+                {t("adminTournament.loginAs", { username: selectedPlayer.player.username })}
               </Button>
             )}
           </Stack>
@@ -1420,44 +1428,44 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
               href={fullscreenPhoto}
               download
             >
-              Download
+              {t("common.download")}
             </Button>
           </Stack>
         )}
       </Modal>
-      <Modal opened={resolveState !== null} onClose={() => setResolveState(null)} title="Konflikt lösen">
+      <Modal opened={resolveState !== null} onClose={() => setResolveState(null)} title={t("adminTournament.resolveConflict")}>
         {resolveState && (
           <Stack>
             <Text><strong>{resolveState.match.player1_username}</strong> vs.{" "}
               <strong>{resolveState.match.player2_username ?? "—"}</strong></Text>
             {resolveState.match.p1_reported_p1_wins !== null && (
-              <Text size="sm" c="dimmed">Gemeldet von Sp.1: {resolveState.match.p1_reported_p1_wins} – {resolveState.match.p1_reported_p2_wins}</Text>
+              <Text size="sm" c="dimmed">{t("adminTournament.reportedByP1")}: {resolveState.match.p1_reported_p1_wins} – {resolveState.match.p1_reported_p2_wins}</Text>
             )}
             {resolveState.match.p2_reported_p1_wins !== null && (
-              <Text size="sm" c="dimmed">Gemeldet von Sp.2: {resolveState.match.p2_reported_p1_wins} – {resolveState.match.p2_reported_p2_wins}</Text>
+              <Text size="sm" c="dimmed">{t("adminTournament.reportedByP2")}: {resolveState.match.p2_reported_p1_wins} – {resolveState.match.p2_reported_p2_wins}</Text>
             )}
-            <NumberInput label={`Siege ${resolveState.match.player1_username}`}
+            <NumberInput label={t("adminTournament.winsFor", { player: resolveState.match.player1_username })}
               value={resolveState.p1Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p1Wins: Number(v) } : s)} min={0} max={3} />
-            <NumberInput label={`Siege ${resolveState.match.player2_username ?? "Spieler 2"}`}
+            <NumberInput label={t("adminTournament.winsFor", { player: resolveState.match.player2_username ?? "Player 2" })}
               value={resolveState.p2Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p2Wins: Number(v) } : s)} min={0} max={3} />
-            <Button onClick={resolveMatch} loading={resolving} color="red">Ergebnis festlegen</Button>
+            <Button onClick={resolveMatch} loading={resolving} color="red">{t("adminTournament.setResult")}</Button>
           </Stack>
         )}
       </Modal>
       <Modal
         opened={confirmCancelTimer !== null}
         onClose={() => setConfirmCancelTimer(null)}
-        title="Timer abbrechen?"
+        title={t("adminTournament.cancelTimer")}
         size="sm"
       >
         {confirmCancelTimer && (
           <Stack>
             <Text size="sm">
-              Timer für Pod {confirmCancelTimer.pod_number} ({confirmCancelTimer.cube_name}) wirklich abbrechen?
+              {t("adminTournament.cancelTimerConfirm", { pod: confirmCancelTimer.pod_number, cube: confirmCancelTimer.cube_name })}
             </Text>
             <Group justify="flex-end" gap="xs">
               <Button variant="light" size="xs" onClick={() => setConfirmCancelTimer(null)}>
-                Nein
+                {t("common.no")}
               </Button>
               <Button color="red" size="xs"
                 loading={settingTimer === confirmCancelTimer.id}
@@ -1465,7 +1473,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                   await clearTimerForPod(confirmCancelTimer);
                   setConfirmCancelTimer(null);
                 }}>
-                Ja, abbrechen
+                {t("adminTournament.yesCancelTimer")}
               </Button>
             </Group>
           </Stack>
@@ -1478,6 +1486,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
 // ─── Standings Tab ───────────────────────────────────────────────────────────
 
 function StandingsTab({ tournamentId }: { tournamentId: string }) {
+  const { t } = useTranslation();
   const { data: standings, loading } = useApi<StandingsEntry[]>(
     `/tournaments/${tournamentId}/standings`
   );
@@ -1499,19 +1508,19 @@ function StandingsTab({ tournamentId }: { tournamentId: string }) {
           leftSection={<IconDownload size={14} />}
           onClick={() => downloadPdf(`/tournaments/${tournamentId}/standings/pdf`, "standings.pdf")}
         >
-          Standings PDF
+          {t("adminTournament.standingsPdf")}
         </Button>
       </Group>
       {(!standings || standings.length === 0) ? (
-        <Text c="dimmed">Keine Standings vorhanden.</Text>
+        <Text c="dimmed">{t("adminTournament.noStandings")}</Text>
       ) : (
         <ScrollArea>
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th ta="right">#</Table.Th>
-                <Table.Th>Spieler</Table.Th>
-                <Table.Th ta="right">Punkte</Table.Th>
+                <Table.Th>{t("common.players")}</Table.Th>
+                <Table.Th ta="right">{t("common.points")}</Table.Th>
                 <Table.Th ta="right">W-L-D</Table.Th>
                 <Table.Th ta="right">OMW%</Table.Th>
                 <Table.Th ta="right">GW%</Table.Th>
@@ -1549,6 +1558,7 @@ function StandingsTab({ tournamentId }: { tournamentId: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function AdminTournament() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { data: tournament, loading, refetch } = useApi<TournamentDetail>(
     id ? `/tournaments/${id}` : null
@@ -1567,7 +1577,7 @@ export function AdminTournament() {
     return (
       <Container>
         <Alert color="red" icon={<IconAlertTriangle size={16} />}>
-          Turnier nicht gefunden.
+          {t("adminTournament.tournamentNotFound")}
         </Alert>
       </Container>
     );
@@ -1583,42 +1593,37 @@ export function AdminTournament() {
       <Tabs value={activeTab} onChange={setActiveTab} keepMounted={false}>
         <Tabs.List mb="md">
           <Tabs.Tab value="overview" leftSection={<IconInfoCircle size={16} />}>
-            Übersicht
+            {t("adminTournament.overview")}
           </Tabs.Tab>
           <Tabs.Tab value="cubes" leftSection={<IconCube size={16} />}>
-            Cubes
+            {t("common.cubes")}
           </Tabs.Tab>
           <Tabs.Tab value="players" leftSection={<IconUsers size={16} />}>
-            Spieler ({tournament.player_count})
+            {t("adminTournament.players")} ({tournament.player_count})
           </Tabs.Tab>
           <Tabs.Tab value="drafts" leftSection={<IconCards size={16} />}>
-            Drafts
+            {t("adminTournament.drafts")}
           </Tabs.Tab>
           <Tabs.Tab value="standings" leftSection={<IconTrophy size={16} />}>
-            Standings
+            {t("adminTournament.standings")}
           </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="overview">
           <OverviewTab tournament={tournament} onRefetch={refetch} />
         </Tabs.Panel>
-
         <Tabs.Panel value="cubes">
           <CubesTab tournament={tournament} onRefetch={refetch} />
         </Tabs.Panel>
-
         <Tabs.Panel value="players">
           <PlayersTab tournament={tournament} onRefetch={refetch} />
         </Tabs.Panel>
-
         <Tabs.Panel value="drafts">
-          <DraftsTab tournamentId={id} isTest={tournament.is_test} tournament={tournament} />
+          <DraftsTab tournamentId={id} isTest={tournament.name.toLowerCase().includes("test")} tournament={tournament} />
         </Tabs.Panel>
-
         <Tabs.Panel value="standings">
           <StandingsTab tournamentId={id} />
         </Tabs.Panel>
-
       </Tabs>
     </Container>
   );

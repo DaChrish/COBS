@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ActionIcon, Button, Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput, Badge, Image } from "@mantine/core";
 import { IconUpload, IconChevronLeft, IconChevronRight, IconTrophy } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -15,6 +16,7 @@ export function DraftPage() {
   const { id, round } = useParams<{ id: string; round: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { data: tournament } = useApi<TournamentDetail>(`/tournaments/${id}`);
   const { data: drafts, refetch: refetchDrafts } = useApi<Draft[]>(`/tournaments/${id}/drafts`);
   const draft = drafts?.find((d) => d.round_number === Number(round));
@@ -95,7 +97,7 @@ export function DraftPage() {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (!res.ok) throw new Error("Upload fehlgeschlagen");
+      if (!res.ok) throw new Error(t("draft.uploadFailed"));
       // Refresh photos
       const photos = await apiFetch<Record<string, string | null>>(`/tournaments/${id}/drafts/${draft.id}/photos/mine`);
       setMyPhotos(photos);
@@ -124,7 +126,7 @@ export function DraftPage() {
         </Group>
         <Button variant="light" size="xs" leftSection={<IconTrophy size={14} />}
           onClick={() => navigate(`/tournament/${id}/standings`)}>
-          Standings
+          {t("draft.standings")}
         </Button>
       </Group>
 
@@ -145,10 +147,10 @@ export function DraftPage() {
               </div>
             )}
             <Stack p="md" gap="xs">
-              <Text size="sm" c="dimmed" tt="uppercase">Dein Pod</Text>
+              <Text size="sm" c="dimmed" tt="uppercase">{t("draft.yourPod")}</Text>
               <Text fw={600} size="lg">{myPod.cube_name}</Text>
               <Text size="sm" c="dimmed">
-                Pod {myPod.pod_number} · Seat {myPod.players.find((p) => p.tournament_player_id === myPlayer?.id)?.seat_number} · {myPod.pod_size} Spieler
+                Pod {myPod.pod_number} · Seat {myPod.players.find((p) => p.tournament_player_id === myPlayer?.id)?.seat_number} · {t("dashboard.playerCount", { count: myPod.pod_size })}
               </Text>
               <Group mt="xs" gap="xs">
                 {myPod.players.map((pp) => (
@@ -162,7 +164,7 @@ export function DraftPage() {
         );
       })()}
 
-      <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Matches</Text>
+      <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">{t("draft.matches")}</Text>
       {myMatches.length > 0 ? (
         <Stack gap="sm" mb="md">
           {(() => {
@@ -184,12 +186,12 @@ export function DraftPage() {
         <Card withBorder mb="md" padding="md" radius="md" bg="var(--mantine-color-blue-light)">
           <Group gap="xs" align="center">
             <Loader size="xs" />
-            <Text size="sm">Warte auf Pairings... Dein Gegner wird gleich ermittelt.</Text>
+            <Text size="sm">{t("draft.waitingForPairings")}</Text>
           </Group>
         </Card>
       )}
 
-      <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">Fotos</Text>
+      <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">{t("draft.photos")}</Text>
       <Stack gap="xs">
         {(["POOL", "DECK", "RETURNED"] as const).map((type) => (
           <Card key={type} withBorder padding="xs" radius="md">
@@ -197,19 +199,19 @@ export function DraftPage() {
               <Group gap="xs" align="center">
                 <Text size="sm" fw={500} w={80}>{type}</Text>
                 {type === "RETURNED" && (
-                  <Text size="xs" c="dimmed" ml="xs">(nach der letzten Runde)</Text>
+                  <Text size="xs" c="dimmed" ml="xs">{t("draft.afterLastRound")}</Text>
                 )}
                 {myPhotos[type] ? (
-                  <Badge color="green" size="xs" variant="light">Hochgeladen</Badge>
+                  <Badge color="green" size="xs" variant="light">{t("common.uploaded")}</Badge>
                 ) : (
-                  <Badge color="gray" size="xs" variant="light">Fehlt</Badge>
+                  <Badge color="gray" size="xs" variant="light">{t("common.missing")}</Badge>
                 )}
               </Group>
               {isDraftActive && (
                 <FileInput
                   size="xs"
                   w={200}
-                  placeholder={myPhotos[type] ? "Ersetzen..." : "Hochladen..."}
+                  placeholder={myPhotos[type] ? t("draft.replace") : t("draft.upload")}
                   accept="image/*"
                   leftSection={<IconUpload size={14} />}
                   onChange={(f) => handlePhotoUpload(f, type)}

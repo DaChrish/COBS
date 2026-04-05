@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button, Container, Group, Title, Table, Badge, Text, Center, Loader, ScrollArea, Tooltip } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
 import type { StandingsEntry, TournamentDetail } from "../../api/types";
@@ -9,6 +10,7 @@ export function StandingsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { data: standings, loading } = useApi<StandingsEntry[]>(`/tournaments/${id}/standings`);
   const { data: tournament } = useApi<TournamentDetail>(`/tournaments/${id}`);
 
@@ -19,10 +21,10 @@ export function StandingsPage() {
   return (
     <Container size="md">
       <Group justify="space-between" mb="md" align="center">
-        <Title order={3}>Standings</Title>
+        <Title order={3}>{t("standings.title")}</Title>
         <Button variant="light" size="xs" leftSection={<IconArrowLeft size={14} />}
           onClick={() => navigate(`/tournament/${id}`)}>
-          Zurück
+          {t("common.back")}
         </Button>
       </Group>
       <ScrollArea>
@@ -30,21 +32,21 @@ export function StandingsPage() {
           <Table.Thead>
             <Table.Tr>
               <Table.Th>#</Table.Th>
-              <Table.Th>Spieler</Table.Th>
-              <Table.Th ta="right">Punkte</Table.Th>
+              <Table.Th>{t("standings.player")}</Table.Th>
+              <Table.Th ta="right">{t("standings.points")}</Table.Th>
               <Table.Th ta="right">W-L-D</Table.Th>
               <Table.Th ta="right">
-                <Tooltip events={{ hover: true, touch: true, focus: true }} label="Opponent Match Win % — Durchschnittliche Siegquote deiner Gegner" withArrow>
+                <Tooltip events={{ hover: true, touch: true, focus: true }} label={t("standings.omwTooltip")} withArrow>
                   <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>OMW%</Text>
                 </Tooltip>
               </Table.Th>
               <Table.Th ta="right">
-                <Tooltip events={{ hover: true, touch: true, focus: true }} label="Game Win % — Deine Einzelspiel-Siegquote (2-0 besser als 2-1)" withArrow>
+                <Tooltip events={{ hover: true, touch: true, focus: true }} label={t("standings.gwTooltip")} withArrow>
                   <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>GW%</Text>
                 </Tooltip>
               </Table.Th>
               <Table.Th ta="right">
-                <Tooltip events={{ hover: true, touch: true, focus: true }} label="Opponent Game Win % — Durchschnittliche Einzelspiel-Siegquote deiner Gegner" withArrow>
+                <Tooltip events={{ hover: true, touch: true, focus: true }} label={t("standings.ogwTooltip")} withArrow>
                   <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>OGW%</Text>
                 </Tooltip>
               </Table.Th>
