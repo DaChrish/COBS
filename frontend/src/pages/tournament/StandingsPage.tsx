@@ -34,17 +34,17 @@ export function StandingsPage() {
               <Table.Th ta="right">Punkte</Table.Th>
               <Table.Th ta="right">W-L-D</Table.Th>
               <Table.Th ta="right">
-                <Tooltip label="Opponent Match Win % — Durchschnittliche Siegquote deiner Gegner" withArrow>
+                <Tooltip events={{ hover: true, touch: true, focus: true }} label="Opponent Match Win % — Durchschnittliche Siegquote deiner Gegner" withArrow>
                   <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>OMW%</Text>
                 </Tooltip>
               </Table.Th>
               <Table.Th ta="right">
-                <Tooltip label="Game Win % — Deine Einzelspiel-Siegquote (2-0 besser als 2-1)" withArrow>
+                <Tooltip events={{ hover: true, touch: true, focus: true }} label="Game Win % — Deine Einzelspiel-Siegquote (2-0 besser als 2-1)" withArrow>
                   <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>GW%</Text>
                 </Tooltip>
               </Table.Th>
               <Table.Th ta="right">
-                <Tooltip label="Opponent Game Win % — Durchschnittliche Einzelspiel-Siegquote deiner Gegner" withArrow>
+                <Tooltip events={{ hover: true, touch: true, focus: true }} label="Opponent Game Win % — Durchschnittliche Einzelspiel-Siegquote deiner Gegner" withArrow>
                   <Text span size="sm" style={{ cursor: "help", textDecoration: "underline dotted" }}>OGW%</Text>
                 </Tooltip>
               </Table.Th>

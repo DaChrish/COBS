@@ -956,7 +956,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                         <Text size="xs" c="dimmed">
                           ·
                         </Text>
-                        <Tooltip
+                        <Tooltip events={{ hover: true, touch: true, focus: true }}
                           multiline w={250} withArrow
                           label={(() => {
                             const cubeVotes = voteSummary?.find((v) => v.cube_name === pod.cube_name);
@@ -1035,7 +1035,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           );
                           const hasPoolDeck = ps?.pool && ps?.deck;
                           return (
-                            <Tooltip
+                            <Tooltip events={{ hover: true, touch: true, focus: true }}
                               key={p.tournament_player_id}
                               multiline
                               w={250}

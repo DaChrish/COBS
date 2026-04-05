@@ -516,7 +516,7 @@ export function OptimizerPlayground() {
                       return (
                         <Paper key={i} withBorder p="md" radius="md">
                           <Group justify="space-between" mb="xs">
-                            <Tooltip multiline w={250} withArrow label={(() => {
+                            <Tooltip events={{ hover: true, touch: true, focus: true }} multiline w={250} withArrow label={(() => {
                               if (!cubeVotes) return "Keine Votes";
                               const desired = cubeVotes.votes.filter((v) => v.vote === "DESIRED");
                               const avoid = cubeVotes.votes.filter((v) => v.vote === "AVOID");
@@ -559,7 +559,7 @@ export function OptimizerPlayground() {
                           </Group>
                           <Group gap={6} wrap="wrap">
                             {pod.players.map((p) => (
-                              <Tooltip key={p.id} multiline w={250} withArrow label={
+                              <Tooltip events={{ hover: true, touch: true, focus: true }} key={p.id} multiline w={250} withArrow label={
                                 <Stack gap={2}>
                                   {playerAllVotes[p.username]?.length ? playerAllVotes[p.username].map((v, j) => (
                                     <Group key={j} justify="space-between" gap="xs">
@@ -954,7 +954,7 @@ export function OptimizerPlayground() {
                                             const podPlayerIds = new Set((pod.players || []).map((p: any) => p.id));
                                             return (
                                               <Paper key={pi} withBorder p="xs" radius="sm" style={{ minWidth: 220 }}>
-                                                <Tooltip multiline w={250} withArrow label={(() => {
+                                                <Tooltip events={{ hover: true, touch: true, focus: true }} multiline w={250} withArrow label={(() => {
                                                   if (!sim.cube_votes) return pod.cube;
                                                   const cv = sim.cube_votes.find((c: any) => c.cube === pod.cube);
                                                   if (!cv) return pod.cube;
@@ -973,7 +973,7 @@ export function OptimizerPlayground() {
                                                     const pVotes = sim.player_votes?.[p.id] || {};
                                                     const voteEntries = Object.entries(pVotes).filter(([, v]) => v !== "NEUTRAL");
                                                     return (
-                                                      <Tooltip key={p.id} multiline w={200} withArrow label={
+                                                      <Tooltip events={{ hover: true, touch: true, focus: true }} key={p.id} multiline w={200} withArrow label={
                                                         voteEntries.length > 0 ? (
                                                           <Stack gap={2}>
                                                             {voteEntries.map(([cid, v]: [string, any]) => (
