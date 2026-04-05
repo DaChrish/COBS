@@ -287,7 +287,6 @@ export function OptimizerPlayground() {
     setBScoreWant(5.0);
     setBScoreAvoid(-200.0);
     setBScoreNeutral(0.0);
-    setBMatchPenalty(100000.0);
     setBEarlyBonus(3.0);
     setBLowerBonus(0.3);
     setBRepeatMult(4.0);

@@ -173,6 +173,9 @@ export interface BatchAnalysis {
   simulations: {
     desired_pct: number; neutral_pct: number; avoid_pct: number;
     total_desired: number; total_neutral: number; total_avoid: number;
+    objective?: number;
+    cube_votes?: { cube: string; desired: number; neutral: number; avoid: number }[];
+    player_votes?: Record<string, Record<string, string>>;
     drafts?: { round: number; desired_pct: number; neutral_pct: number; avoid_pct: number }[];
   }[];
   total_time_ms: number;
