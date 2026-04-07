@@ -182,6 +182,8 @@
     "simulatePhotos": "Fotos simulieren",
     "simulatePhotosIncomplete": "Fotos (lückenhaft)",
     "resolveConflict": "Konflikt lösen",
+    "editMatch": "Match bearbeiten",
+    "matchReadonly": "Ergebnis kann nicht mehr geändert werden — nächste Runde oder Draft wurde bereits gestartet.",
     "reportedByP1": "Gemeldet von Sp.1",
     "reportedByP2": "Gemeldet von Sp.2",
     "winsFor": "Siege {{player}}",

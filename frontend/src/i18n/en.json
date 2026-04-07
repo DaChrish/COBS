@@ -182,6 +182,8 @@
     "simulatePhotos": "Simulate Photos",
     "simulatePhotosIncomplete": "Photos (incomplete)",
     "resolveConflict": "Resolve Conflict",
+    "editMatch": "Edit Match",
+    "matchReadonly": "Result can no longer be changed — next round or draft has already started.",
     "reportedByP1": "Reported by P1",
     "reportedByP2": "Reported by P2",
     "winsFor": "Wins {{player}}",

@@ -98,6 +98,7 @@ export interface Match {
   is_bye: boolean;
   reported: boolean;
   has_conflict: boolean;
+  editable: boolean;
   p1_reported_p1_wins: number | null;
   p1_reported_p2_wins: number | null;
   p2_reported_p1_wins: number | null;

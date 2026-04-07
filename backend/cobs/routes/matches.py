@@ -360,6 +360,7 @@ async def generate_pod_pairings(
         .order_by(Match.swiss_round)
     )
     matches = match_result.scalars().all()
+    max_round = max((m.swiss_round for m in matches), default=0)
     return [
         MatchResponse(
             id=m.id,
@@ -374,6 +375,7 @@ async def generate_pod_pairings(
             is_bye=m.is_bye,
             reported=m.reported,
             has_conflict=m.has_conflict,
+            editable=m.swiss_round == max_round,  # just generated, no later draft possible
             p1_reported_p1_wins=m.p1_reported_p1_wins,
             p1_reported_p2_wins=m.p1_reported_p2_wins,
             p2_reported_p1_wins=m.p2_reported_p1_wins,
@@ -482,14 +484,23 @@ async def resolve_match(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Admin resolves a match conflict or manually sets result."""
+    """Admin resolves a match conflict or manually sets/edits result."""
     match = await _get_match(match_id, db)
+
+    if not await _is_match_editable(match, db):
+        raise HTTPException(status_code=400, detail="Match can no longer be edited — next round or draft already started")
+
+    was_reported = match.reported
 
     match.player1_wins = body.player1_wins
     match.player2_wins = body.player2_wins
     match.reported = True
     match.has_conflict = False
-    await _update_player_points(match, db)
+
+    # Re-aggregate all points for both players across all their pod matches
+    await _reaggregate_player_points(match.player1_id, db)
+    if match.player2_id:
+        await _reaggregate_player_points(match.player2_id, db)
 
     await db.commit()
     await db.refresh(match)
@@ -497,7 +508,7 @@ async def resolve_match(
 
 
 async def _update_player_points(match: Match, db: AsyncSession):
-    """Update tournament player match points and game records."""
+    """Update tournament player match points and game records (incremental, for player reports)."""
     p1 = await db.execute(
         select(TournamentPlayer).where(TournamentPlayer.id == match.player1_id)
     )
@@ -520,6 +531,82 @@ async def _update_player_points(match: Match, db: AsyncSession):
         else:
             tp1.match_points += 1
             tp2.match_points += 1
+
+
+async def _reaggregate_player_points(player_id: uuid.UUID, db: AsyncSession):
+    """Re-aggregate all match/game points for a player from their match records."""
+    tp_result = await db.execute(
+        select(TournamentPlayer).where(TournamentPlayer.id == player_id)
+    )
+    tp = tp_result.scalar_one()
+
+    # Find all reported matches involving this player
+    matches_result = await db.execute(
+        select(Match).where(
+            Match.reported.is_(True),
+            (Match.player1_id == player_id) | (Match.player2_id == player_id),
+        )
+    )
+    matches = matches_result.scalars().all()
+
+    match_points = 0
+    game_wins = 0
+    game_losses = 0
+
+    for m in matches:
+        is_p1 = m.player1_id == player_id
+        if m.is_bye:
+            match_points += 3
+            game_wins += 2
+        elif is_p1:
+            game_wins += m.player1_wins
+            game_losses += m.player2_wins
+            if m.player1_wins > m.player2_wins:
+                match_points += 3
+            elif m.player1_wins == m.player2_wins:
+                match_points += 1
+        else:
+            game_wins += m.player2_wins
+            game_losses += m.player1_wins
+            if m.player2_wins > m.player1_wins:
+                match_points += 3
+            elif m.player1_wins == m.player2_wins:
+                match_points += 1
+
+    tp.match_points = match_points
+    tp.game_wins = game_wins
+    tp.game_losses = game_losses
+
+
+async def _is_match_editable(match: Match, db: AsyncSession) -> bool:
+    """A match is editable if no subsequent swiss round exists in the same pod,
+    and (for the last swiss round) no subsequent draft exists in the tournament."""
+    # Check if a later swiss round exists in this pod
+    later_round = await db.execute(
+        select(Match).where(
+            Match.pod_id == match.pod_id,
+            Match.swiss_round > match.swiss_round,
+        )
+    )
+    if later_round.scalars().first():
+        return False
+
+    # For the latest swiss round: check if a later draft exists
+    pod_result = await db.execute(select(Pod).where(Pod.id == match.pod_id))
+    pod = pod_result.scalar_one()
+    draft_result = await db.execute(select(Draft).where(Draft.id == pod.draft_id))
+    draft = draft_result.scalar_one()
+
+    later_draft = await db.execute(
+        select(Draft).where(
+            Draft.tournament_id == draft.tournament_id,
+            Draft.round_number > draft.round_number,
+        )
+    )
+    if later_draft.scalars().first():
+        return False
+
+    return True
 
 
 async def _get_draft(draft_id: uuid.UUID, tournament_id: uuid.UUID, db: AsyncSession) -> Draft:
@@ -552,8 +639,29 @@ async def _get_draft_matches(draft_id: uuid.UUID, db: AsyncSession) -> list[Matc
         .order_by(Match.swiss_round, Match.pod_id)
     )
     matches = result.scalars().all()
-    return [
-        MatchResponse(
+
+    # Pre-compute editability: a match is editable if no later round exists in its pod
+    # Group matches by pod to determine max swiss round per pod
+    pod_max_round: dict[uuid.UUID, int] = {}
+    for m in matches:
+        pod_max_round[m.pod_id] = max(pod_max_round.get(m.pod_id, 0), m.swiss_round)
+
+    # Check if a later draft exists (needed for last-round matches)
+    draft_result = await db.execute(select(Draft).where(Draft.id == draft_id))
+    draft_obj = draft_result.scalar_one()
+    later_draft_result = await db.execute(
+        select(Draft).where(
+            Draft.tournament_id == draft_obj.tournament_id,
+            Draft.round_number > draft_obj.round_number,
+        )
+    )
+    has_later_draft = later_draft_result.scalars().first() is not None
+
+    responses = []
+    for m in matches:
+        is_latest_round = m.swiss_round == pod_max_round[m.pod_id]
+        editable = is_latest_round and not has_later_draft
+        responses.append(MatchResponse(
             id=m.id,
             pod_id=m.pod_id,
             swiss_round=m.swiss_round,
@@ -566,13 +674,13 @@ async def _get_draft_matches(draft_id: uuid.UUID, db: AsyncSession) -> list[Matc
             is_bye=m.is_bye,
             reported=m.reported,
             has_conflict=m.has_conflict,
+            editable=editable,
             p1_reported_p1_wins=m.p1_reported_p1_wins,
             p1_reported_p2_wins=m.p1_reported_p2_wins,
             p2_reported_p1_wins=m.p2_reported_p1_wins,
             p2_reported_p2_wins=m.p2_reported_p2_wins,
-        )
-        for m in matches
-    ]
+        ))
+    return responses
 
 
 async def _match_to_response(match: Match, db: AsyncSession) -> MatchResponse:
@@ -585,6 +693,8 @@ async def _match_to_response(match: Match, db: AsyncSession) -> MatchResponse:
         p2_user = (await db.execute(
             select(TournamentPlayer).where(TournamentPlayer.id == match.player2_id).options(selectinload(TournamentPlayer.user))
         )).scalar_one()
+
+    editable = await _is_match_editable(match, db)
 
     return MatchResponse(
         id=match.id,
@@ -599,6 +709,7 @@ async def _match_to_response(match: Match, db: AsyncSession) -> MatchResponse:
         is_bye=match.is_bye,
         reported=match.reported,
         has_conflict=match.has_conflict,
+        editable=editable,
         p1_reported_p1_wins=match.p1_reported_p1_wins,
         p1_reported_p2_wins=match.p1_reported_p2_wins,
         p2_reported_p1_wins=match.p2_reported_p1_wins,

@@ -16,6 +16,7 @@ class MatchResponse(BaseModel):
     is_bye: bool
     reported: bool
     has_conflict: bool
+    editable: bool = False
     p1_reported_p1_wins: int | None
     p1_reported_p2_wins: int | None
     p2_reported_p1_wins: int | None

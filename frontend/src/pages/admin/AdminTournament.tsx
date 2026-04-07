@@ -701,7 +701,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
   };
   const [matchesByDraft, setMatchesByDraft] = useState<Record<string, Match[]>>({});
   const [resolveState, setResolveState] = useState<{
-    match: Match; draftId: string; p1Wins: number; p2Wins: number;
+    match: Match; draftId: string; p1Wins: number; p2Wins: number; readonly: boolean;
   } | null>(null);
   const [resolving, setResolving] = useState(false);
 
@@ -1126,10 +1126,23 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                 </Accordion.Control>
                                 <Accordion.Panel>
                                   <Stack gap={4}>
-                                    {roundMatches.map((m) => (
+                                    {roundMatches.map((m) => {
+                                      const openMatchModal = () => {
+                                        if (m.is_bye) return;
+                                        // Pre-fill: use final result > P1's report > P2's report > zeros
+                                        const p1w = m.reported ? m.player1_wins : m.p1_reported_p1_wins ?? m.p2_reported_p1_wins ?? 0;
+                                        const p2w = m.reported ? m.player2_wins : m.p1_reported_p2_wins ?? m.p2_reported_p2_wins ?? 0;
+                                        setResolveState({
+                                          match: m, draftId: draft.id,
+                                          p1Wins: p1w, p2Wins: p2w,
+                                          readonly: !m.editable,
+                                        });
+                                      };
+                                      return (
                                       <Group key={m.id} justify="space-between" px="xs" py={4}
-                                        style={{ borderRadius: 4 }}
-                                        bg={m.has_conflict ? "var(--mantine-color-red-light)" : undefined}>
+                                        style={{ borderRadius: 4, cursor: m.is_bye ? undefined : "pointer" }}
+                                        bg={m.has_conflict ? "var(--mantine-color-red-light)" : undefined}
+                                        onClick={openMatchModal}>
                                         {tableNumbers[m.id] && (
                                           <Text size="xs" c="dimmed" w={24} ta="center" style={{ flexShrink: 0 }}>
                                             T{tableNumbers[m.id]}
@@ -1150,50 +1163,23 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                                           {m.is_bye ? (
                                             <Badge color="gray" size="xs">Bye</Badge>
                                           ) : m.has_conflict ? (
-                                            <Button size="compact-xs" color="red" variant="light"
-                                              onClick={() => setResolveState({
-                                                match: m, draftId: draft.id,
-                                                p1Wins: m.p1_reported_p1_wins ?? 0, p2Wins: m.p1_reported_p2_wins ?? 0,
-                                              })}>{t("adminTournament.resolve")}</Button>
+                                            <Badge color="red" size="xs">{t("adminTournament.resolve")}</Badge>
                                           ) : m.reported ? (
-                                            <Badge color="green" size="xs">✓</Badge>
+                                            <Badge color="green" size="xs">{"\u2713"}</Badge>
                                           ) : (() => {
                                             const p1done = m.p1_reported_p1_wins !== null;
                                             const p2done = m.p2_reported_p1_wins !== null;
                                             const anyReported = p1done || p2done;
                                             return anyReported ? (
-                                              <Popover width={200} position="bottom" withArrow>
-                                                <Popover.Target>
-                                                  <Badge color="yellow" size="xs" style={{ cursor: "pointer" }}>1/2</Badge>
-                                                </Popover.Target>
-                                                <Popover.Dropdown>
-                                                  <Stack gap={2}>
-                                                    <Group justify="space-between">
-                                                      <Text size="xs">{m.player1_username}</Text>
-                                                      {p1done ? (
-                                                        <Badge size="xs" color="green" variant="light">{m.p1_reported_p1_wins}–{m.p1_reported_p2_wins}</Badge>
-                                                      ) : (
-                                                        <Badge size="xs" color="gray" variant="light">{t("adminTournament.pendingReport")}</Badge>
-                                                      )}
-                                                    </Group>
-                                                    <Group justify="space-between">
-                                                      <Text size="xs">{m.player2_username}</Text>
-                                                      {p2done ? (
-                                                        <Badge size="xs" color="green" variant="light">{m.p2_reported_p1_wins}–{m.p2_reported_p2_wins}</Badge>
-                                                      ) : (
-                                                        <Badge size="xs" color="gray" variant="light">{t("adminTournament.pendingReport")}</Badge>
-                                                      )}
-                                                    </Group>
-                                                  </Stack>
-                                                </Popover.Dropdown>
-                                              </Popover>
+                                              <Badge color="yellow" size="xs">1/2</Badge>
                                             ) : (
-                                              <Badge color="gray" size="xs">⏳</Badge>
+                                              <Badge color="gray" size="xs">{"\u23F3"}</Badge>
                                             );
                                           })()}
                                         </div>
                                       </Group>
-                                    ))}
+                                      );
+                                    })}
                                   </Stack>
                                 </Accordion.Panel>
                               </Accordion.Item>
@@ -1433,7 +1419,8 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
           </Stack>
         )}
       </Modal>
-      <Modal opened={resolveState !== null} onClose={() => setResolveState(null)} title={t("adminTournament.resolveConflict")}>
+      <Modal opened={resolveState !== null} onClose={() => setResolveState(null)}
+        title={resolveState?.match.has_conflict ? t("adminTournament.resolveConflict") : t("adminTournament.editMatch")}>
         {resolveState && (
           <Stack>
             <Text><strong>{resolveState.match.player1_username}</strong> vs.{" "}
@@ -1444,11 +1431,20 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
             {resolveState.match.p2_reported_p1_wins !== null && (
               <Text size="sm" c="dimmed">{t("adminTournament.reportedByP2")}: {resolveState.match.p2_reported_p1_wins} – {resolveState.match.p2_reported_p2_wins}</Text>
             )}
+            {resolveState.readonly && (
+              <Alert color="yellow" variant="light">{t("adminTournament.matchReadonly")}</Alert>
+            )}
             <NumberInput label={t("adminTournament.winsFor", { player: resolveState.match.player1_username })}
-              value={resolveState.p1Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p1Wins: Number(v) } : s)} min={0} max={3} />
+              value={resolveState.p1Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p1Wins: Number(v) } : s)}
+              min={0} max={3} disabled={resolveState.readonly} />
             <NumberInput label={t("adminTournament.winsFor", { player: resolveState.match.player2_username ?? "Player 2" })}
-              value={resolveState.p2Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p2Wins: Number(v) } : s)} min={0} max={3} />
-            <Button onClick={resolveMatch} loading={resolving} color="red">{t("adminTournament.setResult")}</Button>
+              value={resolveState.p2Wins} onChange={(v) => setResolveState((s) => s ? { ...s, p2Wins: Number(v) } : s)}
+              min={0} max={3} disabled={resolveState.readonly} />
+            {!resolveState.readonly && (
+              <Button onClick={resolveMatch} loading={resolving} color={resolveState.match.has_conflict ? "red" : "blue"}>
+                {t("adminTournament.setResult")}
+              </Button>
+            )}
           </Stack>
         )}
       </Modal>
