@@ -1,4 +1,5 @@
-import { Paper, Group, Text, Badge, Button } from "@mantine/core";
+import { Paper, Group, Text, Badge, Button, Stack, Alert } from "@mantine/core";
+import { IconCamera } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import type { Match } from "../api/types";
 
@@ -7,9 +8,10 @@ interface Props {
   myPlayerId: string | undefined;
   onReport: (match: Match) => void;
   tableNumber?: number;
+  needsCheckoutPhoto?: boolean;
 }
 
-export function MatchCard({ match, myPlayerId, onReport, tableNumber }: Props) {
+export function MatchCard({ match, myPlayerId, onReport, tableNumber, needsCheckoutPhoto }: Props) {
   const { t } = useTranslation();
   const isP1 = match.player1_id === myPlayerId;
   const isP2 = match.player2_id === myPlayerId;
@@ -33,34 +35,50 @@ export function MatchCard({ match, myPlayerId, onReport, tableNumber }: Props) {
     );
   }
 
+  const showCheckoutHint = !match.reported && !match.has_conflict && isMyMatch && !iReported && needsCheckoutPhoto;
+
   return (
     <Paper withBorder p="sm" radius="md">
-      <Group justify="space-between" wrap="nowrap">
-        <Group gap="xs" style={{ minWidth: 0 }}>
-          {tableNumber && <Text size="xs" c="dimmed" fw={600}>T{tableNumber}</Text>}
-          <Text size="sm" fw={500}>
-            {isMyMatch ? `vs. ${opponentName}` : `${match.player1_username} vs. ${match.player2_username}`}
-          </Text>
+      <Stack gap="xs">
+        <Group justify="space-between" wrap="nowrap">
+          <Group gap="xs" style={{ minWidth: 0 }}>
+            {tableNumber && <Text size="xs" c="dimmed" fw={600}>T{tableNumber}</Text>}
+            <Text size="sm" fw={500}>
+              {isMyMatch ? `vs. ${opponentName}` : `${match.player1_username} vs. ${match.player2_username}`}
+            </Text>
+          </Group>
+          {match.reported && (
+            <Badge color="green">{match.player1_wins}-{match.player2_wins} {"\u2713"}</Badge>
+          )}
+          {match.has_conflict && (
+            <>
+              <Badge color="red">{t("match.conflict")}</Badge>
+              <Text size="xs" c="dimmed">{t("match.conflictHint")}</Text>
+            </>
+          )}
+          {!match.reported && !match.has_conflict && isMyMatch && !iReported && !needsCheckoutPhoto && (
+            <Button size="compact-xs" onClick={() => onReport(match)}>{t("match.report")}</Button>
+          )}
+          {!match.reported && !match.has_conflict && isMyMatch && iReported && (
+            <Badge color="yellow">{t("match.waitingForOpponent")}</Badge>
+          )}
+          {!match.reported && !match.has_conflict && !isMyMatch && (
+            <Badge color="gray">{t("match.pending")}</Badge>
+          )}
         </Group>
-        {match.reported && (
-          <Badge color="green">{match.player1_wins}-{match.player2_wins} ✓</Badge>
+        {showCheckoutHint && (
+          <Alert color="orange" variant="light" p="xs">
+            <Stack gap={4}>
+              <Text size="xs">{t("match.checkoutRequired")}</Text>
+              <Button size="compact-xs" variant="light" color="orange"
+                leftSection={<IconCamera size={14} />}
+                onClick={() => document.getElementById("photos-section")?.scrollIntoView({ behavior: "smooth" })}>
+                {t("match.uploadCheckout")}
+              </Button>
+            </Stack>
+          </Alert>
         )}
-        {match.has_conflict && (
-          <>
-            <Badge color="red">{t("match.conflict")}</Badge>
-            <Text size="xs" c="dimmed">{t("match.conflictHint")}</Text>
-          </>
-        )}
-        {!match.reported && !match.has_conflict && isMyMatch && !iReported && (
-          <Button size="compact-xs" onClick={() => onReport(match)}>{t("match.report")}</Button>
-        )}
-        {!match.reported && !match.has_conflict && isMyMatch && iReported && (
-          <Badge color="yellow">{t("match.waitingForOpponent")}</Badge>
-        )}
-        {!match.reported && !match.has_conflict && !isMyMatch && (
-          <Badge color="gray">{t("match.pending")}</Badge>
-        )}
-      </Group>
+      </Stack>
     </Paper>
   );
 }

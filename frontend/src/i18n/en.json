@@ -75,7 +75,9 @@
     "conflictHint": "Results don't match — Admin will resolve",
     "report": "Report",
     "waitingForOpponent": "Waiting for opponent...",
-    "pending": "Pending"
+    "pending": "Pending",
+    "checkoutRequired": "Please upload your checkout photo showing your entire draft pool. Results for round 3 can be reported after.",
+    "uploadCheckout": "Upload checkout photo"
   },
   "matchReport": {
     "title": "Report Result",

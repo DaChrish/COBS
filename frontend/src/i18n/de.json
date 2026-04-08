@@ -75,7 +75,9 @@
     "conflictHint": "Ergebnisse stimmen nicht überein — Admin wird es klären",
     "report": "Melden",
     "waitingForOpponent": "Warte auf Gegner...",
-    "pending": "Ausstehend"
+    "pending": "Ausstehend",
+    "checkoutRequired": "Bitte lade das Checkout-Foto mit deinem gesamten Draftpool hoch. Danach können die Ergebnisse für Runde 3 gemeldet werden.",
+    "uploadCheckout": "Checkout-Foto hochladen"
   },
   "matchReport": {
     "title": "Ergebnis melden",

@@ -175,7 +175,8 @@ export function DraftPage() {
                 <Stack key={round} gap="xs">
                   {rounds.length > 1 && <Text size="xs" c="dimmed" fw={600}>Swiss {round}</Text>}
                   {roundMatches.map((m) => (
-                    <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} tableNumber={tableNumbers[m.id]} />
+                    <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} tableNumber={tableNumbers[m.id]}
+                      needsCheckoutPhoto={m.swiss_round >= 3 && !myPhotos.RETURNED} />
                   ))}
                 </Stack>
               );
@@ -191,7 +192,7 @@ export function DraftPage() {
         </Card>
       )}
 
-      <Text fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">{t("draft.photos")}</Text>
+      <Text id="photos-section" fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">{t("draft.photos")}</Text>
       <Stack gap="xs">
         {(["POOL", "DECK", "RETURNED"] as const).map((type) => (
           <Card key={type} withBorder padding="xs" radius="md">
