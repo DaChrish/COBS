@@ -1615,7 +1615,7 @@ export function AdminTournament() {
           <PlayersTab tournament={tournament} onRefetch={refetch} />
         </Tabs.Panel>
         <Tabs.Panel value="drafts">
-          <DraftsTab tournamentId={id} isTest={tournament.name.toLowerCase().includes("test")} tournament={tournament} />
+          <DraftsTab tournamentId={id} isTest={tournament.is_test} tournament={tournament} />
         </Tabs.Panel>
         <Tabs.Panel value="standings">
           <StandingsTab tournamentId={id} />
