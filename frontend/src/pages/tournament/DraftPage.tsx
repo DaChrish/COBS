@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ActionIcon, Button, Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput, Badge, Image } from "@mantine/core";
-import { IconUpload, IconChevronLeft, IconChevronRight, IconTrophy } from "@tabler/icons-react";
+import { ActionIcon, Button, Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput, Badge, Image, Modal } from "@mantine/core";
+import { IconUpload, IconChevronLeft, IconChevronRight, IconTrophy, IconDownload, IconZoomIn, IconZoomOut, IconZoomReset } from "@tabler/icons-react";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
@@ -34,6 +35,7 @@ export function DraftPage() {
   const [reportMatch, setReportMatch] = useState<Match | null>(null);
   const [uploading, setUploading] = useState(false);
   const [myPhotos, setMyPhotos] = useState<Record<string, string | null>>({ POOL: null, DECK: null, RETURNED: null });
+  const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
 
   // Load existing photos
   useEffect(() => {
@@ -226,11 +228,41 @@ export function DraftPage() {
                 fit="contain"
                 h={150}
                 mt="xs"
+                style={{ cursor: "pointer" }}
+                onClick={() => setFullscreenPhoto(`/api${myPhotos[type]}`)}
               />
             )}
           </Card>
         ))}
       </Stack>
+
+      <Modal opened={fullscreenPhoto !== null} onClose={() => setFullscreenPhoto(null)}
+        fullScreen padding={0} withCloseButton
+        styles={{ close: { position: "absolute", top: 12, right: 12, zIndex: 10 }, body: { height: "100%", display: "flex", flexDirection: "column" } }}>
+        {fullscreenPhoto && (
+          <TransformWrapper minScale={1} maxScale={5} doubleClick={{ mode: "toggle", step: 2 }} pinch={{ step: 5 }}>
+            {({ zoomIn, zoomOut, resetTransform }) => (
+              <Stack gap={0} h="100%">
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}
+                    contentStyle={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img src={fullscreenPhoto} alt="" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                  </TransformComponent>
+                </div>
+                <Group justify="center" gap="xs" p="sm">
+                  <ActionIcon variant="light" size="lg" onClick={() => zoomOut()}><IconZoomOut size={18} /></ActionIcon>
+                  <ActionIcon variant="light" size="lg" onClick={() => resetTransform()}><IconZoomReset size={18} /></ActionIcon>
+                  <ActionIcon variant="light" size="lg" onClick={() => zoomIn()}><IconZoomIn size={18} /></ActionIcon>
+                  <Button size="sm" variant="light" leftSection={<IconDownload size={16} />}
+                    component="a" href={fullscreenPhoto} download>
+                    {t("common.download")}
+                  </Button>
+                </Group>
+              </Stack>
+            )}
+          </TransformWrapper>
+        )}
+      </Modal>
 
       <MatchReportModal
         opened={!!reportMatch}
