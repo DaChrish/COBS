@@ -195,12 +195,12 @@ export function DraftPage() {
       <Text id="photos-section" fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">{t("draft.photos")}</Text>
       <Stack gap="xs">
         {(["POOL", "DECK", "RETURNED"] as const).map((type) => (
-          <Card key={type} withBorder padding="xs" radius="md">
-            <Group justify="space-between" align="center">
+          <Card key={type} withBorder padding="sm" radius="md">
+            <Stack gap="xs">
               <Group gap="xs" align="center">
-                <Text size="sm" fw={500} w={80}>{type}</Text>
+                <Text size="sm" fw={500}>{type}</Text>
                 {type === "RETURNED" && (
-                  <Text size="xs" c="dimmed" ml="xs">{t("draft.afterLastRound")}</Text>
+                  <Text size="xs" c="dimmed">{t("draft.afterLastRound")}</Text>
                 )}
                 {myPhotos[type] ? (
                   <Badge color="green" size="xs" variant="light">{t("common.uploaded")}</Badge>
@@ -210,16 +210,15 @@ export function DraftPage() {
               </Group>
               {isDraftActive && (
                 <FileInput
-                  size="xs"
-                  w={200}
+                  size="md"
                   placeholder={myPhotos[type] ? t("draft.replace") : t("draft.upload")}
                   accept="image/*"
-                  leftSection={<IconUpload size={14} />}
+                  leftSection={<IconUpload size={18} />}
                   onChange={(f) => handlePhotoUpload(f, type)}
                   disabled={uploading}
                 />
               )}
-            </Group>
+            </Stack>
             {myPhotos[type] && (
               <Image
                 src={`/api${myPhotos[type]}`}
