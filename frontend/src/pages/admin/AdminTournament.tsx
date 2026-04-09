@@ -49,6 +49,7 @@ import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { PhotoViewer } from "../../components/PhotoViewer";
 import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry, Cube, CubeVoteSummary } from "../../api/types";
 
 function downloadPdf(path: string, filename: string) {
@@ -1396,29 +1397,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
           </Stack>
         )}
       </Modal>
-      <Modal
-        opened={fullscreenPhoto !== null}
-        onClose={() => setFullscreenPhoto(null)}
-        size="xl"
-        padding={0}
-        withCloseButton
-      >
-        {fullscreenPhoto && (
-          <Stack gap="xs" p="md">
-            <MantineImage src={fullscreenPhoto} radius="md" fit="contain" />
-            <Button
-              size="xs"
-              variant="light"
-              leftSection={<IconDownload size={14} />}
-              component="a"
-              href={fullscreenPhoto}
-              download
-            >
-              {t("common.download")}
-            </Button>
-          </Stack>
-        )}
-      </Modal>
+      <PhotoViewer src={fullscreenPhoto} onClose={() => setFullscreenPhoto(null)} />
       <Modal opened={resolveState !== null} onClose={() => setResolveState(null)}
         title={resolveState?.match.has_conflict ? t("adminTournament.resolveConflict") : t("adminTournament.editMatch")}>
         {resolveState && (
