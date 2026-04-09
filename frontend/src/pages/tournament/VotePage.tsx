@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Alert, Badge, Container, Title, Text, Button, Card, Group, Stack, Center, Loader, ActionIcon, Image, SegmentedControl, Paper } from "@mantine/core";
+import { Alert, Badge, Container, Title, Text, Button, Card, Group, Stack, Center, Loader, ActionIcon, Image, SegmentedControl, Paper, UnstyledButton } from "@mantine/core";
 import { IconThumbUp, IconThumbDown, IconMinus, IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../api/client";
@@ -66,7 +66,7 @@ export function VotePage() {
     <Container size="sm">
       <Group justify="space-between" mb="md">
         <Title order={3}>{readonly ? t("vote.myVotes") : t("vote.cubeVoting")}</Title>
-        <SegmentedControl size="xs" value={viewMode} onChange={(v) => setViewMode(v as "card" | "list")}
+        <SegmentedControl size="sm" value={viewMode} onChange={(v) => setViewMode(v as "card" | "list")}
           data={[{ label: t("vote.cards"), value: "card" }, { label: t("vote.list"), value: "list" }]} />
       </Group>
       {readonly && (
@@ -105,11 +105,11 @@ export function VotePage() {
               )}
             </Stack>
             <Group grow p="md" pt={0}>
-              <VoteButton icon={<IconThumbDown />} color="red" label={t("vote.avoid")}
+              <VoteButton icon={<IconThumbDown size={28} />} color="red" label={t("vote.avoid")}
                 active={votes[currentCube.id] === "AVOID"} onClick={() => setVote(currentCube.id, "AVOID")} />
-              <VoteButton icon={<IconMinus />} color="gray" label={t("vote.neutral")}
+              <VoteButton icon={<IconMinus size={28} />} color="gray" label={t("vote.neutral")}
                 active={votes[currentCube.id] === "NEUTRAL"} onClick={() => setVote(currentCube.id, "NEUTRAL")} />
-              <VoteButton icon={<IconThumbUp />} color="green" label={t("vote.desired")}
+              <VoteButton icon={<IconThumbUp size={28} />} color="green" label={t("vote.desired")}
                 active={votes[currentCube.id] === "DESIRED"} onClick={() => setVote(currentCube.id, "DESIRED")} />
             </Group>
           </Card>
@@ -127,33 +127,34 @@ export function VotePage() {
         <Stack gap="xs">
           {cubes.map((cube) => (
             <Paper key={cube.id} withBorder p="sm" radius="md">
-              <Group justify="space-between" wrap="nowrap">
-                <div style={{ minWidth: 0 }}>
-                  <Text fw={500} truncate>{cube.cube_name}</Text>
-                  {cube.cube_description?.startsWith("http") ? (
-                    <Text size="xs" c="dimmed" truncate component="a" href={cube.cube_description} target="_blank" style={{ textDecoration: "underline" }}>
-                      {cube.cube_description}
-                    </Text>
-                  ) : (
-                    <Text size="xs" c="dimmed" truncate>{cube.cube_description}</Text>
+              <Stack gap="xs">
+                <Group justify="space-between" wrap="nowrap">
+                  <Text fw={500}>{cube.cube_name}</Text>
+                  {readonly && (
+                    <Badge color={votes[cube.id] === "DESIRED" ? "green" : votes[cube.id] === "AVOID" ? "red" : "gray"}
+                      variant="light" size="sm">
+                      {votes[cube.id] || "NEUTRAL"}
+                    </Badge>
                   )}
-                </div>
-                {readonly ? (
-                  <Badge color={votes[cube.id] === "DESIRED" ? "green" : votes[cube.id] === "AVOID" ? "red" : "gray"}
-                    variant="light" size="sm">
-                    {votes[cube.id] || "NEUTRAL"}
-                  </Badge>
-                ) : (
-                  <Group gap={4} wrap="nowrap">
-                    <ActionIcon color="red" variant={votes[cube.id] === "AVOID" ? "filled" : "subtle"} size="sm"
-                      onClick={() => setVote(cube.id, "AVOID")}><IconThumbDown size={14} /></ActionIcon>
-                    <ActionIcon color="gray" variant={votes[cube.id] === "NEUTRAL" ? "filled" : "subtle"} size="sm"
-                      onClick={() => setVote(cube.id, "NEUTRAL")}><IconMinus size={14} /></ActionIcon>
-                    <ActionIcon color="green" variant={votes[cube.id] === "DESIRED" ? "filled" : "subtle"} size="sm"
-                      onClick={() => setVote(cube.id, "DESIRED")}><IconThumbUp size={14} /></ActionIcon>
+                </Group>
+                {cube.cube_description?.startsWith("http") ? (
+                  <Text size="xs" c="dimmed" component="a" href={cube.cube_description} target="_blank" style={{ textDecoration: "underline" }}>
+                    {cube.cube_description}
+                  </Text>
+                ) : cube.cube_description ? (
+                  <Text size="xs" c="dimmed">{cube.cube_description}</Text>
+                ) : null}
+                {!readonly && (
+                  <Group gap={6} grow>
+                    <ActionIcon color="red" variant={votes[cube.id] === "AVOID" ? "filled" : "subtle"} size="lg"
+                      onClick={() => setVote(cube.id, "AVOID")}><IconThumbDown size={18} /></ActionIcon>
+                    <ActionIcon color="gray" variant={votes[cube.id] === "NEUTRAL" ? "filled" : "subtle"} size="lg"
+                      onClick={() => setVote(cube.id, "NEUTRAL")}><IconMinus size={18} /></ActionIcon>
+                    <ActionIcon color="green" variant={votes[cube.id] === "DESIRED" ? "filled" : "subtle"} size="lg"
+                      onClick={() => setVote(cube.id, "DESIRED")}><IconThumbUp size={18} /></ActionIcon>
                   </Group>
                 )}
-              </Group>
+              </Stack>
             </Paper>
           ))}
         </Stack>
@@ -169,7 +170,15 @@ function VoteButton({ icon, color, label, active, onClick }: {
   icon: React.ReactNode; color: string; label: string; active: boolean; onClick: () => void;
 }) {
   return (
-    <Button variant={active ? "filled" : "light"} color={color} onClick={onClick}
-      leftSection={icon} size="md">{label}</Button>
+    <UnstyledButton onClick={onClick}
+      style={{
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+        padding: "12px 8px", borderRadius: 8, flex: 1,
+        background: active ? `var(--mantine-color-${color}-filled)` : `var(--mantine-color-${color}-light)`,
+        color: active ? "white" : `var(--mantine-color-${color}-light-color)`,
+      }}>
+      {icon}
+      <Text size="xs" ta="center" style={{ color: "inherit" }}>{label}</Text>
+    </UnstyledButton>
   );
 }

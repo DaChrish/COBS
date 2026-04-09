@@ -61,7 +61,7 @@ export function MatchCard({ match, myPlayerId, onReport, tableNumber, needsCheck
             </>
           )}
           {!match.reported && !match.has_conflict && isMyMatch && !iReported && !needsCheckoutPhoto && (
-            <Button size="compact-xs" onClick={() => onReport(match)}>{t("match.report")}</Button>
+            <Button size="sm" onClick={() => onReport(match)}>{t("match.report")}</Button>
           )}
           {!match.reported && !match.has_conflict && isMyMatch && iReported && (
             <Badge color="yellow">{t("match.waitingForOpponent")}</Badge>
@@ -74,8 +74,8 @@ export function MatchCard({ match, myPlayerId, onReport, tableNumber, needsCheck
           <Alert color="orange" variant="light" p="xs">
             <Stack gap={4}>
               <Text size="xs">{t("match.checkoutRequired")}</Text>
-              <Button size="compact-xs" variant="light" color="orange"
-                leftSection={<IconCamera size={14} />}
+              <Button size="sm" variant="light" color="orange"
+                leftSection={<IconCamera size={16} />}
                 onClick={() => document.getElementById("photos-section")?.scrollIntoView({ behavior: "smooth" })}>
                 {t("match.uploadCheckout")}
               </Button>

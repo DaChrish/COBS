@@ -22,7 +22,7 @@ export function StandingsPage() {
     <Container size="md">
       <Group justify="space-between" mb="md" align="center">
         <Title order={3}>{t("standings.title")}</Title>
-        <Button variant="light" size="xs" leftSection={<IconArrowLeft size={14} />}
+        <Button variant="light" size="sm" leftSection={<IconArrowLeft size={16} />}
           onClick={() => navigate(`/tournament/${id}`)}>
           {t("common.back")}
         </Button>

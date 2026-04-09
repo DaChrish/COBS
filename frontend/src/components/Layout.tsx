@@ -35,7 +35,7 @@ export function Layout() {
             {user && (
               <Menu shadow="md" width={200}>
                 <Menu.Target>
-                  <Button variant="subtle" size="compact-sm" leftSection={<IconUser size={16} />}>
+                  <Button variant="subtle" size="sm" leftSection={<IconUser size={16} />}>
                     {user.username}
                   </Button>
                 </Menu.Target>

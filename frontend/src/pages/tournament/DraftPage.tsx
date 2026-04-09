@@ -124,7 +124,7 @@ export function DraftPage() {
             <IconChevronRight size={20} />
           </ActionIcon>
         </Group>
-        <Button variant="light" size="xs" leftSection={<IconTrophy size={14} />}
+        <Button variant="light" size="sm" leftSection={<IconTrophy size={16} />}
           onClick={() => navigate(`/tournament/${id}/standings`)}>
           {t("draft.standings")}
         </Button>

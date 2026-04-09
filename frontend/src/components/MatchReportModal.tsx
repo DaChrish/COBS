@@ -54,12 +54,12 @@ function Counter({ label, value, onChange }: { label: string; value: number; onC
     <Group justify="space-between">
       <Text>{label}</Text>
       <Group gap="xs">
-        <ActionIcon variant="light" onClick={() => onChange(Math.max(0, value - 1))} disabled={value === 0}>
-          <IconMinus size={16} />
+        <ActionIcon variant="light" size="xl" onClick={() => onChange(Math.max(0, value - 1))} disabled={value === 0}>
+          <IconMinus size={20} />
         </ActionIcon>
-        <Text fw={700} w={30} ta="center">{value}</Text>
-        <ActionIcon variant="light" onClick={() => onChange(value + 1)}>
-          <IconPlus size={16} />
+        <Text fw={700} w={30} ta="center" size="lg">{value}</Text>
+        <ActionIcon variant="light" size="xl" onClick={() => onChange(value + 1)}>
+          <IconPlus size={20} />
         </ActionIcon>
       </Group>
     </Group>
