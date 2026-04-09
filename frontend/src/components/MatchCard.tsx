@@ -47,9 +47,13 @@ export function MatchCard({ match, myPlayerId, onReport, tableNumber, needsCheck
               {isMyMatch ? `vs. ${opponentName}` : `${match.player1_username} vs. ${match.player2_username}`}
             </Text>
           </Group>
-          {match.reported && (
-            <Badge color="green">{match.player1_wins}-{match.player2_wins} {"\u2713"}</Badge>
-          )}
+          {match.reported && (() => {
+            const myWins = isP1 ? match.player1_wins : match.player2_wins;
+            const oppWins = isP1 ? match.player2_wins : match.player1_wins;
+            const display = isMyMatch ? `${myWins}-${oppWins}` : `${match.player1_wins}-${match.player2_wins}`;
+            const color = !isMyMatch ? "gray" : myWins > oppWins ? "green" : myWins < oppWins ? "red" : "orange";
+            return <Badge color={color}>{display} {"\u2713"}</Badge>;
+          })()}
           {match.has_conflict && (
             <>
               <Badge color="red">{t("match.conflict")}</Badge>
