@@ -88,37 +88,89 @@ def generate_swiss_pairings(
             pairings.append(SwissPairing(player1_id=p1["id"], player2_id=p2["id"], is_bye=False))
         return SwissResult(pairings=pairings, warnings=warnings)
 
-    # Round 2+: Standard Swiss by points (no seat tiebreaker — greedy seat optimization
-    # doesn't produce globally optimal results)
-    paired: set[str] = set()
-    remaining = list(players_to_match)
+    # Round 2+: Standard Swiss by points. Backtracking search prefers pairing within
+    # the same point group and guarantees a rematch-free solution whenever one exists.
+    solution = _find_pairing(players_to_match, played_pairs)
 
-    for i in range(len(remaining)):
-        if remaining[i]["id"] in paired:
-            continue
+    if solution is not None:
+        for p1, p2 in solution:
+            pairings.append(SwissPairing(player1_id=p1["id"], player2_id=p2["id"], is_bye=False))
+        return SwissResult(pairings=pairings, warnings=warnings)
 
-        p1 = remaining[i]
-        best_match = None
-
-        for j in range(i + 1, len(remaining)):
-            if remaining[j]["id"] in paired:
-                continue
-            pair_key = "-".join(sorted([p1["id"], remaining[j]["id"]]))
-            if pair_key not in played_pairs:
-                best_match = remaining[j]
-                break
-
-        # Fallback: allow repeat pairings
-        if best_match is None:
-            for j in range(i + 1, len(remaining)):
-                if remaining[j]["id"] not in paired:
-                    best_match = remaining[j]
-                    warnings.append(f"Repeat pairing: {p1['id']} vs {remaining[j]['id']}")
-                    break
-
-        if best_match:
-            paired.add(p1["id"])
-            paired.add(best_match["id"])
-            pairings.append(SwissPairing(player1_id=p1["id"], player2_id=best_match["id"], is_bye=False))
+    # No rematch-free pairing exists (e.g. too many rounds for pod size).
+    # Fall back to a greedy pairing that permits repeats, emitting warnings.
+    fallback = _greedy_pairing_with_repeats(players_to_match, played_pairs, warnings)
+    for p1, p2 in fallback:
+        pairings.append(SwissPairing(player1_id=p1["id"], player2_id=p2["id"], is_bye=False))
 
     return SwissResult(pairings=pairings, warnings=warnings)
+
+
+def _find_pairing(
+    players: list[dict], played_pairs: set[str]
+) -> list[tuple[dict, dict]] | None:
+    """Recursive backtracking search for a rematch-free pairing.
+
+    Players are already sorted by match points desc. To preserve Swiss intent,
+    each candidate opponent is tried in order of point-difference ascending,
+    so same-point-group pairings are preferred.
+    """
+    if not players:
+        return []
+
+    p1 = players[0]
+    rest = players[1:]
+
+    candidates = sorted(
+        range(len(rest)),
+        key=lambda idx: abs(p1["match_points"] - rest[idx]["match_points"]),
+    )
+
+    for idx in candidates:
+        p2 = rest[idx]
+        pair_key = "-".join(sorted([p1["id"], p2["id"]]))
+        if pair_key in played_pairs:
+            continue
+        remaining = rest[:idx] + rest[idx + 1 :]
+        tail = _find_pairing(remaining, played_pairs)
+        if tail is not None:
+            return [(p1, p2), *tail]
+
+    return None
+
+
+def _greedy_pairing_with_repeats(
+    players: list[dict], played_pairs: set[str], warnings: list[str]
+) -> list[tuple[dict, dict]]:
+    """Last-resort pairing when no rematch-free solution exists."""
+    paired: set[str] = set()
+    result: list[tuple[dict, dict]] = []
+
+    for i, p1 in enumerate(players):
+        if p1["id"] in paired:
+            continue
+
+        best_match = None
+        for j in range(i + 1, len(players)):
+            p2 = players[j]
+            if p2["id"] in paired:
+                continue
+            pair_key = "-".join(sorted([p1["id"], p2["id"]]))
+            if pair_key not in played_pairs:
+                best_match = p2
+                break
+
+        if best_match is None:
+            for j in range(i + 1, len(players)):
+                p2 = players[j]
+                if p2["id"] not in paired:
+                    best_match = p2
+                    warnings.append(f"Repeat pairing: {p1['id']} vs {p2['id']}")
+                    break
+
+        if best_match is not None:
+            paired.add(p1["id"])
+            paired.add(best_match["id"])
+            result.append((p1, best_match))
+
+    return result
