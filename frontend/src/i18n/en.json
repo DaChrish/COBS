@@ -123,7 +123,11 @@
     "afterLastRound": "(after the last round)",
     "uploadFailed": "Upload failed",
     "replace": "Replace...",
-    "upload": "Upload..."
+    "upload": "Upload...",
+    "addMore": "Add more...",
+    "uploadReminderTitle": "Upload required before round 1",
+    "uploadReminderBody": "Please upload your {{missing}} photo(s) so the admin can generate pairings.",
+    "uploadReminderAction": "Go to photos"
   },
   "standings": {
     "title": "Standings",

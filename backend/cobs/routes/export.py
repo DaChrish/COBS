@@ -14,7 +14,7 @@ from cobs.auth.dependencies import require_admin
 from cobs.config import settings
 from cobs.database import get_db
 from cobs.logic.pdf import generate_pods_pdf, generate_results_pdf, generate_standings_pdf
-from cobs.logic.standings import calculate_standings
+from cobs.logic.standings import calculate_points, calculate_standings
 from cobs.logic.swiss import MatchResult
 from cobs.models.cube import TournamentCube
 from cobs.models.draft import Draft, Pod, PodPlayer
@@ -95,6 +95,7 @@ async def _build_draft_zip_content(
     standings_rank_map: dict[uuid.UUID, int],
     db: AsyncSession,
     prefix: str = "",
+    photo_folder_suffix: str = "",
 ) -> list[tuple[str, bytes | str]]:
     """Build all ZIP entries for one draft.
 
@@ -194,33 +195,66 @@ async def _build_draft_zip_content(
             entries.append((f"{prefix}Ergebnisse_Swiss{sr}.pdf", results_pdf))
 
     # --- Photos ---
-    # Build pod mapping: tournament_player_id -> pod_number
-    pod_map: dict[uuid.UUID, int] = {}
+    # Folder = cube name (of the player's pod), file = {type}_{W-L-D}_{name}.jpg
+    # Map tp_id -> cube name for this draft's pod assignment.
+    tp_cube: dict[uuid.UUID, str] = {}
     for pod in draft.pods:
+        cube_name = pod.tournament_cube.cube.name if pod.tournament_cube else "Unknown"
         for pp in pod.players:
-            pod_map[pp.tournament_player_id] = pod.pod_number
+            tp_cube[pp.tournament_player_id] = cube_name
 
-    # Load photos for this draft
+    # Per-player W-L-D within this draft only (matches were loaded above).
+    draft_results = [
+        MatchResult(
+            player1_id=str(m.player1_id),
+            player2_id=str(m.player2_id) if m.player2_id else None,
+            player1_wins=m.player1_wins,
+            player2_wins=m.player2_wins,
+            is_bye=m.is_bye,
+        )
+        for m in all_matches
+        if m.reported or m.is_bye
+    ]
+    player_stats = calculate_points(draft_results)
+
+    def _record(tp_id: uuid.UUID) -> str:
+        s = player_stats.get(str(tp_id))
+        if s is None:
+            return "0-0-0"
+        return f"{s.match_wins}-{s.match_losses}-{s.match_draws}"
+
+    # Load photos for this draft (oldest first so numbering is stable)
     photo_result = await db.execute(
         select(DraftPhoto)
         .where(DraftPhoto.draft_id == draft.id)
+        .order_by(DraftPhoto.created_at)
         .options(
             selectinload(DraftPhoto.tournament_player).selectinload(TournamentPlayer.user)
         )
     )
     photos = photo_result.scalars().all()
 
+    # Rename RETURNED → checkout in exports per Jacob's feedback.
+    type_label = {"POOL": "pool", "DECK": "deck", "RETURNED": "checkout"}
+
+    # Number duplicates per (player, type): first gets plain name, rest gets _2, _3, ...
+    type_counts: dict[tuple[uuid.UUID, str], int] = {}
     for photo in photos:
         tp_id = photo.tournament_player_id
-        rank = standings_rank_map.get(tp_id, 99)
         username = _safe_filename(photo.tournament_player.user.username)
-        pod_num = pod_map.get(tp_id, 0)
-        photo_type = photo.photo_type.value
+        cube_name = tp_cube.get(tp_id, "Unknown")
+        ptype = type_label.get(photo.photo_type.value, photo.photo_type.value.lower())
+        record = _record(tp_id)
 
-        folder = f"{prefix}Fotos/Rang{rank:02d}_{username}_Pod{pod_num}"
+        idx = type_counts.get((tp_id, photo.photo_type.value), 0) + 1
+        type_counts[(tp_id, photo.photo_type.value)] = idx
+        suffix = "" if idx == 1 else f"_{idx}"
+        entry_name = f"{ptype}_{record}_{username}{suffix}.jpg"
+
+        folder = f"{_safe_filename(cube_name)}{photo_folder_suffix}"
         filepath = os.path.join(settings.upload_dir, photo.filename)
         if os.path.exists(filepath):
-            entries.append((f"{folder}/{photo_type}.jpg", filepath))
+            entries.append((f"{folder}/{entry_name}", filepath))
 
     return entries
 
@@ -322,7 +356,12 @@ async def export_tournament(
         for draft in drafts:
             draft_prefix = f"Draft{draft.round_number}/"
             draft_entries = await _build_draft_zip_content(
-                tournament, draft, rank_map, db, prefix=draft_prefix
+                tournament,
+                draft,
+                rank_map,
+                db,
+                prefix=draft_prefix,
+                photo_folder_suffix=f" - Draft{draft.round_number}",
             )
             for zip_path, content in draft_entries:
                 if isinstance(content, bytes):

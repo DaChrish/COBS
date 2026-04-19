@@ -34,9 +34,9 @@ class TestPhotoStatus:
         assert data["returned_ready"] == 0
         assert len(data["players"]) == 4
         for p in data["players"]:
-            assert p["pool"] is None
-            assert p["deck"] is None
-            assert p["returned"] is None
+            assert p["pool"] == []
+            assert p["deck"] == []
+            assert p["returned"] == []
 
     async def test_status_reflects_uploaded_photos(self, client: AsyncClient):
         ah, tid, draft_id = await _setup_draft(client)
@@ -51,8 +51,8 @@ class TestPhotoStatus:
         assert data["pool_deck_ready"] == 4
         assert data["returned_ready"] == 4
         for p in data["players"]:
-            assert p["pool"] is not None
-            assert p["pool"].startswith("/uploads/")
+            assert len(p["pool"]) >= 1
+            assert p["pool"][0]["url"].startswith("/uploads/")
 
 
 class TestPairingsPhotoEnforcement:

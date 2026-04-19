@@ -123,7 +123,11 @@
     "afterLastRound": "(nach der letzten Runde)",
     "uploadFailed": "Upload fehlgeschlagen",
     "replace": "Ersetzen...",
-    "upload": "Hochladen..."
+    "upload": "Hochladen...",
+    "addMore": "Weitere hinzufügen...",
+    "uploadReminderTitle": "Upload vor Runde 1 erforderlich",
+    "uploadReminderBody": "Bitte lade dein {{missing}}-Foto hoch, damit der Admin Pairings erstellen kann.",
+    "uploadReminderAction": "Zu den Fotos"
   },
   "standings": {
     "title": "Standings",

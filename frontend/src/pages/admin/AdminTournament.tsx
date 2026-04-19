@@ -1042,7 +1042,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                           const ps = photoStatus[draft.id]?.players.find(
                             (s) => s.tournament_player_id === p.tournament_player_id
                           );
-                          const hasPoolDeck = ps?.pool && ps?.deck;
+                          const hasPoolDeck = (ps?.pool.length ?? 0) > 0 && (ps?.deck.length ?? 0) > 0;
                           return (
                             <Tooltip events={{ hover: true, touch: true, focus: true }}
                               key={p.tournament_player_id}
@@ -1335,34 +1335,40 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
           <Stack gap="md">
             <SimpleGrid cols={3} spacing="md">
               {(["pool", "deck", "returned"] as const).map((type) => {
-                const url = selectedPlayer.player[type];
+                const items = selectedPlayer.player[type];
                 return (
                   <Stack key={type} gap={4} align="center">
-                    <Text size="xs" fw={600} c="dimmed">{type.toUpperCase()}</Text>
-                    {url ? (
-                      <div style={{ position: "relative", width: "100%" }}>
-                        <MantineImage
-                          src={`/api${url}`}
-                          radius="md"
-                          fit="contain"
-                          h={200}
-                          style={{ cursor: "pointer" }}
-                          onClick={() => setFullscreenPhoto(`/api${url}`)}
-                        />
-                        <Group gap={4} style={{ position: "absolute", top: 4, right: 4 }}>
-                          <ActionIcon size="xs" variant="filled" color="dark" opacity={0.7} onClick={() => setFullscreenPhoto(`/api${url}`)}>
-                            <IconMaximize size={12} />
-                          </ActionIcon>
-                          <ActionIcon
-                            size="xs" variant="filled" color="dark" opacity={0.7}
-                            component="a"
-                            href={`/api${url}`}
-                            download={`${selectedPlayer.player.username}_${type}.jpg`}
-                          >
-                            <IconDownload size={12} />
-                          </ActionIcon>
-                        </Group>
-                      </div>
+                    <Text size="xs" fw={600} c="dimmed">
+                      {type.toUpperCase()}{items.length > 1 ? ` (${items.length})` : ""}
+                    </Text>
+                    {items.length > 0 ? (
+                      <Stack gap={4} style={{ width: "100%" }}>
+                        {items.map((item, idx) => (
+                          <div key={item.id} style={{ position: "relative", width: "100%" }}>
+                            <MantineImage
+                              src={`/api${item.url}`}
+                              radius="md"
+                              fit="contain"
+                              h={200}
+                              style={{ cursor: "pointer" }}
+                              onClick={() => setFullscreenPhoto(`/api${item.url}`)}
+                            />
+                            <Group gap={4} style={{ position: "absolute", top: 4, right: 4 }}>
+                              <ActionIcon size="xs" variant="filled" color="dark" opacity={0.7} onClick={() => setFullscreenPhoto(`/api${item.url}`)}>
+                                <IconMaximize size={12} />
+                              </ActionIcon>
+                              <ActionIcon
+                                size="xs" variant="filled" color="dark" opacity={0.7}
+                                component="a"
+                                href={`/api${item.url}`}
+                                download={`${selectedPlayer.player.username}_${type}${items.length > 1 ? `_${idx + 1}` : ""}.jpg`}
+                              >
+                                <IconDownload size={12} />
+                              </ActionIcon>
+                            </Group>
+                          </div>
+                        ))}
+                      </Stack>
                     ) : (
                       <Paper withBorder p="xl" radius="md" style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
                         <Text c="red" size="sm">{t("common.missing")}</Text>
@@ -1372,7 +1378,7 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                 );
               })}
             </SimpleGrid>
-            {(!selectedPlayer.player.pool || !selectedPlayer.player.deck || !selectedPlayer.player.returned) && (
+            {(selectedPlayer.player.pool.length === 0 || selectedPlayer.player.deck.length === 0 || selectedPlayer.player.returned.length === 0) && (
               <Button
                 size="xs"
                 variant="light"

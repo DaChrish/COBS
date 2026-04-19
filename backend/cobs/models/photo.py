@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cobs.models.base import Base, TimestampMixin
@@ -28,10 +28,3 @@ class DraftPhoto(TimestampMixin, Base):
 
     draft: Mapped["Draft"] = relationship()
     tournament_player: Mapped["TournamentPlayer"] = relationship()
-
-    __table_args__ = (
-        UniqueConstraint(
-            "draft_id", "tournament_player_id", "photo_type",
-            name="uq_draft_player_photo_type",
-        ),
-    )

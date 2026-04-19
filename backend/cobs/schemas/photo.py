@@ -16,13 +16,18 @@ class PhotoResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PhotoItem(BaseModel):
+    id: uuid.UUID
+    url: str
+
+
 class PlayerPhotoStatus(BaseModel):
     tournament_player_id: uuid.UUID
     user_id: uuid.UUID
     username: str
-    pool: str | None = None
-    deck: str | None = None
-    returned: str | None = None
+    pool: list[PhotoItem] = []
+    deck: list[PhotoItem] = []
+    returned: list[PhotoItem] = []
 
     model_config = {"from_attributes": True}
 

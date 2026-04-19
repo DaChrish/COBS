@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ActionIcon, Button, Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput, Badge, Image } from "@mantine/core";
-import { IconUpload, IconChevronLeft, IconChevronRight, IconTrophy } from "@tabler/icons-react";
+import { ActionIcon, Alert, Button, Container, Title, Text, Stack, Card, Group, Center, Loader, FileInput, Badge, Image, SimpleGrid } from "@mantine/core";
+import { IconUpload, IconChevronLeft, IconChevronRight, IconTrophy, IconTrash, IconCamera } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { useAuth } from "../../hooks/useAuth";
@@ -11,7 +11,10 @@ import { Timer } from "../../components/Timer";
 import { MatchCard } from "../../components/MatchCard";
 import { MatchReportModal } from "../../components/MatchReportModal";
 import { PhotoViewer } from "../../components/PhotoViewer";
-import type { Draft, Match, TournamentDetail } from "../../api/types";
+import type { Draft, Match, PhotoItem, TournamentDetail } from "../../api/types";
+
+type PhotoMap = Record<"POOL" | "DECK" | "RETURNED", PhotoItem[]>;
+const EMPTY_PHOTOS: PhotoMap = { POOL: [], DECK: [], RETURNED: [] };
 
 export function DraftPage() {
   const { id, round } = useParams<{ id: string; round: string }>();
@@ -34,14 +37,14 @@ export function DraftPage() {
 
   const [reportMatch, setReportMatch] = useState<Match | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [myPhotos, setMyPhotos] = useState<Record<string, string | null>>({ POOL: null, DECK: null, RETURNED: null });
+  const [myPhotos, setMyPhotos] = useState<PhotoMap>(EMPTY_PHOTOS);
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
 
   // Load existing photos
   useEffect(() => {
     if (!draft) return;
-    apiFetch<Record<string, string | null>>(`/tournaments/${id}/drafts/${draft.id}/photos/mine`)
-      .then(setMyPhotos)
+    apiFetch<PhotoMap>(`/tournaments/${id}/drafts/${draft.id}/photos/mine`)
+      .then((photos) => setMyPhotos({ POOL: photos.POOL ?? [], DECK: photos.DECK ?? [], RETURNED: photos.RETURNED ?? [] }))
       .catch(() => {});
   }, [id, draft]);
 
@@ -87,26 +90,42 @@ export function DraftPage() {
     refetchMatches();
   };
 
-  const handlePhotoUpload = async (file: File | null, type: string) => {
-    if (!file || !draft) return;
+  const refreshPhotos = async () => {
+    if (!draft) return;
+    const photos = await apiFetch<PhotoMap>(`/tournaments/${id}/drafts/${draft.id}/photos/mine`);
+    setMyPhotos({ POOL: photos.POOL ?? [], DECK: photos.DECK ?? [], RETURNED: photos.RETURNED ?? [] });
+  };
+
+  const handlePhotoUpload = async (files: File[] | null, type: string) => {
+    if (!files || files.length === 0 || !draft) return;
     setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/tournaments/${id}/drafts/${draft.id}/photos/${type}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!res.ok) throw new Error(t("draft.uploadFailed"));
-      // Refresh photos
-      const photos = await apiFetch<Record<string, string | null>>(`/tournaments/${id}/drafts/${draft.id}/photos/mine`);
-      setMyPhotos(photos);
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(`/api/tournaments/${id}/drafts/${draft.id}/photos/${type}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!res.ok) throw new Error(t("draft.uploadFailed"));
+      }
+      await refreshPhotos();
     } catch {
       // silently fail for now
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handlePhotoDelete = async (photoId: string) => {
+    if (!draft) return;
+    try {
+      await apiFetch(`/tournaments/${id}/drafts/${draft.id}/photos/item/${photoId}`, { method: "DELETE" });
+      await refreshPhotos();
+    } catch {
+      // silently fail for now
     }
   };
 
@@ -131,6 +150,36 @@ export function DraftPage() {
           {t("draft.standings")}
         </Button>
       </Group>
+
+      {isDraftActive && myMatches.length === 0 && (myPhotos.POOL.length === 0 || myPhotos.DECK.length === 0) && (
+        <Alert
+          color="yellow"
+          icon={<IconCamera size={20} />}
+          mb="md"
+          title={t("draft.uploadReminderTitle")}
+        >
+          <Stack gap="xs">
+            <Text size="sm">
+              {t("draft.uploadReminderBody", {
+                missing: [
+                  myPhotos.POOL.length === 0 ? "POOL" : null,
+                  myPhotos.DECK.length === 0 ? "DECK" : null,
+                ].filter(Boolean).join(" + "),
+              })}
+            </Text>
+            <Button
+              variant="light"
+              color="yellow"
+              size="xs"
+              leftSection={<IconUpload size={14} />}
+              onClick={() => document.getElementById("photos-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              style={{ alignSelf: "flex-start" }}
+            >
+              {t("draft.uploadReminderAction")}
+            </Button>
+          </Stack>
+        </Alert>
+      )}
 
       {myPod?.timer_ends_at && <Timer endsAt={myPod.timer_ends_at} />}
 
@@ -178,7 +227,7 @@ export function DraftPage() {
                   {rounds.length > 1 && <Text size="xs" c="dimmed" fw={600}>Swiss {round}</Text>}
                   {roundMatches.map((m) => (
                     <MatchCard key={m.id} match={m} myPlayerId={myPlayer?.id} onReport={setReportMatch} tableNumber={tableNumbers[m.id]}
-                      needsCheckoutPhoto={m.swiss_round >= 3 && !myPhotos.RETURNED} />
+                      needsCheckoutPhoto={m.swiss_round >= 3 && myPhotos.RETURNED.length === 0} />
                   ))}
                 </Stack>
               );
@@ -196,44 +245,68 @@ export function DraftPage() {
 
       <Text id="photos-section" fw={500} mb="xs" c="dimmed" size="sm" tt="uppercase">{t("draft.photos")}</Text>
       <Stack gap="xs">
-        {(["POOL", "DECK", "RETURNED"] as const).map((type) => (
-          <Card key={type} withBorder padding="sm" radius="md">
-            <Stack gap="xs">
-              <Group gap="xs" align="center">
-                <Text size="sm" fw={500}>{type}</Text>
-                {type === "RETURNED" && (
-                  <Text size="xs" c="dimmed">{t("draft.afterLastRound")}</Text>
+        {(["POOL", "DECK", "RETURNED"] as const).map((type) => {
+          const items = myPhotos[type];
+          const count = items.length;
+          return (
+            <Card key={type} withBorder padding="sm" radius="md">
+              <Stack gap="xs">
+                <Group gap="xs" align="center">
+                  <Text size="sm" fw={500}>{type}</Text>
+                  {type === "RETURNED" && (
+                    <Text size="xs" c="dimmed">{t("draft.afterLastRound")}</Text>
+                  )}
+                  {count > 0 ? (
+                    <Badge color="green" size="xs" variant="light">{count}</Badge>
+                  ) : (
+                    <Badge color="gray" size="xs" variant="light">{t("common.missing")}</Badge>
+                  )}
+                </Group>
+                {isDraftActive && (
+                  <FileInput
+                    size="md"
+                    multiple
+                    value={[]}
+                    clearable={false}
+                    placeholder={count > 0 ? t("draft.addMore") : t("draft.upload")}
+                    accept="image/*"
+                    leftSection={<IconUpload size={18} />}
+                    onChange={(f) => handlePhotoUpload(f, type)}
+                    disabled={uploading}
+                  />
                 )}
-                {myPhotos[type] ? (
-                  <Badge color="green" size="xs" variant="light">{t("common.uploaded")}</Badge>
-                ) : (
-                  <Badge color="gray" size="xs" variant="light">{t("common.missing")}</Badge>
-                )}
-              </Group>
-              {isDraftActive && (
-                <FileInput
-                  size="md"
-                  placeholder={myPhotos[type] ? t("draft.replace") : t("draft.upload")}
-                  accept="image/*"
-                  leftSection={<IconUpload size={18} />}
-                  onChange={(f) => handlePhotoUpload(f, type)}
-                  disabled={uploading}
-                />
+              </Stack>
+              {count > 0 && (
+                <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs" mt="xs">
+                  {items.map((item) => (
+                    <div key={item.id} style={{ position: "relative" }}>
+                      <Image
+                        src={`/api${item.url}`}
+                        radius="md"
+                        fit="cover"
+                        h={120}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setFullscreenPhoto(`/api${item.url}`)}
+                      />
+                      {isDraftActive && (
+                        <ActionIcon
+                          size="sm"
+                          variant="filled"
+                          color="dark"
+                          opacity={0.75}
+                          style={{ position: "absolute", top: 4, right: 4 }}
+                          onClick={() => handlePhotoDelete(item.id)}
+                        >
+                          <IconTrash size={14} />
+                        </ActionIcon>
+                      )}
+                    </div>
+                  ))}
+                </SimpleGrid>
               )}
-            </Stack>
-            {myPhotos[type] && (
-              <Image
-                src={`/api${myPhotos[type]}`}
-                radius="md"
-                fit="contain"
-                h={150}
-                mt="xs"
-                style={{ cursor: "pointer" }}
-                onClick={() => setFullscreenPhoto(`/api${myPhotos[type]}`)}
-              />
-            )}
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </Stack>
 
       <PhotoViewer src={fullscreenPhoto} onClose={() => setFullscreenPhoto(null)} />

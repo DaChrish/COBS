@@ -16,7 +16,12 @@ from cobs.models.draft import Draft, Pod, PodPlayer
 from cobs.models.photo import DraftPhoto, PhotoType
 from cobs.models.tournament import TournamentPlayer
 from cobs.models.user import User
-from cobs.schemas.photo import DraftPhotoStatusResponse, PhotoResponse, PlayerPhotoStatus
+from cobs.schemas.photo import (
+    DraftPhotoStatusResponse,
+    PhotoItem,
+    PhotoResponse,
+    PlayerPhotoStatus,
+)
 
 router = APIRouter(tags=["photos"])
 
@@ -82,31 +87,14 @@ async def upload_photo(
 
     img.save(filepath, "JPEG", quality=80)
 
-    # Upsert database record
-    existing = await db.execute(
-        select(DraftPhoto).where(
-            DraftPhoto.draft_id == draft_id,
-            DraftPhoto.tournament_player_id == tp.id,
-            DraftPhoto.photo_type == photo_type,
-        )
+    # Always append a new record — multiple photos per (draft, player, type) are allowed.
+    photo = DraftPhoto(
+        draft_id=draft_id,
+        tournament_player_id=tp.id,
+        photo_type=photo_type,
+        filename=filename,
     )
-    photo = existing.scalar_one_or_none()
-
-    if photo:
-        # Delete old file
-        old_path = os.path.join(settings.upload_dir, photo.filename)
-        if os.path.exists(old_path):
-            os.remove(old_path)
-        photo.filename = filename
-    else:
-        photo = DraftPhoto(
-            draft_id=draft_id,
-            tournament_player_id=tp.id,
-            photo_type=photo_type,
-            filename=filename,
-        )
-        db.add(photo)
-
+    db.add(photo)
     await db.commit()
     await db.refresh(photo)
 
@@ -120,17 +108,17 @@ async def upload_photo(
     )
 
 
-@router.get(
-    "/tournaments/{tournament_id}/drafts/{draft_id}/photos/mine",
-    response_model=dict[str, str | None],
+@router.delete(
+    "/tournaments/{tournament_id}/drafts/{draft_id}/photos/item/{photo_id}",
+    status_code=204,
 )
-async def get_my_photos(
+async def delete_photo(
     tournament_id: uuid.UUID,
     draft_id: uuid.UUID,
+    photo_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get current player's photos for a draft."""
     tp_result = await db.execute(
         select(TournamentPlayer).where(
             TournamentPlayer.tournament_id == tournament_id,
@@ -143,15 +131,59 @@ async def get_my_photos(
 
     photo_result = await db.execute(
         select(DraftPhoto).where(
+            DraftPhoto.id == photo_id,
             DraftPhoto.draft_id == draft_id,
             DraftPhoto.tournament_player_id == tp.id,
         )
     )
+    photo = photo_result.scalar_one_or_none()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    filepath = os.path.join(settings.upload_dir, photo.filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
+    await db.delete(photo)
+    await db.commit()
+
+
+@router.get(
+    "/tournaments/{tournament_id}/drafts/{draft_id}/photos/mine",
+    response_model=dict[str, list[PhotoItem]],
+)
+async def get_my_photos(
+    tournament_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get current player's photos for a draft, grouped by type and ordered by upload time."""
+    tp_result = await db.execute(
+        select(TournamentPlayer).where(
+            TournamentPlayer.tournament_id == tournament_id,
+            TournamentPlayer.user_id == user.id,
+        )
+    )
+    tp = tp_result.scalar_one_or_none()
+    if not tp:
+        raise HTTPException(status_code=403, detail="Not a participant")
+
+    photo_result = await db.execute(
+        select(DraftPhoto)
+        .where(
+            DraftPhoto.draft_id == draft_id,
+            DraftPhoto.tournament_player_id == tp.id,
+        )
+        .order_by(DraftPhoto.created_at)
+    )
     photos = photo_result.scalars().all()
 
-    result: dict[str, str | None] = {"POOL": None, "DECK": None, "RETURNED": None}
+    result: dict[str, list[PhotoItem]] = {"POOL": [], "DECK": [], "RETURNED": []}
     for p in photos:
-        result[p.photo_type.value] = f"/uploads/{p.filename}"
+        result[p.photo_type.value].append(
+            PhotoItem(id=p.id, url=f"/uploads/{p.filename}")
+        )
     return result
 
 
@@ -181,16 +213,21 @@ async def draft_photo_status(
     )
     pod_players = pp_result.scalars().all()
 
-    # Load all DraftPhotos for the draft
+    # Load all DraftPhotos for the draft (oldest first for stable display order)
     photo_result = await db.execute(
-        select(DraftPhoto).where(DraftPhoto.draft_id == draft_id)
+        select(DraftPhoto)
+        .where(DraftPhoto.draft_id == draft_id)
+        .order_by(DraftPhoto.created_at)
     )
     photos = photo_result.scalars().all()
 
-    # Index photos by (tournament_player_id, photo_type) → URL
-    photo_index: dict[tuple[uuid.UUID, PhotoType], str] = {}
+    # Index photos by (tournament_player_id, photo_type) → list[PhotoItem]
+    photo_index: dict[tuple[uuid.UUID, PhotoType], list[PhotoItem]] = {}
     for photo in photos:
-        photo_index[(photo.tournament_player_id, photo.photo_type)] = f"/uploads/{photo.filename}"
+        key = (photo.tournament_player_id, photo.photo_type)
+        photo_index.setdefault(key, []).append(
+            PhotoItem(id=photo.id, url=f"/uploads/{photo.filename}")
+        )
 
     # Build PlayerPhotoStatus for each player
     players: list[PlayerPhotoStatus] = []
@@ -199,24 +236,24 @@ async def draft_photo_status(
 
     for pp in pod_players:
         tp = pp.tournament_player
-        pool_url = photo_index.get((tp.id, PhotoType.POOL))
-        deck_url = photo_index.get((tp.id, PhotoType.DECK))
-        returned_url = photo_index.get((tp.id, PhotoType.RETURNED))
+        pool = photo_index.get((tp.id, PhotoType.POOL), [])
+        deck = photo_index.get((tp.id, PhotoType.DECK), [])
+        returned = photo_index.get((tp.id, PhotoType.RETURNED), [])
 
         players.append(
             PlayerPhotoStatus(
                 tournament_player_id=tp.id,
                 user_id=tp.user_id,
                 username=tp.user.username,
-                pool=pool_url,
-                deck=deck_url,
-                returned=returned_url,
+                pool=pool,
+                deck=deck,
+                returned=returned,
             )
         )
 
-        if pool_url and deck_url:
+        if pool and deck:
             pool_deck_ready += 1
-        if returned_url:
+        if returned:
             returned_ready += 1
 
     return DraftPhotoStatusResponse(

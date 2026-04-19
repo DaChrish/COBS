@@ -120,13 +120,18 @@ export interface StandingsEntry {
   dropped: boolean;
 }
 
+export interface PhotoItem {
+  id: string;
+  url: string;
+}
+
 export interface PlayerPhotoStatus {
   tournament_player_id: string;
   user_id: string;
   username: string;
-  pool: string | null;
-  deck: string | null;
-  returned: string | null;
+  pool: PhotoItem[];
+  deck: PhotoItem[];
+  returned: PhotoItem[];
 }
 
 export interface DraftPhotoStatus {
