@@ -15,6 +15,7 @@ class Cube(TimestampMixin, Base):
     cubecobra_id: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str] = mapped_column(Text, default="")
+    notes: Mapped[str] = mapped_column(Text, default="", server_default="")
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     artist: Mapped[str | None] = mapped_column(String(200), nullable=True)
     max_players: Mapped[int | None] = mapped_column(Integer, nullable=True)

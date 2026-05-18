@@ -111,7 +111,9 @@
     "avoid": "Avoid",
     "neutral": "Neutral",
     "desired": "Desired",
-    "saveVotes": "Votes speichern"
+    "saveVotes": "Votes speichern",
+    "showNotes": "Beschreibung anzeigen",
+    "hideNotes": "Beschreibung ausblenden"
   },
   "draft": {
     "title": "Draft {{round}}",
@@ -215,7 +217,12 @@
     "update": "Aktualisieren",
     "deleteTitle": "Cube löschen?",
     "deleteConfirm": "<strong>{{name}}</strong> wirklich löschen? Der Cube wird auch aus allen Turnieren entfernt.",
-    "loadError": "Fehler beim Laden"
+    "loadError": "Fehler beim Laden",
+    "notes": "Beschreibung",
+    "notesHelp": "Für Spieler beim Voting sichtbar. Markdown wird unterstützt.",
+    "notesEdit": "Bearbeiten",
+    "notesPreview": "Vorschau",
+    "notesEmpty": "Noch keine Beschreibung."
   },
   "optimizerPlayground": {
     "title": "Optimizer Playground",

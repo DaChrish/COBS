@@ -63,6 +63,7 @@ async def create_cube(
             cubecobra_id=body.cubecobra_id,
             name=final_name,
             description=meta.get("description", ""),
+            notes=body.notes,
             image_url=meta["image_url"],
             artist=meta["artist"],
             max_players=body.max_players if body.max_players is not None else meta.get("max_players"),
@@ -82,6 +83,7 @@ async def create_cube(
         cube = Cube(
             name=body.name,
             description=body.description,
+            notes=body.notes,
             image_url=body.image_url,
             artist=body.artist,
             max_players=body.max_players,
@@ -131,6 +133,8 @@ async def update_cube(
         cube.name = body.name
     if body.max_players is not None:
         cube.max_players = body.max_players
+    if body.notes is not None:
+        cube.notes = body.notes
 
     await db.commit()
     await db.refresh(cube)

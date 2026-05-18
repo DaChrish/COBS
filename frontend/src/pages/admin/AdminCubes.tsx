@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Container,
@@ -8,12 +8,16 @@ import {
   Group,
   Modal,
   TextInput,
+  Textarea,
   NumberInput,
   Stack,
   Text,
   ScrollArea,
   ActionIcon,
   Image,
+  SegmentedControl,
+  Paper,
+  Collapse,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -21,10 +25,13 @@ import {
   IconTrash,
   IconRefresh,
   IconArrowLeft,
+  IconChevronDown,
+  IconChevronUp,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
+import { MarkdownNotes } from "../../components/MarkdownNotes";
 import type { Cube } from "../../api/types";
 
 interface CubeCobraPreview {
@@ -45,8 +52,11 @@ export function AdminCubes() {
   const [preview, setPreview] = useState<CubeCobraPreview | null>(null);
   const [cubeName, setCubeName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState<number | undefined>();
+  const [notes, setNotes] = useState("");
+  const [notesView, setNotesView] = useState<"edit" | "preview">("edit");
   const [loading, setLoading] = useState(false);
   const [confirmRefresh, setConfirmRefresh] = useState<Cube | null>(null);
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
 
   const openCreate = () => {
     setEditingCube(null);
@@ -54,6 +64,8 @@ export function AdminCubes() {
     setPreview(null);
     setCubeName("");
     setMaxPlayers(undefined);
+    setNotes("");
+    setNotesView("edit");
     setModalOpen(true);
   };
 
@@ -61,6 +73,8 @@ export function AdminCubes() {
     setEditingCube(cube);
     setCubeName(cube.name);
     setMaxPlayers(cube.max_players ?? undefined);
+    setNotes(cube.notes ?? "");
+    setNotesView("edit");
     setPreview(null);
     setModalOpen(true);
   };
@@ -85,7 +99,7 @@ export function AdminCubes() {
       if (editingCube) {
         await apiFetch(`/cubes/${editingCube.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ name: cubeName, max_players: maxPlayers ?? null }),
+          body: JSON.stringify({ name: cubeName, max_players: maxPlayers ?? null, notes }),
         });
       } else {
         await apiFetch<Cube>("/cubes", {
@@ -94,6 +108,7 @@ export function AdminCubes() {
             cubecobra_id: cobraId,
             name: cubeName,
             max_players: maxPlayers ?? null,
+            notes,
           }),
         });
       }
@@ -164,86 +179,110 @@ export function AdminCubes() {
           <Table.Tbody>
             {cubes?.map((cube) => {
               const url = cubeCobraUrl(cube);
+              const hasNotes = !!cube.notes;
+              const isExpanded = expandedNotes[cube.id] ?? false;
               return (
-                <Table.Tr key={cube.id}>
-                  <Table.Td>
-                    {cube.image_url ? (
-                      <div style={{ position: "relative", width: 60, height: 60 }}>
-                        <Image
-                          src={cube.image_url}
-                          w={60}
-                          h={60}
-                          radius="sm"
-                          fit="cover"
-                        />
-                        {cube.artist && (
-                          <Text
-                            size="8px"
-                            c="white"
-                            style={{
-                              position: "absolute",
-                              bottom: 1,
-                              right: 2,
-                              textShadow: "0 0 8px rgba(0,0,0,0.7)",
-                              lineHeight: 1,
-                            }}
+                <Fragment key={cube.id}>
+                  <Table.Tr>
+                    <Table.Td>
+                      {cube.image_url ? (
+                        <div style={{ position: "relative", width: 60, height: 60 }}>
+                          <Image
+                            src={cube.image_url}
+                            w={60}
+                            h={60}
+                            radius="sm"
+                            fit="cover"
+                          />
+                          {cube.artist && (
+                            <Text
+                              size="8px"
+                              c="white"
+                              style={{
+                                position: "absolute",
+                                bottom: 1,
+                                right: 2,
+                                textShadow: "0 0 8px rgba(0,0,0,0.7)",
+                                lineHeight: 1,
+                              }}
+                            >
+                              {cube.artist}
+                            </Text>
+                          )}
+                        </div>
+                      ) : (
+                        <Text size="xs" c="dimmed">
+                          –
+                        </Text>
+                      )}
+                    </Table.Td>
+                    <Table.Td fw={500}>
+                      {url ? (
+                        <Text
+                          component="a"
+                          href={url}
+                          target="_blank"
+                          c="blue"
+                          td="underline"
+                          size="sm"
+                        >
+                          {cube.name}
+                        </Text>
+                      ) : (
+                        <Text size="sm">{cube.name}</Text>
+                      )}
+                    </Table.Td>
+                    <Table.Td ta="right">
+                      {cube.max_players ?? "–"}
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={4} wrap="nowrap">
+                        {hasNotes && (
+                          <ActionIcon
+                            variant="subtle"
+                            onClick={() => setExpandedNotes((p) => ({ ...p, [cube.id]: !isExpanded }))}
+                            title={isExpanded ? t("vote.hideNotes") : t("vote.showNotes")}
                           >
-                            {cube.artist}
-                          </Text>
+                            {isExpanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+                          </ActionIcon>
                         )}
-                      </div>
-                    ) : (
-                      <Text size="xs" c="dimmed">
-                        –
-                      </Text>
-                    )}
-                  </Table.Td>
-                  <Table.Td fw={500}>
-                    {url ? (
-                      <Text
-                        component="a"
-                        href={url}
-                        target="_blank"
-                        c="blue"
-                        td="underline"
-                        size="sm"
-                      >
-                        {cube.name}
-                      </Text>
-                    ) : (
-                      <Text size="sm">{cube.name}</Text>
-                    )}
-                  </Table.Td>
-                  <Table.Td ta="right">
-                    {cube.max_players ?? "–"}
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap={4} wrap="nowrap">
-                      {cube.cubecobra_id && (
+                        {cube.cubecobra_id && (
+                          <ActionIcon
+                            variant="subtle"
+                            onClick={() => refreshCube(cube)}
+                            title={t("adminCubes.refreshFromCubeCobra")}
+                          >
+                            <IconRefresh size={16} />
+                          </ActionIcon>
+                        )}
                         <ActionIcon
                           variant="subtle"
-                          onClick={() => refreshCube(cube)}
-                          title={t("adminCubes.refreshFromCubeCobra")}
+                          onClick={() => openEdit(cube)}
                         >
-                          <IconRefresh size={16} />
+                          <IconEdit size={16} />
                         </ActionIcon>
-                      )}
-                      <ActionIcon
-                        variant="subtle"
-                        onClick={() => openEdit(cube)}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        variant="subtle"
-                        color="red"
-                        onClick={() => setConfirmDelete(cube)}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          onClick={() => setConfirmDelete(cube)}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                  {hasNotes && (
+                    <Table.Tr style={{ background: "transparent" }}>
+                      <Table.Td colSpan={4} p={0}>
+                        <Collapse in={isExpanded}>
+                          <Paper p="sm" radius={0} bg="var(--mantine-color-dark-7)">
+                            <MarkdownNotes>{cube.notes}</MarkdownNotes>
+                          </Paper>
+                        </Collapse>
+                      </Table.Td>
+                    </Table.Tr>
+                  )}
+                </Fragment>
               );
             })}
           </Table.Tbody>
@@ -286,6 +325,12 @@ export function AdminCubes() {
               )}
               <TextInput label={t("common.name")} value={cubeName} onChange={(e) => setCubeName(e.target.value)} />
               <NumberInput label={t("adminCubes.maxPlayers")} value={maxPlayers} onChange={(v) => setMaxPlayers(v ? Number(v) : undefined)} min={1} />
+              <NotesEditor
+                value={notes}
+                onChange={setNotes}
+                view={notesView}
+                onViewChange={setNotesView}
+              />
               <Button onClick={saveCube} loading={loading} disabled={!cubeName}>{t("common.create")}</Button>
             </>
           )}
@@ -307,6 +352,12 @@ export function AdminCubes() {
               )}
               <TextInput label={t("common.name")} value={cubeName} onChange={(e) => setCubeName(e.target.value)} />
               <NumberInput label={t("adminCubes.maxPlayers")} value={maxPlayers} onChange={(v) => setMaxPlayers(v ? Number(v) : undefined)} min={1} />
+              <NotesEditor
+                value={notes}
+                onChange={setNotes}
+                view={notesView}
+                onViewChange={setNotesView}
+              />
               <Button onClick={saveCube} loading={loading} disabled={!cubeName}>{t("common.save")}</Button>
             </>
           )}
@@ -335,5 +386,52 @@ export function AdminCubes() {
         )}
       </Modal>
     </Container>
+  );
+}
+
+function NotesEditor({
+  value,
+  onChange,
+  view,
+  onViewChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  view: "edit" | "preview";
+  onViewChange: (v: "edit" | "preview") => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Stack gap="xs">
+      <Group justify="space-between" align="end">
+        <Text size="sm" fw={500}>{t("adminCubes.notes")}</Text>
+        <SegmentedControl
+          size="xs"
+          value={view}
+          onChange={(v) => onViewChange(v as "edit" | "preview")}
+          data={[
+            { value: "edit", label: t("adminCubes.notesEdit") },
+            { value: "preview", label: t("adminCubes.notesPreview") },
+          ]}
+        />
+      </Group>
+      {view === "edit" ? (
+        <Textarea
+          description={t("adminCubes.notesHelp")}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autosize
+          minRows={3}
+        />
+      ) : (
+        <Paper withBorder p="sm" radius="sm" mih={80}>
+          {value ? (
+            <MarkdownNotes>{value}</MarkdownNotes>
+          ) : (
+            <Text size="xs" c="dimmed" fs="italic">{t("adminCubes.notesEmpty")}</Text>
+          )}
+        </Paper>
+      )}
+    </Stack>
   );
 }

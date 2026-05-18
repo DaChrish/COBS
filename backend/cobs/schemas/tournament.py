@@ -53,6 +53,7 @@ class TournamentCubeResponse(BaseModel):
     cube_id: uuid.UUID
     cube_name: str
     cube_description: str
+    cube_notes: str = ""
     cube_image_url: str | None
     cube_artist: str | None = None
     max_players: int | None

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Alert, Badge, Container, Title, Text, Button, Card, Group, Stack, Center, Loader, ActionIcon, Image, SegmentedControl, Paper, UnstyledButton } from "@mantine/core";
-import { IconThumbUp, IconThumbDown, IconMinus, IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
+import { Alert, Badge, Collapse, Container, Title, Text, Button, Card, Group, Stack, Center, Loader, ActionIcon, Image, SegmentedControl, Paper, UnstyledButton } from "@mantine/core";
+import { IconThumbUp, IconThumbDown, IconMinus, IconArrowLeft, IconArrowRight, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../api/client";
 import { useApi } from "../../hooks/useApi";
+import { MarkdownNotes } from "../../components/MarkdownNotes";
 import type { Vote, TournamentDetail } from "../../api/types";
 
 type VoteValue = "DESIRED" | "NEUTRAL" | "AVOID";
@@ -19,6 +20,7 @@ export function VotePage() {
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [cardIndex, setCardIndex] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (initialVotes) {
@@ -103,6 +105,7 @@ export function VotePage() {
               ) : (
                 <Text size="sm" c="dimmed">{currentCube.cube_description}</Text>
               )}
+              {currentCube.cube_notes && <MarkdownNotes>{currentCube.cube_notes}</MarkdownNotes>}
             </Stack>
             <Group grow p="md" pt={0}>
               <VoteButton icon={<IconThumbDown size={28} />} color="red" label={t("vote.avoid")}
@@ -125,38 +128,59 @@ export function VotePage() {
 
       {viewMode === "list" && (
         <Stack gap="xs">
-          {cubes.map((cube) => (
-            <Paper key={cube.id} withBorder p="sm" radius="md">
-              <Stack gap="xs">
-                <Group justify="space-between" wrap="nowrap">
-                  <Text fw={500}>{cube.cube_name}</Text>
-                  {readonly && (
-                    <Badge color={votes[cube.id] === "DESIRED" ? "green" : votes[cube.id] === "AVOID" ? "red" : "gray"}
-                      variant="light" size="sm">
-                      {votes[cube.id] || "NEUTRAL"}
-                    </Badge>
-                  )}
-                </Group>
-                {cube.cube_description?.startsWith("http") ? (
-                  <Text size="xs" c="dimmed" component="a" href={cube.cube_description} target="_blank" style={{ textDecoration: "underline" }}>
-                    {cube.cube_description}
-                  </Text>
-                ) : cube.cube_description ? (
-                  <Text size="xs" c="dimmed">{cube.cube_description}</Text>
-                ) : null}
-                {!readonly && (
-                  <Group gap={6} grow>
-                    <ActionIcon color="red" variant={votes[cube.id] === "AVOID" ? "filled" : "subtle"} size="lg"
-                      onClick={() => setVote(cube.id, "AVOID")}><IconThumbDown size={18} /></ActionIcon>
-                    <ActionIcon color="gray" variant={votes[cube.id] === "NEUTRAL" ? "filled" : "subtle"} size="lg"
-                      onClick={() => setVote(cube.id, "NEUTRAL")}><IconMinus size={18} /></ActionIcon>
-                    <ActionIcon color="green" variant={votes[cube.id] === "DESIRED" ? "filled" : "subtle"} size="lg"
-                      onClick={() => setVote(cube.id, "DESIRED")}><IconThumbUp size={18} /></ActionIcon>
+          {cubes.map((cube) => {
+            const isExpanded = expanded[cube.id] ?? false;
+            const hasNotes = !!cube.cube_notes;
+            return (
+              <Paper key={cube.id} withBorder p="sm" radius="md">
+                <Stack gap="xs">
+                  <Group justify="space-between" wrap="nowrap">
+                    <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
+                      <Text fw={500}>{cube.cube_name}</Text>
+                      {hasNotes && (
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          onClick={() => setExpanded((p) => ({ ...p, [cube.id]: !isExpanded }))}
+                          aria-label={isExpanded ? t("vote.hideNotes") : t("vote.showNotes")}
+                        >
+                          {isExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+                        </ActionIcon>
+                      )}
+                    </Group>
+                    {readonly && (
+                      <Badge color={votes[cube.id] === "DESIRED" ? "green" : votes[cube.id] === "AVOID" ? "red" : "gray"}
+                        variant="light" size="sm">
+                        {votes[cube.id] || "NEUTRAL"}
+                      </Badge>
+                    )}
                   </Group>
-                )}
-              </Stack>
-            </Paper>
-          ))}
+                  {cube.cube_description?.startsWith("http") ? (
+                    <Text size="xs" c="dimmed" component="a" href={cube.cube_description} target="_blank" style={{ textDecoration: "underline" }}>
+                      {cube.cube_description}
+                    </Text>
+                  ) : cube.cube_description ? (
+                    <Text size="xs" c="dimmed">{cube.cube_description}</Text>
+                  ) : null}
+                  {hasNotes && (
+                    <Collapse in={isExpanded}>
+                      <MarkdownNotes>{cube.cube_notes}</MarkdownNotes>
+                    </Collapse>
+                  )}
+                  {!readonly && (
+                    <Group gap={6} grow>
+                      <ActionIcon color="red" variant={votes[cube.id] === "AVOID" ? "filled" : "subtle"} size="lg"
+                        onClick={() => setVote(cube.id, "AVOID")}><IconThumbDown size={18} /></ActionIcon>
+                      <ActionIcon color="gray" variant={votes[cube.id] === "NEUTRAL" ? "filled" : "subtle"} size="lg"
+                        onClick={() => setVote(cube.id, "NEUTRAL")}><IconMinus size={18} /></ActionIcon>
+                      <ActionIcon color="green" variant={votes[cube.id] === "DESIRED" ? "filled" : "subtle"} size="lg"
+                        onClick={() => setVote(cube.id, "DESIRED")}><IconThumbUp size={18} /></ActionIcon>
+                    </Group>
+                  )}
+                </Stack>
+              </Paper>
+            );
+          })}
         </Stack>
       )}
 

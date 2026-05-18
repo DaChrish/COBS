@@ -86,3 +86,48 @@ async def test_create_cube_requires_admin(client: AsyncClient):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 403
+
+
+async def test_create_cube_with_notes(client: AsyncClient):
+    token = await _admin_token(client)
+    resp = await client.post(
+        "/cubes",
+        json={"name": "Vintage Cube", "notes": "**Power 9** included"},
+        headers=await _auth(client, token),
+    )
+    assert resp.status_code == 201
+    assert resp.json()["notes"] == "**Power 9** included"
+
+
+async def test_update_cube_notes(client: AsyncClient):
+    token = await _admin_token(client)
+    headers = await _auth(client, token)
+    create_resp = await client.post(
+        "/cubes", json={"name": "Notable"}, headers=headers
+    )
+    cube_id = create_resp.json()["id"]
+    assert create_resp.json()["notes"] == ""
+
+    resp = await client.patch(
+        f"/cubes/{cube_id}",
+        json={"notes": "Cool cube\n\n- Fast\n- Fun"},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["notes"] == "Cool cube\n\n- Fast\n- Fun"
+
+
+async def test_update_cube_notes_does_not_touch_name(client: AsyncClient):
+    token = await _admin_token(client)
+    headers = await _auth(client, token)
+    create_resp = await client.post(
+        "/cubes", json={"name": "Original"}, headers=headers
+    )
+    cube_id = create_resp.json()["id"]
+
+    resp = await client.patch(
+        f"/cubes/{cube_id}", json={"notes": "just notes"}, headers=headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "Original"
+    assert resp.json()["notes"] == "just notes"

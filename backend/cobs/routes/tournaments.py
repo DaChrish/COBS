@@ -172,6 +172,7 @@ async def get_tournament(
             cube_id=tc.cube_id,
             cube_name=tc.cube.name,
             cube_description=tc.cube.description,
+            cube_notes=tc.cube.notes,
             cube_image_url=tc.cube.image_url,
             cube_artist=tc.cube.artist,
             max_players=tc.max_players,
