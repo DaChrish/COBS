@@ -36,7 +36,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useApi } from "../../hooks/useApi";
 import { apiFetch } from "../../api/client";
-import type { Tournament, Simulation, CubeVoteSummary, BatchAnalysis } from "../../api/types";
+import type { Tournament, Simulation, CubeVoteSummary, BatchAnalysis, SimulateMultiRoundResponse } from "../../api/types";
 
 export function OptimizerPlayground() {
   const { t } = useTranslation();
@@ -59,6 +59,13 @@ export function OptimizerPlayground() {
   const [repeatAvoidMult, setRepeatAvoidMult] = useState(4.0);
   const [avoidPenaltyScaling, setAvoidPenaltyScaling] = useState(1.0);
   const [avoidPenaltyFormula, setAvoidPenaltyFormula] = useState("linear");
+
+  // Multi-Runden-Simulation (echte Votes, Zufallsergebnisse dazwischen)
+  const [multiRounds, setMultiRounds] = useState(3);
+  const [multiSwissRounds, setMultiSwissRounds] = useState(3);
+  const [multiSeed, setMultiSeed] = useState(1);
+  const [multiResult, setMultiResult] = useState<SimulateMultiRoundResponse | null>(null);
+  const [multiRunning, setMultiRunning] = useState(false);
 
   // Test tournament modal
   const [testModalOpen, setTestModalOpen] = useState(false);
@@ -175,6 +182,40 @@ export function OptimizerPlayground() {
       setError(e instanceof Error ? e.message : t("optimizerPlayground.simulationFailed"));
     } finally {
       setSimulating(false);
+    }
+  };
+
+  const simulateMulti = async (reroll = false) => {
+    if (!selectedTournament) return;
+    const seed = reroll ? multiSeed + 1 : multiSeed;
+    if (reroll) setMultiSeed(seed);
+    setMultiRunning(true);
+    setError(null);
+    try {
+      const res = await apiFetch<SimulateMultiRoundResponse>(
+        `/tournaments/${selectedTournament}/simulate-draft-multi`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            num_rounds: multiRounds,
+            swiss_rounds_per_draft: multiSwissRounds,
+            seed,
+            score_want: scoreWant,
+            score_avoid: scoreAvoid,
+            score_neutral: scoreNeutral,
+            early_round_bonus: earlyRoundBonus,
+            lower_standing_bonus: lowerStandingBonus,
+            repeat_avoid_multiplier: repeatAvoidMult,
+            avoid_penalty_scaling: avoidPenaltyScaling,
+            avoid_penalty_formula: avoidPenaltyFormula,
+          }),
+        },
+      );
+      setMultiResult(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("optimizerPlayground.simulationFailed"));
+    } finally {
+      setMultiRunning(false);
     }
   };
 
@@ -371,6 +412,7 @@ export function OptimizerPlayground() {
                     { value: "none", label: "none (deaktiviert)" },
                     { value: "linear", label: "linear (Default)" },
                     { value: "arccot", label: "arccot" },
+                    { value: "arccot_norm", label: "arccot_norm (normiert)" },
                     { value: "cosine", label: "cosine" },
                   ]} />
               </SimpleGrid>
@@ -392,6 +434,72 @@ export function OptimizerPlayground() {
                   {t("optimizerPlayground.simulate")}
                 </Button>
               </Group>
+            </Paper>
+          )}
+
+          {/* Multi-Runden-Simulation */}
+          {selectedTournament && (
+            <Paper withBorder p="md" mb="md" radius="md">
+              <Title order={4} mb="xs">{t("optimizerPlayground.multiRoundTitle")}</Title>
+              <Text size="sm" c="dimmed" mb="sm">{t("optimizerPlayground.multiRoundHint")}</Text>
+              <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+                <NumberInput label={t("optimizerPlayground.multiRounds")} min={1} max={10}
+                  value={multiRounds} onChange={(v) => setMultiRounds(Math.max(1, Number(v) || 1))} />
+                <NumberInput label={t("optimizerPlayground.multiSwissRounds")} min={1} max={6}
+                  value={multiSwissRounds} onChange={(v) => setMultiSwissRounds(Math.max(1, Number(v) || 1))} />
+                <NumberInput label="Seed" min={0}
+                  value={multiSeed} onChange={(v) => setMultiSeed(Math.max(0, Number(v) || 0))} />
+              </SimpleGrid>
+              <Group mt="sm">
+                <Button leftSection={<IconPlayerPlay size={16} />} onClick={() => simulateMulti(false)} loading={multiRunning}>
+                  {t("optimizerPlayground.multiRun")}
+                </Button>
+                <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => simulateMulti(true)} loading={multiRunning}>
+                  {t("optimizerPlayground.multiReroll")}
+                </Button>
+              </Group>
+
+              {multiResult && (
+                <Stack gap="md" mt="md">
+                  <Text size="sm" c="dimmed">
+                    {t("optimizerPlayground.multiResultMeta", { seed: multiResult.seed, rounds: multiResult.num_rounds, players: multiResult.player_count })}
+                  </Text>
+                  {multiResult.rounds.map((r) => (
+                    <Paper key={r.round} withBorder p="sm" radius="sm">
+                      <Group justify="space-between" mb="xs">
+                        <Title order={5}>{t("optimizerPlayground.round")} {r.round}</Title>
+                        <Text size="xs" c="dimmed">Objective: {r.objective.toFixed(1)} · {r.solver_time}s</Text>
+                      </Group>
+                      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="sm">
+                        {r.pods.map((pod) => (
+                          <Paper key={pod.pod} withBorder p="xs" radius="sm">
+                            <Group justify="space-between" mb={4}>
+                              <Text size="sm" fw={600}>Pod {pod.pod} — {pod.cube_name}</Text>
+                              <Badge size="sm" variant="light">{pod.size}</Badge>
+                            </Group>
+                            <Table>
+                              <Table.Tbody>
+                                {pod.players.map((p, i) => (
+                                  <Table.Tr key={i}>
+                                    <Table.Td>{p.username}</Table.Td>
+                                    <Table.Td ta="right">
+                                      <Text component="span" size="sm"
+                                        c={p.vote === "DESIRED" ? "green" : p.vote === "AVOID" ? "red" : "dimmed"}>
+                                        {p.vote === "DESIRED" ? "🟢" : p.vote === "AVOID" ? "🔴" : "🩶"}
+                                      </Text>
+                                    </Table.Td>
+                                    <Table.Td ta="right"><Text size="xs" c="dimmed">{p.match_points} MP</Text></Table.Td>
+                                  </Table.Tr>
+                                ))}
+                              </Table.Tbody>
+                            </Table>
+                          </Paper>
+                        ))}
+                      </SimpleGrid>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
             </Paper>
           )}
 
@@ -704,6 +812,7 @@ export function OptimizerPlayground() {
                         { value: "none", label: "none (deaktiviert)" },
                         { value: "linear", label: "linear (Default)" },
                         { value: "arccot", label: "arccot" },
+                        { value: "arccot_norm", label: "arccot_norm (normiert)" },
                         { value: "cosine", label: "cosine" },
                       ]} />
                     <NumberInput label="avoid_penalty_scaling" description="Default: 1.0 (0=aus)" value={bAvoidScaling}

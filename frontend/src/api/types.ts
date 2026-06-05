@@ -190,6 +190,36 @@ export interface BatchAnalysis {
   created_at: string | null;
 }
 
+export interface MultiRoundPlayer {
+  username: string;
+  vote: string;
+  match_points: number;
+}
+
+export interface MultiRoundPod {
+  pod: number;
+  cube_name: string;
+  cube_id: string | null;
+  size: number;
+  players: MultiRoundPlayer[];
+}
+
+export interface MultiRoundResult {
+  round: number;
+  objective: number;
+  solver_status: string;
+  solver_time: number;
+  pods: MultiRoundPod[];
+}
+
+export interface SimulateMultiRoundResponse {
+  seed: number;
+  num_rounds: number;
+  player_count: number;
+  config: Record<string, number | string>;
+  rounds: MultiRoundResult[];
+}
+
 export interface Simulation {
   id: string;
   tournament_id: string;

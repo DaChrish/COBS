@@ -1,4 +1,59 @@
-from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, optimize_pods
+from cobs.logic.optimizer import (
+    CubeInput,
+    OptimizerConfig,
+    PlayerInput,
+    _compute_avoid_weight,
+    optimize_pods,
+)
+
+
+def _w(formula, avoid_count, num_cubes):
+    return _compute_avoid_weight(
+        formula, avoid_count, num_cubes, num_cubes - avoid_count, 1.0
+    )
+
+
+def test_arccot_norm_zero_avoids_is_one():
+    # Normalized: no avoids → exactly full strength.
+    assert _w("arccot_norm", 0, 26) == 1.0
+
+
+def test_arccot_norm_monotonic_decreasing():
+    weights = [_w("arccot_norm", a, 26) for a in range(0, 27)]
+    for earlier, later in zip(weights, weights[1:]):
+        assert later <= earlier + 1e-9
+
+
+def test_arccot_norm_clamped_to_unit_interval():
+    for a in range(0, 27):
+        w = _w("arccot_norm", a, 26)
+        assert 0.0 <= w <= 1.0
+
+
+def test_arccot_norm_no_zero_division_on_integer_threshold():
+    # 0.6 * 20 == 12 → x can be exactly 0; must not raise.
+    w = _w("arccot_norm", 12, 20)
+    assert 0.0 <= w <= 1.0
+
+
+def test_arccot_norm_sharp_drop_around_threshold():
+    # Threshold at 0.6 * 26 = 15.6: still high just below, low just above.
+    assert _w("arccot_norm", 14, 26) > 0.7
+    assert _w("arccot_norm", 17, 26) < 0.3
+
+
+def test_arccot_norm_works_in_optimizer():
+    players = [
+        PlayerInput(id="extreme", match_points=0, votes={"c1": "DESIRED", "c2": "AVOID", "c3": "AVOID", "c4": "AVOID"}),
+        PlayerInput(id="p1", match_points=0, votes={"c1": "NEUTRAL", "c2": "DESIRED", "c3": "NEUTRAL", "c4": "NEUTRAL"}),
+        PlayerInput(id="p2", match_points=0, votes={"c1": "NEUTRAL", "c2": "NEUTRAL", "c3": "DESIRED", "c4": "NEUTRAL"}),
+        PlayerInput(id="p3", match_points=0, votes={"c1": "NEUTRAL", "c2": "NEUTRAL", "c3": "NEUTRAL", "c4": "DESIRED"}),
+    ]
+    cubes = [CubeInput(id="c1"), CubeInput(id="c2"), CubeInput(id="c3"), CubeInput(id="c4")]
+    config = OptimizerConfig(avoid_penalty_formula="arccot_norm")
+    result = optimize_pods(players, cubes, pod_sizes=[2, 2], round_number=1, config=config, seed=42)
+    assert len(result.pods) == 2
+    assert sum(len(p) for p in result.pods) == 4
 
 
 def test_basic_assignment():

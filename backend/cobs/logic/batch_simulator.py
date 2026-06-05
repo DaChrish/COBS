@@ -141,6 +141,101 @@ def _select_cubes_for_round(
     return selected
 
 
+def simulate_real_vote_rounds(
+    player_ids: list[str],
+    votes: dict[str, dict[str, str]],
+    initial_match_points: dict[str, int],
+    cube_ids: list[str],
+    cube_max_players: dict[str, int | None],
+    num_rounds: int,
+    swiss_rounds_per_draft: int,
+    config: OptimizerConfig,
+    seed: int,
+) -> list[dict]:
+    """Chain several draft rounds using *real* votes (not random ones).
+
+    Between rounds the Swiss results are simulated randomly (same distribution
+    as the batch simulator) and standings + prior_avoid_count carry forward.
+    Deterministic for a given seed.
+
+    Returns one dict per round with the pod assignments and the standings that
+    each player carried into that round.
+    """
+    rng = random.Random(seed)
+
+    standings = dict(initial_match_points)
+    prior_avoid_counts: dict[str, int] = {pid: 0 for pid in player_ids}
+    used_cubes: set[str] = set()
+
+    rounds: list[dict] = []
+
+    for round_num in range(1, num_rounds + 1):
+        pod_sizes = calculate_pod_sizes(len(player_ids))
+        num_pods = len(pod_sizes)
+
+        round_cubes = _select_cubes_for_round(cube_ids, num_pods, used_cubes, rng)
+        used_cubes.update(round_cubes)
+
+        player_inputs = [
+            PlayerInput(
+                id=pid,
+                match_points=standings[pid],
+                votes=votes.get(pid, {}),
+                prior_avoid_count=prior_avoid_counts[pid],
+            )
+            for pid in player_ids
+        ]
+        cube_inputs = [
+            CubeInput(id=cid, max_players=cube_max_players.get(cid)) for cid in round_cubes
+        ]
+
+        result = optimize_pods(
+            players=player_inputs,
+            cubes=cube_inputs,
+            pod_sizes=pod_sizes,
+            round_number=round_num,
+            config=config,
+            seed=seed + round_num,
+        )
+
+        pod_details = []
+        for pod_idx, (pod_players, cube_id) in enumerate(zip(result.pods, result.cube_ids)):
+            players_data = []
+            for pid in pod_players:
+                vote = votes.get(pid, {}).get(cube_id, "NEUTRAL") if cube_id else "NEUTRAL"
+                if vote == "AVOID":
+                    prior_avoid_counts[pid] += 1
+                players_data.append({
+                    "id": pid,
+                    "vote": vote,
+                    "match_points": standings[pid],
+                })
+            pod_details.append({
+                "pod": pod_idx + 1,
+                "cube": cube_id,
+                "size": len(pod_players),
+                "players": players_data,
+            })
+
+        rounds.append({
+            "round": round_num,
+            "objective": result.objective,
+            "solver_status": result.status,
+            "solver_time": round(result.wall_time, 3),
+            "pods": pod_details,
+        })
+
+        # Simulate Swiss matches within each pod to advance standings.
+        for pod_players in result.pods:
+            if len(pod_players) < 2:
+                continue
+            pod_standings = _simulate_swiss_matches(pod_players, swiss_rounds_per_draft, rng)
+            for pid, pts in pod_standings.items():
+                standings[pid] += pts
+
+    return rounds
+
+
 def simulate_tournament(config: TournamentConfig, seed: int) -> dict:
     """Run a full tournament simulation. Pure logic, deterministic per seed."""
     rng = random.Random(seed)

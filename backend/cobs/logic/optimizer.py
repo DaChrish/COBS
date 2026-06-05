@@ -55,6 +55,8 @@ def _compute_avoid_weight(
     - "none": always 1.0 (no penalty reduction)
     - "linear": min(1, (non_avoid/avoid) ^ scaling)
     - "arccot": 1 - arccot(((cubes/2 - avoids) / 3)) / pi
+    - "arccot_norm": normalized arccot, weight = 1.0 at 0 avoids,
+      sharp drop around 0.6 * cubes
     - "cosine": (cos(avoids/cubes * pi) + 1) / 2
     """
     if formula == "none" or avoid_count == 0:
@@ -70,6 +72,25 @@ def _compute_avoid_weight(
             if arccot_val < 0:
                 arccot_val += math.pi
         return max(0.0, min(1.0, 1 - arccot_val / math.pi))
+
+    if formula == "arccot_norm":
+        # Normalized arccot variant: threshold at 0.6 * cubes, steeper than
+        # "arccot", and normalized so that 0 avoids yields exactly 1.0.
+        threshold = num_cubes * 0.6
+        if threshold == 0:
+            return 1.0
+        x = threshold - avoid_count
+        if x == 0:
+            # limit from both sides: atan(±inf)/pi resolves to 0.5
+            arccot_val = 0.5
+        elif x > 0:
+            arccot_val = math.atan(1 / x) / math.pi
+        else:
+            arccot_val = (math.atan(1 / x) + math.pi) / math.pi
+        denom = 1 - math.atan(1 / threshold) / math.pi
+        if denom == 0:
+            return 1.0
+        return max(0.0, min(1.0, (1 - arccot_val) / denom))
 
     if formula == "cosine":
         if num_cubes == 0:

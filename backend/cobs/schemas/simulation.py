@@ -16,6 +16,50 @@ class SimulateDraftRequest(BaseModel):
     avoid_penalty_formula: str = "linear"
 
 
+class SimulateMultiRoundRequest(BaseModel):
+    num_rounds: int = 3
+    swiss_rounds_per_draft: int = 3
+    seed: int = 1
+    score_want: float = 5.0
+    score_avoid: float = -200.0
+    score_neutral: float = 0.0
+    early_round_bonus: float = 3.0
+    lower_standing_bonus: float = 0.3
+    repeat_avoid_multiplier: float = 4.0
+    avoid_penalty_scaling: float = 1.0
+    avoid_penalty_formula: str = "linear"
+
+
+class MultiRoundPlayer(BaseModel):
+    username: str
+    vote: str
+    match_points: int
+
+
+class MultiRoundPod(BaseModel):
+    pod: int
+    cube_name: str
+    cube_id: str | None
+    size: int
+    players: list[MultiRoundPlayer]
+
+
+class MultiRoundResult(BaseModel):
+    round: int
+    objective: float
+    solver_status: str
+    solver_time: float
+    pods: list[MultiRoundPod]
+
+
+class SimulateMultiRoundResponse(BaseModel):
+    seed: int
+    num_rounds: int
+    player_count: int
+    config: dict
+    rounds: list[MultiRoundResult]
+
+
 class SimulationResponse(BaseModel):
     id: uuid.UUID
     tournament_id: uuid.UUID

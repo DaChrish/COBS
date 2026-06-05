@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from cobs.auth.dependencies import require_admin
 from cobs.database import get_db
+from cobs.logic.batch_simulator import simulate_real_vote_rounds
 from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, optimize_pods
 from cobs.logic.pod_sizes import calculate_pod_sizes
 from cobs.models.cube import TournamentCube
@@ -16,7 +17,15 @@ from cobs.models.simulation import Simulation
 from cobs.models.tournament import Tournament, TournamentPlayer
 from cobs.models.user import User
 from cobs.models.vote import CubeVote
-from cobs.schemas.simulation import SimulateDraftRequest, SimulationResponse
+from cobs.schemas.simulation import (
+    MultiRoundPlayer,
+    MultiRoundPod,
+    MultiRoundResult,
+    SimulateDraftRequest,
+    SimulateMultiRoundRequest,
+    SimulateMultiRoundResponse,
+    SimulationResponse,
+)
 
 router = APIRouter(prefix="/tournaments/{tournament_id}", tags=["simulations"])
 
@@ -209,6 +218,134 @@ async def simulate_draft(
         pod_count=simulation.pod_count,
         solver_time_ms=simulation.solver_time_ms,
         created_at=simulation.created_at.isoformat() if simulation.created_at else None,
+    )
+
+
+@router.post("/simulate-draft-multi", response_model=SimulateMultiRoundResponse)
+async def simulate_draft_multi(
+    tournament_id: uuid.UUID,
+    body: SimulateMultiRoundRequest = SimulateMultiRoundRequest(),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Chain several draft rounds with real votes and random results between.
+
+    Deterministic per seed. Not persisted — purely a playground exploration.
+    """
+    if body.num_rounds < 1:
+        raise HTTPException(status_code=400, detail="num_rounds must be >= 1")
+
+    t_result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
+    tournament = t_result.scalar_one_or_none()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    tp_result = await db.execute(
+        select(TournamentPlayer)
+        .where(
+            TournamentPlayer.tournament_id == tournament_id,
+            TournamentPlayer.dropped.is_(False),
+        )
+        .options(
+            selectinload(TournamentPlayer.votes).selectinload(CubeVote.tournament_cube),
+            selectinload(TournamentPlayer.user),
+        )
+    )
+    tournament_players = tp_result.scalars().all()
+    if len(tournament_players) < 2:
+        raise HTTPException(status_code=400, detail="Need at least 2 active players")
+
+    tc_result = await db.execute(
+        select(TournamentCube)
+        .where(TournamentCube.tournament_id == tournament_id)
+        .options(selectinload(TournamentCube.cube))
+    )
+    tournament_cubes = tc_result.scalars().all()
+    if not tournament_cubes:
+        raise HTTPException(status_code=400, detail="No cubes in tournament")
+
+    # Build inputs keyed by cube_id (string) — matches optimizer/vote convention.
+    cube_ids = [str(tc.cube_id) for tc in tournament_cubes]
+    cube_max_players = {str(tc.cube_id): tc.max_players for tc in tournament_cubes}
+    cube_name_by_id = {str(tc.cube_id): tc.cube.name for tc in tournament_cubes}
+
+    player_ids: list[str] = []
+    votes: dict[str, dict[str, str]] = {}
+    initial_match_points: dict[str, int] = {}
+    username_by_id: dict[str, str] = {}
+    for tp in tournament_players:
+        pid = str(tp.id)
+        player_ids.append(pid)
+        username_by_id[pid] = tp.user.username
+        initial_match_points[pid] = tp.match_points
+        votes[pid] = {str(v.tournament_cube.cube_id): v.vote.value for v in tp.votes}
+
+    config = OptimizerConfig(
+        score_want=body.score_want,
+        score_avoid=body.score_avoid,
+        score_neutral=body.score_neutral,
+        early_round_bonus=body.early_round_bonus,
+        lower_standing_bonus=body.lower_standing_bonus,
+        repeat_avoid_multiplier=body.repeat_avoid_multiplier,
+        avoid_penalty_scaling=body.avoid_penalty_scaling,
+        avoid_penalty_formula=body.avoid_penalty_formula,
+    )
+
+    rounds_raw = simulate_real_vote_rounds(
+        player_ids=player_ids,
+        votes=votes,
+        initial_match_points=initial_match_points,
+        cube_ids=cube_ids,
+        cube_max_players=cube_max_players,
+        num_rounds=body.num_rounds,
+        swiss_rounds_per_draft=body.swiss_rounds_per_draft,
+        config=config,
+        seed=body.seed,
+    )
+
+    rounds = [
+        MultiRoundResult(
+            round=r["round"],
+            objective=r["objective"],
+            solver_status=r["solver_status"],
+            solver_time=r["solver_time"],
+            pods=[
+                MultiRoundPod(
+                    pod=pod["pod"],
+                    cube_name=cube_name_by_id.get(pod["cube"], "?"),
+                    cube_id=pod["cube"],
+                    size=pod["size"],
+                    players=[
+                        MultiRoundPlayer(
+                            username=username_by_id.get(p["id"], "?"),
+                            vote=p["vote"],
+                            match_points=p["match_points"],
+                        )
+                        for p in pod["players"]
+                    ],
+                )
+                for pod in r["pods"]
+            ],
+        )
+        for r in rounds_raw
+    ]
+
+    return SimulateMultiRoundResponse(
+        seed=body.seed,
+        num_rounds=body.num_rounds,
+        player_count=len(player_ids),
+        config={
+            "score_want": body.score_want,
+            "score_avoid": body.score_avoid,
+            "score_neutral": body.score_neutral,
+            "early_round_bonus": body.early_round_bonus,
+            "lower_standing_bonus": body.lower_standing_bonus,
+            "repeat_avoid_multiplier": body.repeat_avoid_multiplier,
+            "avoid_penalty_scaling": body.avoid_penalty_scaling,
+            "avoid_penalty_formula": body.avoid_penalty_formula,
+            "swiss_rounds_per_draft": body.swiss_rounds_per_draft,
+        },
+        rounds=rounds,
     )
 
 

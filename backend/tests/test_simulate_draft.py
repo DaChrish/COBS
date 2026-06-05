@@ -51,3 +51,39 @@ class TestSimulateDraft:
         r1 = await client.post(f"/tournaments/{tid}/simulate-draft", json={}, headers=ah)
         r2 = await client.post(f"/tournaments/{tid}/simulate-draft", json={}, headers=ah)
         assert r1.json()["result"] == r2.json()["result"]
+
+
+class TestSimulateDraftMulti:
+    async def test_returns_rounds(self, client: AsyncClient):
+        ah, tid = await _setup(client)
+        resp = await client.post(
+            f"/tournaments/{tid}/simulate-draft-multi",
+            json={"num_rounds": 3, "seed": 5},
+            headers=ah,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["num_rounds"] == 3
+        assert data["player_count"] == 8
+        assert len(data["rounds"]) == 3
+        for i, r in enumerate(data["rounds"]):
+            assert r["round"] == i + 1
+            assert sum(p["size"] for p in r["pods"]) == 8
+
+    async def test_deterministic_per_seed(self, client: AsyncClient):
+        ah, tid = await _setup(client)
+        body = {"num_rounds": 3, "seed": 42, "avoid_penalty_formula": "arccot_norm"}
+        r1 = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json=body, headers=ah)
+        r2 = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json=body, headers=ah)
+        assert r1.json()["rounds"] == r2.json()["rounds"]
+
+    async def test_different_seed_may_differ(self, client: AsyncClient):
+        ah, tid = await _setup(client)
+        r1 = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json={"seed": 1}, headers=ah)
+        r2 = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json={"seed": 2}, headers=ah)
+        assert r1.status_code == 200 and r2.status_code == 200
+
+    async def test_rejects_zero_rounds(self, client: AsyncClient):
+        ah, tid = await _setup(client)
+        resp = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json={"num_rounds": 0}, headers=ah)
+        assert resp.status_code == 400
