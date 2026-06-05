@@ -48,8 +48,6 @@ next-env.d.ts
 /skills/
 skills-lock.json
 
-__pycache__/
-*.pyc
 .superpowers/
 .cursor/
 
