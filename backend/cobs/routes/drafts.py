@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from cobs.auth.dependencies import require_admin
 from cobs.logic.ws_manager import manager
 from cobs.database import get_db
-from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, optimize_pods
+from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, is_infeasible, optimize_pods
 from cobs.logic.pdf import generate_pods_pdf
 from cobs.logic.pod_sizes import calculate_pod_sizes
 from cobs.models.cube import TournamentCube
@@ -301,6 +301,17 @@ async def create_draft(
         optimizer_players, optimizer_cubes, pod_sizes, round_number, config,
         seed=tournament_seed + round_number,
     )
+
+    # Never persist an empty/invalid assignment (would create a broken draft).
+    if is_infeasible(opt_result.status):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Konnte keine gültige Pod-Aufteilung finden. Mögliche Ursachen: "
+                "zu wenige Cubes für die Anzahl der Pods oder zu geringe "
+                f"max_players-Kapazität der Cubes. (Solver-Status: {opt_result.status})"
+            ),
+        )
 
     # Mark previous draft as finished
     if last_draft:

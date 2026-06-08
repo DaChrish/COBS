@@ -75,7 +75,11 @@ class TestSimulateDraftMulti:
         body = {"num_rounds": 3, "seed": 42, "avoid_penalty_formula": "arccot_norm"}
         r1 = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json=body, headers=ah)
         r2 = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json=body, headers=ah)
-        assert r1.json()["rounds"] == r2.json()["rounds"]
+
+        def strip(rounds):  # solver_time is wall-clock and varies between runs
+            return [{k: v for k, v in r.items() if k != "solver_time"} for r in rounds]
+
+        assert strip(r1.json()["rounds"]) == strip(r2.json()["rounds"])
 
     async def test_different_seed_may_differ(self, client: AsyncClient):
         ah, tid = await _setup(client)
@@ -87,3 +91,17 @@ class TestSimulateDraftMulti:
         ah, tid = await _setup(client)
         resp = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json={"num_rounds": 0}, headers=ah)
         assert resp.status_code == 400
+
+    async def test_36_players_fills_pods(self, client: AsyncClient):
+        # Regression: 36 players (≡ 4 mod 16) previously produced pod sizes
+        # summing to 28 → INFEASIBLE → empty pods. Must now fill all 36 seats.
+        admin = await client.post("/auth/admin/setup", json={"username": "admin", "password": "pw"})
+        ah = {"Authorization": f"Bearer {admin.json()['access_token']}"}
+        resp = await client.post("/test/tournament", json={"num_players": 36, "num_cubes": 8, "seed": 7}, headers=ah)
+        tid = resp.json()["tournament_id"]
+
+        r = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json={"num_rounds": 1, "seed": 1}, headers=ah)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["player_count"] == 36
+        assert sum(p["size"] for p in data["rounds"][0]["pods"]) == 36

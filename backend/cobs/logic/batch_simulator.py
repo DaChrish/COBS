@@ -126,18 +126,29 @@ def _select_cubes_for_round(
     used_cube_ids: set[str],
     rng: random.Random,
 ) -> list[str]:
-    """Select cubes for a round, preferring unused ones. Refill if needed."""
+    """Select cubes for a round, preferring unused ones.
+
+    Always returns exactly ``num_needed`` ids when the pool is non-empty. When
+    there are fewer distinct cubes than pods, cubes are reused (the returned
+    list may contain duplicates) — each pod still needs one cube, and a cube
+    short of pods would otherwise leave the optimizer INFEASIBLE.
+    """
+    if not all_cube_ids or num_needed <= 0:
+        return []
+
     unused = [c for c in all_cube_ids if c not in used_cube_ids]
     rng.shuffle(unused)
 
     if len(unused) >= num_needed:
         return unused[:num_needed]
 
-    # Not enough unused — take all unused plus refill from all
+    # Not enough unused — take all unused, then refill from the FULL pool
+    # (allowing reuse) until we have exactly num_needed cubes.
     selected = list(unused)
-    remaining_pool = [c for c in all_cube_ids if c not in set(selected)]
-    rng.shuffle(remaining_pool)
-    selected.extend(remaining_pool[: num_needed - len(selected)])
+    while len(selected) < num_needed:
+        refill = list(all_cube_ids)
+        rng.shuffle(refill)
+        selected.extend(refill[: num_needed - len(selected)])
     return selected
 
 

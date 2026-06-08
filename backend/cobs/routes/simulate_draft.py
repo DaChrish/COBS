@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from cobs.auth.dependencies import require_admin
 from cobs.database import get_db
 from cobs.logic.batch_simulator import simulate_real_vote_rounds
-from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, optimize_pods
+from cobs.logic.optimizer import CubeInput, OptimizerConfig, PlayerInput, is_infeasible, optimize_pods
 from cobs.logic.pod_sizes import calculate_pod_sizes
 from cobs.models.cube import TournamentCube
 from cobs.models.simulation import Simulation
@@ -117,6 +117,16 @@ async def simulate_draft(
         seed=tournament_seed + round_number,
     )
     solver_time_ms = int((time.monotonic() - t0) * 1000)
+
+    if is_infeasible(opt_result.status):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Konnte keine gültige Pod-Aufteilung finden. Mögliche Ursachen: "
+                "zu wenige Cubes für die Anzahl der Pods oder zu geringe "
+                f"max_players-Kapazität der Cubes. (Solver-Status: {opt_result.status})"
+            ),
+        )
 
     # Build result JSON and compute metrics
     total_desired = 0
@@ -302,6 +312,19 @@ async def simulate_draft_multi(
         config=config,
         seed=body.seed,
     )
+
+    for r in rounds_raw:
+        empty = sum(p["size"] for p in r["pods"]) == 0
+        if is_infeasible(r["solver_status"]) or empty:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Konnte für Runde {r['round']} keine gültige Pod-Aufteilung "
+                    "finden. Mögliche Ursachen: zu wenige Cubes für die Anzahl der "
+                    "Pods oder zu geringe max_players-Kapazität der Cubes. "
+                    f"(Solver-Status: {r['solver_status']})"
+                ),
+            )
 
     rounds = [
         MultiRoundResult(
