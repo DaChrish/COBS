@@ -47,6 +47,16 @@ class OptimizerResult:
     wall_time: float = 0.0
 
 
+def is_infeasible(status: str) -> bool:
+    """True when the solver did not find a usable assignment.
+
+    CP-SAT StatusName returns OPTIMAL / FEASIBLE / INFEASIBLE / MODEL_INVALID /
+    UNKNOWN. Anything other than OPTIMAL/FEASIBLE means the result pods are empty
+    and must NOT be treated as a valid draft.
+    """
+    return status not in ("OPTIMAL", "FEASIBLE")
+
+
 def _compute_avoid_weight(
     formula: str, avoid_count: int, num_cubes: int, non_avoid_count: int, scaling: float
 ) -> float:
@@ -218,6 +228,11 @@ def optimize_pods(
             logger.info("  Player %s: %d avoids/%d cubes → weight %.2f (%s)",
                         player.id, avoid_count, num_cubes, weight, config.avoid_penalty_formula)
 
+    # Rank by DISTINCT match-point values, not by player position. Note the
+    # inverted convention vs. everyday "rank 1 = best": here rank 0 is the
+    # WORST (fewest points) and the highest rank is the BEST (most points).
+    # max_rank = number of distinct point values - 1 (>= 1 to avoid div-by-zero
+    # in round 1, where everyone is tied at 0 → a single rank).
     sorted_mps = sorted(set(p.match_points for p in active))
     mp_to_rank = {mp: i for i, mp in enumerate(sorted_mps)}
     max_rank = max(len(sorted_mps) - 1, 1)
@@ -225,6 +240,9 @@ def optimize_pods(
     for p in range(P):
         player = active[p]
         rank = mp_to_rank[player.match_points]
+        # (1 - rank/max_rank): 1.0 for the lowest-standing players (rank 0),
+        # 0.0 for the highest. So worse-standing players get a larger DESIRED
+        # bonus; the leader gets none (pref_mult = 1.0).
         pref_mult = 1.0 + config.lower_standing_bonus * (1.0 - rank / max_rank)
 
         for k in range(K):
