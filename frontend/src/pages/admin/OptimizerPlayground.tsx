@@ -59,6 +59,7 @@ export function OptimizerPlayground() {
   const [repeatAvoidMult, setRepeatAvoidMult] = useState(4.0);
   const [avoidPenaltyScaling, setAvoidPenaltyScaling] = useState(1.0);
   const [avoidPenaltyFormula, setAvoidPenaltyFormula] = useState("linear");
+  const [simSeed, setSimSeed] = useState(1);
 
   // Multi-Runden-Simulation (echte Votes, Zufallsergebnisse dazwischen)
   const [multiRounds, setMultiRounds] = useState(3);
@@ -137,6 +138,7 @@ export function OptimizerPlayground() {
     setRepeatAvoidMult(4.0);
     setAvoidPenaltyScaling(1.0);
     setAvoidPenaltyFormula("linear");
+    setSimSeed(1);
   };
 
   const loadSimulations = async () => {
@@ -166,6 +168,7 @@ export function OptimizerPlayground() {
         method: "POST",
         body: JSON.stringify({
           label: label || undefined,
+          seed: simSeed,
           score_want: scoreWant,
           score_avoid: scoreAvoid,
           score_neutral: scoreNeutral,
@@ -406,6 +409,8 @@ export function OptimizerPlayground() {
                   onChange={(v) => setRepeatAvoidMult(Number(v))} step={0.5} decimalScale={1} />
                 <NumberInput label="avoid_penalty_scaling" description="Default: 1.0 (0=aus)" value={avoidPenaltyScaling}
                   onChange={(v) => setAvoidPenaltyScaling(Number(v))} step={0.1} decimalScale={2} />
+                <NumberInput label="Seed" description={t("optimizerPlayground.seedHint")} min={0} value={simSeed}
+                  onChange={(v) => setSimSeed(Math.max(0, Number(v) || 0))} />
                 <Select label="avoid_penalty_formula" description={t("optimizerPlayground.penaltyFormula")} value={avoidPenaltyFormula}
                   onChange={(v) => setAvoidPenaltyFormula(v || "linear")}
                   data={[

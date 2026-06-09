@@ -184,8 +184,14 @@ def simulate_real_vote_rounds(
         pod_sizes = calculate_pod_sizes(len(player_ids))
         num_pods = len(pod_sizes)
 
-        round_cubes = _select_cubes_for_round(cube_ids, num_pods, used_cubes, rng)
-        used_cubes.update(round_cubes)
+        # Mirror the real draft generation (routes/drafts.py): hand the optimizer
+        # ALL still-unused cubes and let it pick the best ones for the votes
+        # (refill with used cubes only if fewer than num_pods remain). This makes
+        # round 1 match the single-round simulation instead of using a random
+        # pre-selection.
+        available_cubes = [c for c in cube_ids if c not in used_cubes]
+        if len(available_cubes) < num_pods:
+            available_cubes = available_cubes + [c for c in cube_ids if c in used_cubes]
 
         player_inputs = [
             PlayerInput(
@@ -197,7 +203,7 @@ def simulate_real_vote_rounds(
             for pid in player_ids
         ]
         cube_inputs = [
-            CubeInput(id=cid, max_players=cube_max_players.get(cid)) for cid in round_cubes
+            CubeInput(id=cid, max_players=cube_max_players.get(cid)) for cid in available_cubes
         ]
 
         result = optimize_pods(
@@ -211,6 +217,8 @@ def simulate_real_vote_rounds(
 
         pod_details = []
         for pod_idx, (pod_players, cube_id) in enumerate(zip(result.pods, result.cube_ids)):
+            if cube_id:
+                used_cubes.add(cube_id)  # exclude this cube from later rounds
             players_data = []
             for pid in pod_players:
                 vote = votes.get(pid, {}).get(cube_id, "NEUTRAL") if cube_id else "NEUTRAL"

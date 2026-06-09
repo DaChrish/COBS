@@ -263,6 +263,7 @@
     "addProfile": "Add Profile",
     "optimizerConfig": "Optimizer Configuration",
     "penaltyFormula": "Penalty Formula",
+    "seedHint": "Same seed = identical R1 as multi-sim",
     "multiRoundTitle": "Simulate multiple rounds",
     "multiRoundHint": "Simulates several draft rounds in sequence using the real votes, with random match results in between. Deterministic per seed.",
     "multiRounds": "Draft rounds",

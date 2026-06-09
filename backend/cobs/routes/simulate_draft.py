@@ -109,12 +109,13 @@ async def simulate_draft(
         avoid_penalty_formula=body.avoid_penalty_formula,
     )
 
-    # Run optimizer with timing
-    tournament_seed = tournament.seed or 0
+    # Run optimizer with timing. Use the request seed (not the tournament seed)
+    # so the single sim is reproducible and comparable to the multi-round sim:
+    # same seed + round_number => identical pods.
     t0 = time.monotonic()
     opt_result = optimize_pods(
         optimizer_players, optimizer_cubes, pod_sizes, round_number, config,
-        seed=tournament_seed + round_number,
+        seed=body.seed + round_number,
     )
     solver_time_ms = int((time.monotonic() - t0) * 1000)
 
@@ -185,6 +186,7 @@ async def simulate_draft(
     result_json = {"pods": pods_data}
     config_json = {
         "round_number": body.round_number,
+        "seed": body.seed,
         "score_want": body.score_want,
         "score_avoid": body.score_avoid,
         "score_neutral": body.score_neutral,

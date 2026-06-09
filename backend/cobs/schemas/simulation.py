@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class SimulateDraftRequest(BaseModel):
     label: str = ""
     round_number: int = 1
+    seed: int = 1
     score_want: float = 5.0
     score_avoid: float = -200.0
     score_neutral: float = 0.0

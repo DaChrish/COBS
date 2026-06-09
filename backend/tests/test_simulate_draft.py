@@ -92,6 +92,23 @@ class TestSimulateDraftMulti:
         resp = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json={"num_rounds": 0}, headers=ah)
         assert resp.status_code == 400
 
+    async def test_round1_matches_single_sim_for_same_seed(self, client: AsyncClient):
+        # The multi-sim's round 1 must equal the single sim (same cubes available
+        # + same seed + same params) — regression for the random cube pre-selection.
+        admin = await client.post("/auth/admin/setup", json={"username": "admin", "password": "pw"})
+        ah = {"Authorization": f"Bearer {admin.json()['access_token']}"}
+        resp = await client.post("/test/tournament", json={"num_players": 16, "num_cubes": 6, "seed": 5}, headers=ah)
+        tid = resp.json()["tournament_id"]
+
+        single = await client.post(f"/tournaments/{tid}/simulate-draft", json={"seed": 9}, headers=ah)
+        multi = await client.post(f"/tournaments/{tid}/simulate-draft-multi", json={"num_rounds": 1, "seed": 9}, headers=ah)
+        assert single.status_code == 201 and multi.status_code == 200
+
+        def norm(pods):
+            return {(p["cube_id"], frozenset(pl["username"] for pl in p["players"])) for p in pods}
+
+        assert norm(single.json()["result"]["pods"]) == norm(multi.json()["rounds"][0]["pods"])
+
     async def test_36_players_fills_pods(self, client: AsyncClient):
         # Regression: 36 players (≡ 4 mod 16) previously produced pod sizes
         # summing to 28 → INFEASIBLE → empty pods. Must now fill all 36 seats.
