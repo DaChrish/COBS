@@ -109,12 +109,15 @@ async def simulate_draft(
         avoid_penalty_formula=body.avoid_penalty_formula,
     )
 
-    # Run optimizer with timing
-    tournament_seed = tournament.seed or 0
+    # Reproducibility: by default mirror the real draft generation, which uses
+    # the tournament seed (see routes/drafts.py). An explicit request seed
+    # overrides it for a fixed, shareable result that is directly comparable to
+    # the multi-round sim (same seed + round_number => identical pods).
+    effective_seed = body.seed if body.seed is not None else (tournament.seed or 0)
     t0 = time.monotonic()
     opt_result = optimize_pods(
         optimizer_players, optimizer_cubes, pod_sizes, round_number, config,
-        seed=tournament_seed + round_number,
+        seed=effective_seed + round_number,
     )
     solver_time_ms = int((time.monotonic() - t0) * 1000)
 
@@ -185,6 +188,7 @@ async def simulate_draft(
     result_json = {"pods": pods_data}
     config_json = {
         "round_number": body.round_number,
+        "seed": effective_seed,
         "score_want": body.score_want,
         "score_avoid": body.score_avoid,
         "score_neutral": body.score_neutral,
@@ -301,6 +305,9 @@ async def simulate_draft_multi(
         avoid_penalty_formula=body.avoid_penalty_formula,
     )
 
+    # Default to the tournament seed so round 1 reproduces the real draft and
+    # matches the single sim; an explicit request seed overrides it.
+    effective_seed = body.seed if body.seed is not None else (tournament.seed or 0)
     rounds_raw = simulate_real_vote_rounds(
         player_ids=player_ids,
         votes=votes,
@@ -310,7 +317,7 @@ async def simulate_draft_multi(
         num_rounds=body.num_rounds,
         swiss_rounds_per_draft=body.swiss_rounds_per_draft,
         config=config,
-        seed=body.seed,
+        seed=effective_seed,
     )
 
     for r in rounds_raw:
@@ -354,7 +361,7 @@ async def simulate_draft_multi(
     ]
 
     return SimulateMultiRoundResponse(
-        seed=body.seed,
+        seed=effective_seed,
         num_rounds=body.num_rounds,
         player_count=len(player_ids),
         config={

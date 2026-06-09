@@ -19,6 +19,7 @@ import {
   Accordion,
   SimpleGrid,
   Divider,
+  Switch,
   Tooltip,
   ScrollArea,
   Tabs,
@@ -59,10 +60,15 @@ export function OptimizerPlayground() {
   const [repeatAvoidMult, setRepeatAvoidMult] = useState(4.0);
   const [avoidPenaltyScaling, setAvoidPenaltyScaling] = useState(1.0);
   const [avoidPenaltyFormula, setAvoidPenaltyFormula] = useState("linear");
+  // Seed: by default the backend uses the tournament seed (reproduces the real
+  // draft). Toggle off to pin a fixed, shareable seed.
+  const [simUseTournamentSeed, setSimUseTournamentSeed] = useState(true);
+  const [simSeed, setSimSeed] = useState(1);
 
   // Multi-Runden-Simulation (echte Votes, Zufallsergebnisse dazwischen)
   const [multiRounds, setMultiRounds] = useState(3);
   const [multiSwissRounds, setMultiSwissRounds] = useState(3);
+  const [multiUseTournamentSeed, setMultiUseTournamentSeed] = useState(true);
   const [multiSeed, setMultiSeed] = useState(1);
   const [multiResult, setMultiResult] = useState<SimulateMultiRoundResponse | null>(null);
   const [multiRunning, setMultiRunning] = useState(false);
@@ -137,6 +143,8 @@ export function OptimizerPlayground() {
     setRepeatAvoidMult(4.0);
     setAvoidPenaltyScaling(1.0);
     setAvoidPenaltyFormula("linear");
+    setSimUseTournamentSeed(true);
+    setSimSeed(1);
   };
 
   const loadSimulations = async () => {
@@ -166,6 +174,8 @@ export function OptimizerPlayground() {
         method: "POST",
         body: JSON.stringify({
           label: label || undefined,
+          // omit => backend falls back to the tournament seed
+          seed: simUseTournamentSeed ? undefined : simSeed,
           score_want: scoreWant,
           score_avoid: scoreAvoid,
           score_neutral: scoreNeutral,
@@ -187,8 +197,15 @@ export function OptimizerPlayground() {
 
   const simulateMulti = async (reroll = false) => {
     if (!selectedTournament) return;
-    const seed = reroll ? multiSeed + 1 : multiSeed;
-    if (reroll) setMultiSeed(seed);
+    // Tournament-seed mode => omit the seed (backend uses tournament.seed) and
+    // ignore reroll. Custom mode => reroll bumps the seed for a fresh outcome.
+    let seed: number | undefined;
+    if (multiUseTournamentSeed) {
+      seed = undefined;
+    } else {
+      seed = reroll ? multiSeed + 1 : multiSeed;
+      if (reroll) setMultiSeed(seed);
+    }
     setMultiRunning(true);
     setError(null);
     try {
@@ -406,6 +423,17 @@ export function OptimizerPlayground() {
                   onChange={(v) => setRepeatAvoidMult(Number(v))} step={0.5} decimalScale={1} />
                 <NumberInput label="avoid_penalty_scaling" description="Default: 1.0 (0=aus)" value={avoidPenaltyScaling}
                   onChange={(v) => setAvoidPenaltyScaling(Number(v))} step={0.1} decimalScale={2} />
+                <Stack gap={4}>
+                  <Switch label={t("optimizerPlayground.useTournamentSeed")}
+                    description={t("optimizerPlayground.useTournamentSeedHint")}
+                    checked={simUseTournamentSeed}
+                    onChange={(e) => setSimUseTournamentSeed(e.currentTarget.checked)} />
+                  {!simUseTournamentSeed && (
+                    <NumberInput label={t("optimizerPlayground.customSeed")}
+                      description={t("optimizerPlayground.seedHint")} min={0} value={simSeed}
+                      onChange={(v) => setSimSeed(Math.max(0, Number(v) || 0))} />
+                  )}
+                </Stack>
                 <Select label="avoid_penalty_formula" description={t("optimizerPlayground.penaltyFormula")} value={avoidPenaltyFormula}
                   onChange={(v) => setAvoidPenaltyFormula(v || "linear")}
                   data={[
@@ -447,16 +475,26 @@ export function OptimizerPlayground() {
                   value={multiRounds} onChange={(v) => setMultiRounds(Math.max(1, Number(v) || 1))} />
                 <NumberInput label={t("optimizerPlayground.multiSwissRounds")} min={1} max={6}
                   value={multiSwissRounds} onChange={(v) => setMultiSwissRounds(Math.max(1, Number(v) || 1))} />
-                <NumberInput label="Seed" min={0}
-                  value={multiSeed} onChange={(v) => setMultiSeed(Math.max(0, Number(v) || 0))} />
+                <Stack gap={4}>
+                  <Switch label={t("optimizerPlayground.useTournamentSeed")}
+                    description={t("optimizerPlayground.useTournamentSeedHint")}
+                    checked={multiUseTournamentSeed}
+                    onChange={(e) => setMultiUseTournamentSeed(e.currentTarget.checked)} />
+                  {!multiUseTournamentSeed && (
+                    <NumberInput label={t("optimizerPlayground.customSeed")} min={0}
+                      value={multiSeed} onChange={(v) => setMultiSeed(Math.max(0, Number(v) || 0))} />
+                  )}
+                </Stack>
               </SimpleGrid>
               <Group mt="sm">
                 <Button leftSection={<IconPlayerPlay size={16} />} onClick={() => simulateMulti(false)} loading={multiRunning}>
                   {t("optimizerPlayground.multiRun")}
                 </Button>
-                <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => simulateMulti(true)} loading={multiRunning}>
-                  {t("optimizerPlayground.multiReroll")}
-                </Button>
+                {!multiUseTournamentSeed && (
+                  <Button leftSection={<IconRefresh size={16} />} variant="light" onClick={() => simulateMulti(true)} loading={multiRunning}>
+                    {t("optimizerPlayground.multiReroll")}
+                  </Button>
+                )}
               </Group>
 
               {multiResult && (

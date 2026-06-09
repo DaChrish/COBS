@@ -308,6 +308,16 @@ def optimize_pods(
     logger.info("Optimizer finished: status=%s, objective=%.1f, wall_time=%.2fs",
                 status_name, solver.ObjectiveValue(), solver.WallTime())
 
+    # On a non-OPTIMAL/FEASIBLE status the solver variable values are undefined
+    # (may be stale/garbage from a previous solve). Return clean empty pods so
+    # callers get a well-defined "no assignment" result alongside the status.
+    if is_infeasible(status_name):
+        logger.warning("Optimizer infeasible (%s): returning empty pods", status_name)
+        return OptimizerResult(
+            pods=[[] for _ in range(K)], cube_ids=[None] * K,
+            objective=0.0, status=status_name, wall_time=solver.WallTime(),
+        )
+
     pods: list[list[str]] = [[] for _ in range(K)]
     cube_assignments: list[str | None] = [None] * K
 

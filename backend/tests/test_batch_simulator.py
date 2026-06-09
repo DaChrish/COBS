@@ -24,9 +24,9 @@ def test_select_cubes_refills_when_more_needed_than_available():
     assert _select_cubes_for_round([], 4, set(), random.Random(0)) == []
 
 
-def test_real_vote_rounds_assigns_all_players_when_cubes_lt_pods():
+def test_real_vote_rounds_assigns_all_players_with_enough_cubes():
     pids = [f"p{i}" for i in range(48)]  # 48 -> 6 pods
-    cube_ids = [f"c{i}" for i in range(4)]  # only 4 cubes
+    cube_ids = [f"c{i}" for i in range(10)]  # plenty of cubes
     votes = {pid: {cid: "NEUTRAL" for cid in cube_ids} for pid in pids}
     init_mp = {pid: 0 for pid in pids}
     cube_max = {cid: None for cid in cube_ids}
@@ -36,6 +36,23 @@ def test_real_vote_rounds_assigns_all_players_when_cubes_lt_pods():
     )
     assert sum(p["size"] for p in rounds[0]["pods"]) == 48
     assert rounds[0]["solver_status"] in ("OPTIMAL", "FEASIBLE")
+
+
+def test_real_vote_rounds_infeasible_when_cubes_lt_pods():
+    # Fewer distinct cubes than pods cannot give every pod its own cube — same
+    # behavior as the single sim and the real draft (surfaced as HTTP 422 by the
+    # endpoint). The pure function reports it via solver_status.
+    pids = [f"p{i}" for i in range(48)]  # 48 -> 6 pods
+    cube_ids = [f"c{i}" for i in range(4)]  # only 4 cubes
+    votes = {pid: {cid: "NEUTRAL" for cid in cube_ids} for pid in pids}
+    init_mp = {pid: 0 for pid in pids}
+    cube_max = {cid: None for cid in cube_ids}
+    rounds = simulate_real_vote_rounds(
+        pids, votes, init_mp, cube_ids, cube_max,
+        num_rounds=1, swiss_rounds_per_draft=3, config=OptimizerConfig(), seed=1,
+    )
+    assert rounds[0]["solver_status"] not in ("OPTIMAL", "FEASIBLE")
+    assert sum(p["size"] for p in rounds[0]["pods"]) == 0
 
 
 def _real_vote_setup():

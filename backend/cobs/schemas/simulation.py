@@ -6,6 +6,9 @@ from pydantic import BaseModel
 class SimulateDraftRequest(BaseModel):
     label: str = ""
     round_number: int = 1
+    # None => use the tournament seed (reproduces the real draft). An explicit
+    # value overrides it for a fixed, shareable result.
+    seed: int | None = None
     score_want: float = 5.0
     score_avoid: float = -200.0
     score_neutral: float = 0.0
@@ -19,7 +22,9 @@ class SimulateDraftRequest(BaseModel):
 class SimulateMultiRoundRequest(BaseModel):
     num_rounds: int = 3
     swiss_rounds_per_draft: int = 3
-    seed: int = 1
+    # None => use the tournament seed (reproduces the real draft + matches the
+    # single sim by default). An explicit value overrides it.
+    seed: int | None = None
     score_want: float = 5.0
     score_avoid: float = -200.0
     score_neutral: float = 0.0
