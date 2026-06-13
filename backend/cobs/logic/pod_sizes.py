@@ -43,4 +43,11 @@ def calculate_pod_sizes(player_count: int) -> list[int]:
         diff -= step
         i += 1
 
+    # Largest pod first. The optimizer slices players sorted by standing
+    # (best first) into pods IN THIS ORDER, so pod 0 receives the top-standing
+    # players. Returning the sizes ascending would put the round-1 winners into
+    # the smallest, incomplete pod; the best standings must always get a full
+    # 8-player pod, and the leftover (smaller) pod goes to the lowest standings.
+    sizes.sort(reverse=True)
+
     return sizes
