@@ -13,9 +13,9 @@ class DraftCreate(BaseModel):
     score_neutral: float = 0.0
     early_round_bonus: float = 3.0
     lower_standing_bonus: float = 0.3
-    repeat_avoid_multiplier: float = 4.0
+    repeat_avoid_multiplier: float = 2.0
     avoid_penalty_scaling: float = 1.0
-    avoid_penalty_formula: str = "linear"
+    avoid_penalty_formula: str = "arccot_norm"
     skip_photo_check: bool = False
 
 
