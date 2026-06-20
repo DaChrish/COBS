@@ -1,15 +1,43 @@
 from fpdf import FPDF
 
+# Common typographic characters mapped to ASCII look-alikes so the output stays
+# readable instead of turning into "?". Anything not listed here that is still
+# outside latin-1 (emoji, CJK, rare symbols) is replaced by the catch-all below.
+_NICE_REPLACEMENTS = {
+    "\u2014": "-", "\u2013": "-", "\u00b7": "-",   # em/en dash, middle dot
+    "\u2018": "'", "\u2019": "'",                    # smart single quotes
+    "\u201c": '"', "\u201d": '"',                    # smart double quotes
+    "\u2606": "*", "\u2605": "*",                    # \u2606 \u2605 stars (live: "\u2606 CCC \u2606")
+    "\u2026": "...",                                  # ellipsis
+}
+
 
 def _latin1_safe(text: str) -> str:
-    """Replace Unicode characters not supported by built-in PDF fonts."""
-    return text.replace("\u2014", "-").replace("\u2013", "-").replace("\u00b7", "-")
+    """Make text safe for the built-in latin-1 PDF fonts (Helvetica & co.).
+
+    Built-in fpdf fonts only support latin-1; any character outside that range
+    raises inside fpdf.cell()/normalize_text (the live Braunschweig export 500'd
+    on the cube name "\u2606 CCC ..."). Map the common typographic characters to
+    ASCII, then drop/replace anything still unencodable so export NEVER crashes.
+    """
+    for src, dst in _NICE_REPLACEMENTS.items():
+        text = text.replace(src, dst)
+    # Catch-all: guarantee the result is latin-1 encodable.
+    return text.encode("latin-1", errors="replace").decode("latin-1")
+
+
+class _SafeFPDF(FPDF):
+    """FPDF that sanitizes every string centrally, so callers can't crash the
+    export by forgetting to wrap a value (e.g. a username) in _latin1_safe()."""
+
+    def normalize_text(self, text):
+        return super().normalize_text(_latin1_safe(text))
 
 
 def generate_standings_pdf(
     tournament_name: str, round_label: str, standings: list[dict]
 ) -> bytes:
-    pdf = FPDF()
+    pdf = _SafeFPDF()
     pdf.add_page()
 
     # Title
@@ -61,7 +89,7 @@ def generate_standings_pdf(
 def generate_pairings_pdf(
     tournament_name: str, round_label: str, pods: list[dict]
 ) -> bytes:
-    pdf = FPDF()
+    pdf = _SafeFPDF()
     pdf.add_page()
 
     # Title
@@ -114,7 +142,7 @@ def generate_results_pdf(
     pods: list of dicts with keys:
         pod_name, matches (list of {table, player1, result, player2, status}), byes (list of player names)
     """
-    pdf = FPDF()
+    pdf = _SafeFPDF()
     pdf.add_page()
 
     pdf.set_font("Helvetica", "B", 16)
@@ -166,7 +194,7 @@ def generate_pods_pdf(
     pods: list of dicts with keys:
         table, pod_name, players (list of {seat, username})
     """
-    pdf = FPDF()
+    pdf = _SafeFPDF()
     pdf.add_page()
 
     pdf.set_font("Helvetica", "B", 16)
