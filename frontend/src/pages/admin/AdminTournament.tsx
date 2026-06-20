@@ -8,6 +8,7 @@ import {
   Table,
   Badge,
   Button,
+  type ButtonProps,
   Group,
   Stack,
   Select,
@@ -52,24 +53,46 @@ import { useWebSocket } from "../../hooks/useWebSocket";
 import { PhotoViewer } from "../../components/PhotoViewer";
 import type { TournamentDetail, Draft, Match, Pod, DraftPhotoStatus, PlayerPhotoStatus, StandingsEntry, Cube, CubeVoteSummary } from "../../api/types";
 
-function downloadPdf(path: string, filename: string) {
+async function downloadFile(path: string, filename: string) {
   const token = localStorage.getItem("token");
-  fetch(`/api${path}`, {
+  const res = await fetch(`/api${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-    .then((res) => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.blob();
-    })
-    .then((blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    })
-    .catch((e) => alert(e.message));
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  // Append to the DOM and defer revoke — some browsers (Safari/Firefox) won't
+  // start the download for a detached anchor or if the blob URL is revoked
+  // synchronously right after click().
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// Button that downloads `path` to `filename` and shows a spinner while the
+// server generates the file (the full tournament export can take a while, so
+// without feedback it looks like nothing happens).
+function DownloadButton({
+  path,
+  filename,
+  ...props
+}: ButtonProps & { path: string; filename: string }) {
+  const [loading, setLoading] = useState(false);
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      await downloadFile(path, filename);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+  return <Button {...props} loading={loading} onClick={handleClick} />;
 }
 
 function useTranslateError() {
@@ -221,10 +244,10 @@ function OverviewTab({
           </Table.Tr>
         </Table.Tbody>
       </Table>
-      <Button variant="light" leftSection={<IconDownload size={14} />}
-        onClick={() => downloadPdf(`/tournaments/${tournament.id}/export`, `${tournament.name}.zip`)}>
+      <DownloadButton variant="light" leftSection={<IconDownload size={14} />}
+        path={`/tournaments/${tournament.id}/export`} filename={`${tournament.name}.zip`}>
         {t("adminTournament.exportTournament")}
-      </Button>
+      </DownloadButton>
     </Stack>
   );
 }
@@ -1262,20 +1285,20 @@ function DraftsTab({ tournamentId, isTest, tournament }: { tournamentId: string;
                   </Group>
                 )}
                 <Group gap="xs">
-                  <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
-                    onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pods/pdf`, `pods-runde${draft.round_number}.pdf`)}>
+                  <DownloadButton size="xs" variant="light" leftSection={<IconDownload size={14} />}
+                    path={`/tournaments/${tournamentId}/drafts/${draft.id}/pods/pdf`} filename={`pods-runde${draft.round_number}.pdf`}>
                     {t("adminTournament.podsPdf")}
-                  </Button>
+                  </DownloadButton>
                   {hasMatches && (
-                    <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
-                      onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/pairings/pdf`, `pairings-runde${draft.round_number}.pdf`)}>
+                    <DownloadButton size="xs" variant="light" leftSection={<IconDownload size={14} />}
+                      path={`/tournaments/${tournamentId}/drafts/${draft.id}/pairings/pdf`} filename={`pairings-runde${draft.round_number}.pdf`}>
                       {t("adminTournament.pairingsPdf")}
-                    </Button>
+                    </DownloadButton>
                   )}
-                  <Button size="xs" variant="light" leftSection={<IconDownload size={14} />}
-                    onClick={() => downloadPdf(`/tournaments/${tournamentId}/drafts/${draft.id}/export`, `Draft${draft.round_number}.zip`)}>
+                  <DownloadButton size="xs" variant="light" leftSection={<IconDownload size={14} />}
+                    path={`/tournaments/${tournamentId}/drafts/${draft.id}/export`} filename={`Draft${draft.round_number}.zip`}>
                     {t("adminTournament.exportZip")}
-                  </Button>
+                  </DownloadButton>
                   {hasMatches && !allReported && draft.status !== "FINISHED" && (
                     <Group gap={4}>
                       <NumberInput w={70} size="xs" variant="filled"
@@ -1483,14 +1506,15 @@ function StandingsTab({ tournamentId }: { tournamentId: string }) {
   return (
     <Stack gap="md">
       <Group>
-        <Button
+        <DownloadButton
           size="xs"
           variant="light"
           leftSection={<IconDownload size={14} />}
-          onClick={() => downloadPdf(`/tournaments/${tournamentId}/standings/pdf`, "standings.pdf")}
+          path={`/tournaments/${tournamentId}/standings/pdf`}
+          filename="standings.pdf"
         >
           {t("adminTournament.standingsPdf")}
-        </Button>
+        </DownloadButton>
       </Group>
       {(!standings || standings.length === 0) ? (
         <Text c="dimmed">{t("adminTournament.noStandings")}</Text>
